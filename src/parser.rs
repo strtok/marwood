@@ -72,6 +72,20 @@ fn repeat<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
     }
 }
 
+fn repeat1<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
+    where
+        P: Parser<'a, A>
+{
+    let parser = repeat(parser);
+    move |input| {
+        match parser.parse(input) {
+            Ok((_, output)) if output.is_empty() => Err(input),
+            Ok(output) => Ok(output),
+            Err(e) => Err(e)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,5 +150,25 @@ mod tests {
         assert_eq!(repeat(digit()).parse("123"),
                    Ok(("", vec!("1","2","3"))));
 
+        // zero is OK
+        assert_eq!(repeat(digit()).parse("abc"),
+                   Ok(("abc", vec!())));
     }
+
+    #[test]
+    fn repeat1_captures_while_satisfied() {
+
+        // consume up to not satisfied
+        assert_eq!(repeat1(digit()).parse("123abc"),
+                   Ok(("abc", vec!("1","2","3"))));
+
+        // consume full input
+        assert_eq!(repeat1(digit()).parse("123"),
+                   Ok(("", vec!("1","2","3"))));
+
+        // zero is NOT OK
+        assert_eq!(repeat1(digit()).parse("abc"),
+                   Err("abc"));
+    }
+
 }
