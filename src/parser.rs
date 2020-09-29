@@ -12,25 +12,36 @@ impl<'a, F, Output> Parser<'a, Output> for F
     }
 }
 
-fn satisfy<'a>(f: impl Fn(char) -> bool) -> impl Parser<'a, &'a str> {
+fn satisfy<'a, P, F, A>(parser: P, f: F) -> impl Parser<'a, A>
+    where
+        F: Fn(&A) -> bool,
+        P: Parser<'a, A>
+{
     move |input: &'a str| {
-        match input.chars().next() {
-            Some(c) if f(c) => Ok((&input[1..], &input[0..1])),
+        match parser.apply(input) {
+            Ok((rest, output)) if f(&output) => Ok((rest, output)),
             _ => Err(input)
         }
     }
 }
 
-fn ch<'a>(expected: char) -> impl Parser<'a, &'a str> {
-    satisfy(move |c: char| c == expected)
+fn any_char(input: &str) -> ParseResult<char> {
+    match input.chars().next() {
+        Some(c) => Ok((&input[c.len_utf8()..], c)),
+        None => Err(input),
+    }
 }
 
-fn digit<'a>() -> impl Parser<'a, &'a str> {
-    satisfy(move |c: char| c.is_digit(10))
+fn ch<'a>(expected: char) -> impl Parser<'a, char> {
+    satisfy(any_char, move |&c| c == expected)
 }
 
-fn alphabetic<'a>() -> impl Parser<'a, &'a str> {
-    satisfy(move |c: char| c.is_alphabetic())
+fn digit<'a>() -> impl Parser<'a, char> {
+    satisfy(any_char, |&c| c.is_digit(10))
+}
+
+fn alphabetic<'a>() -> impl Parser<'a, char> {
+    satisfy(any_char,  |&c| c.is_alphabetic())
 }
 
 fn empty(input: &str) -> ParseResult<()> {
@@ -108,16 +119,16 @@ mod tests {
 
     #[test]
     fn satisfy_returns_matched_char() {
-        assert_eq!(satisfy(|ch| ch == 'd').apply("dog"),
-                   Ok(("og", "d")));
-        assert_eq!(satisfy(|ch| ch == 'o').apply("dog"),
+        assert_eq!(satisfy(any_char, |&c| c == 'd').apply("dog"),
+                   Ok(("og", 'd')));
+        assert_eq!(satisfy(any_char, |&c| c == 'o').apply("dog"),
                    Err("dog"));
     }
 
     #[test]
     fn chars() {
         assert_eq!(ch('a').apply("abc"),
-                   Ok(("bc", "a")));
+                   Ok(("bc", 'a')));
         assert_eq!(ch('a').apply("cba"),
                    Err("cba"));
     }
@@ -125,15 +136,15 @@ mod tests {
     #[test]
     fn digits() {
         assert_eq!(digit().apply("42"),
-                   Ok(("2", "4")));
+                   Ok(("2", '4')));
         assert_eq!(digit().apply("dog"),
                    Err("dog"));
     }
 
     #[test]
-    fn alphabets() {
+    fn alphabetics() {
         assert_eq!(alphabetic().apply("abc"),
-                   Ok(("bc", "a")));
+                   Ok(("bc", 'a')));
         assert_eq!(alphabetic().apply("123"),
                    Err("123"));
     }
@@ -143,11 +154,11 @@ mod tests {
 
         // consume up to not satisfied
         assert_eq!(repeat(digit()).apply("123abc"),
-                   Ok(("abc", vec!("1","2","3"))));
+                   Ok(("abc", vec!('1','2','3'))));
 
         // consume full input
         assert_eq!(repeat(digit()).apply("123"),
-                   Ok(("", vec!("1","2","3"))));
+                   Ok(("", vec!('1','2','3'))));
 
         // zero is OK
         assert_eq!(repeat(digit()).apply("abc"),
@@ -159,11 +170,11 @@ mod tests {
 
         // consume up to not satisfied
         assert_eq!(repeat1(digit()).apply("123abc"),
-                   Ok(("abc", vec!("1","2","3"))));
+                   Ok(("abc", vec!('1','2','3'))));
 
         // consume full input
         assert_eq!(repeat1(digit()).apply("123"),
-                   Ok(("", vec!("1","2","3"))));
+                   Ok(("", vec!('1','2','3'))));
 
         // zero is NOT OK
         assert_eq!(repeat1(digit()).apply("abc"),
