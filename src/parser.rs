@@ -1,5 +1,3 @@
-use nom::{InputTake, AsChar};
-
 type ParseResult<'a, Output> = Result<(&'a str, Output), &'a str>;
 
 trait Parser<'a, Output> {
@@ -32,8 +30,8 @@ fn digit<'a>() -> impl Parser<'a, char> {
     satisfy(move |c: char| c.is_digit(10))
 }
 
-fn alpha<'a>() -> impl Parser<'a, char> {
-    satisfy(move |c: char| c.is_alpha())
+fn alphabetic<'a>() -> impl Parser<'a, char> {
+    satisfy(move |c: char| c.is_alphabetic())
 }
 
 fn empty(input: &str) -> ParseResult<()> {
@@ -98,9 +96,9 @@ mod tests {
 
     #[test]
     fn is_alpha() {
-        assert_eq!(alpha().parse("abc"),
+        assert_eq!(alphabetic().parse("abc"),
                    Ok(("bc", 'a')));
-        assert_eq!(alpha().parse("123"),
+        assert_eq!(alphabetic().parse("123"),
                    Err("123"));
     }
 }

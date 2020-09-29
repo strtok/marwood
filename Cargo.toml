@@ -7,6 +7,5 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nom = "5.1.2"
 pretty_env_logger = "0.4.0"
 rustyline = "6.3.0"
