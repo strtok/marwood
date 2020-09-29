@@ -13,24 +13,24 @@ impl<'a, F, Output> Parser<'a, Output> for F
     }
 }
 
-fn satisfy<'a>(f: impl Fn(char) -> bool) -> impl Parser<'a, char> {
+fn satisfy<'a>(f: impl Fn(char) -> bool) -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
         match input.chars().next() {
-            Some(c) if f(c) => Ok((&input[1..], c)),
+            Some(c) if f(c) => Ok((&input[1..], &input[0..1])),
             _ => Err(input)
         }
     }
 }
 
-fn ch<'a>(expected: char) -> impl Parser<'a, char> {
+fn ch<'a>(expected: char) -> impl Parser<'a, &'a str> {
     satisfy(move |c: char| c == expected)
 }
 
-fn digit<'a>() -> impl Parser<'a, char> {
+fn digit<'a>() -> impl Parser<'a, &'a str> {
     satisfy(move |c: char| c.is_digit(10))
 }
 
-fn alphabetic<'a>() -> impl Parser<'a, char> {
+fn alphabetic<'a>() -> impl Parser<'a, &'a str> {
     satisfy(move |c: char| c.is_alphabetic())
 }
 
@@ -96,23 +96,31 @@ mod tests {
     #[test]
     fn satisfy_returns_matched_char() {
         assert_eq!(satisfy(|ch| ch == 'd').parse("dog"),
-                   Ok(("og", 'd')));
+                   Ok(("og", "d")));
         assert_eq!(satisfy(|ch| ch == 'o').parse("dog"),
                    Err("dog"));
     }
 
     #[test]
-    fn is_digit() {
+    fn chars() {
+        assert_eq!(ch('a').parse("abc"),
+                   Ok(("bc", "a")));
+        assert_eq!(ch('a').parse("cba"),
+                   Err("cba"));
+    }
+
+    #[test]
+    fn digits() {
         assert_eq!(digit().parse("42"),
-                   Ok(("2", '4')));
+                   Ok(("2", "4")));
         assert_eq!(digit().parse("dog"),
                    Err("dog"));
     }
 
     #[test]
-    fn is_alpha() {
+    fn alphabets() {
         assert_eq!(alphabetic().parse("abc"),
-                   Ok(("bc", 'a')));
+                   Ok(("bc", "a")));
         assert_eq!(alphabetic().parse("123"),
                    Err("123"));
     }
@@ -122,11 +130,11 @@ mod tests {
 
         // consume up to not satisfied
         assert_eq!(repeat(digit()).parse("123abc"),
-                   Ok(("abc", vec!('1','2','3'))));
+                   Ok(("abc", vec!("1","2","3"))));
 
         // consume full input
         assert_eq!(repeat(digit()).parse("123"),
-                   Ok(("", vec!('1','2','3'))));
+                   Ok(("", vec!("1","2","3"))));
 
     }
 }
