@@ -1,4 +1,4 @@
-use nom::InputTake;
+use nom::{InputTake, AsChar};
 
 type ParseResult<'a, Output> = Result<(&'a str, Output), &'a str>;
 
@@ -18,10 +18,22 @@ impl<'a, F, Output> Parser<'a, Output> for F
 fn satisfy<'a>(f: impl Fn(char) -> bool) -> impl Parser<'a, char> {
     move |input: &'a str| {
         match input.chars().next() {
-            Some(ch) if f(ch) => Ok((&input[1..], ch)),
+            Some(c) if f(c) => Ok((&input[1..], c)),
             _ => Err(input)
         }
     }
+}
+
+fn ch<'a>(expected: char) -> impl Parser<'a, char> {
+    satisfy(move |c: char| c == expected)
+}
+
+fn digit<'a>() -> impl Parser<'a, char> {
+    satisfy(move |c: char| c.is_digit(10))
+}
+
+fn alpha<'a>() -> impl Parser<'a, char> {
+    satisfy(move |c: char| c.is_alpha())
 }
 
 fn empty(input: &str) -> ParseResult<()> {
@@ -30,7 +42,7 @@ fn empty(input: &str) -> ParseResult<()> {
 
 fn any<'a>(input: &str) -> ParseResult<char> {
     match input.chars().next() {
-        Some(ch) => Ok((&input[1..], ch)),
+        Some(c) => Ok((&input[1..], c)),
         None => Err(input)
     }
 }
@@ -69,10 +81,26 @@ mod tests {
     }
 
     #[test]
-    fn satisfy_returns_ch() {
+    fn satisfy_returns_matched_char() {
         assert_eq!(satisfy(|ch| ch == 'd').parse("dog"),
                    Ok(("og", 'd')));
         assert_eq!(satisfy(|ch| ch == 'o').parse("dog"),
                    Err("dog"));
+    }
+
+    #[test]
+    fn is_digit() {
+        assert_eq!(digit().parse("42"),
+                   Ok(("2", '4')));
+        assert_eq!(digit().parse("dog"),
+                   Err("dog"));
+    }
+
+    #[test]
+    fn is_alpha() {
+        assert_eq!(alpha().parse("abc"),
+                   Ok(("bc", 'a')));
+        assert_eq!(alpha().parse("123"),
+                   Err("123"));
     }
 }
