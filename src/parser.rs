@@ -1,14 +1,13 @@
 type ParseResult<'a, Output> = Result<(&'a str, Output), &'a str>;
 
 trait Parser<'a, Output> {
-    fn parse(&self, input: &'a str) -> ParseResult<'a, Output>;
+    fn apply(&self, input: &'a str) -> ParseResult<'a, Output>;
 }
 
 impl<'a, F, Output> Parser<'a, Output> for F
-    where
-        F: Fn(&'a str) -> ParseResult<Output>,
+    where F: Fn(&'a str) -> ParseResult<Output>,
 {
-    fn parse(&self, input: &'a str) -> ParseResult<'a, Output> {
+    fn apply(&self, input: &'a str) -> ParseResult<'a, Output> {
         self(input)
     }
 }
@@ -53,7 +52,7 @@ fn map<'a, P, F, A, B>(parser: P, func: F) -> impl Parser<'a, B>
         F: Fn(A) -> B,
 {
     move |input|
-        parser.parse(input)
+        parser.apply(input)
             .map(|(rest, output)| (rest, func(output)))
 }
 
@@ -64,7 +63,7 @@ fn repeat<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
     move |input| {
         let mut outputs = Vec::new();
         let mut rest = input;
-        while let Ok((next, output)) = parser.parse(rest) {
+        while let Ok((next, output)) = parser.apply(rest) {
             rest = next;
             outputs.push(output);
         }
@@ -78,7 +77,7 @@ fn repeat1<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
 {
     let parser = repeat(parser);
     move |input| {
-        match parser.parse(input) {
+        match parser.apply(input) {
             Ok((_, output)) if output.is_empty() => Err(input),
             Ok(output) => Ok(output),
             Err(e) => Err(e)
@@ -109,33 +108,33 @@ mod tests {
 
     #[test]
     fn satisfy_returns_matched_char() {
-        assert_eq!(satisfy(|ch| ch == 'd').parse("dog"),
+        assert_eq!(satisfy(|ch| ch == 'd').apply("dog"),
                    Ok(("og", "d")));
-        assert_eq!(satisfy(|ch| ch == 'o').parse("dog"),
+        assert_eq!(satisfy(|ch| ch == 'o').apply("dog"),
                    Err("dog"));
     }
 
     #[test]
     fn chars() {
-        assert_eq!(ch('a').parse("abc"),
+        assert_eq!(ch('a').apply("abc"),
                    Ok(("bc", "a")));
-        assert_eq!(ch('a').parse("cba"),
+        assert_eq!(ch('a').apply("cba"),
                    Err("cba"));
     }
 
     #[test]
     fn digits() {
-        assert_eq!(digit().parse("42"),
+        assert_eq!(digit().apply("42"),
                    Ok(("2", "4")));
-        assert_eq!(digit().parse("dog"),
+        assert_eq!(digit().apply("dog"),
                    Err("dog"));
     }
 
     #[test]
     fn alphabets() {
-        assert_eq!(alphabetic().parse("abc"),
+        assert_eq!(alphabetic().apply("abc"),
                    Ok(("bc", "a")));
-        assert_eq!(alphabetic().parse("123"),
+        assert_eq!(alphabetic().apply("123"),
                    Err("123"));
     }
 
@@ -143,15 +142,15 @@ mod tests {
     fn repeat_captures_while_satisfied() {
 
         // consume up to not satisfied
-        assert_eq!(repeat(digit()).parse("123abc"),
+        assert_eq!(repeat(digit()).apply("123abc"),
                    Ok(("abc", vec!("1","2","3"))));
 
         // consume full input
-        assert_eq!(repeat(digit()).parse("123"),
+        assert_eq!(repeat(digit()).apply("123"),
                    Ok(("", vec!("1","2","3"))));
 
         // zero is OK
-        assert_eq!(repeat(digit()).parse("abc"),
+        assert_eq!(repeat(digit()).apply("abc"),
                    Ok(("abc", vec!())));
     }
 
@@ -159,15 +158,15 @@ mod tests {
     fn repeat1_captures_while_satisfied() {
 
         // consume up to not satisfied
-        assert_eq!(repeat1(digit()).parse("123abc"),
+        assert_eq!(repeat1(digit()).apply("123abc"),
                    Ok(("abc", vec!("1","2","3"))));
 
         // consume full input
-        assert_eq!(repeat1(digit()).parse("123"),
+        assert_eq!(repeat1(digit()).apply("123"),
                    Ok(("", vec!("1","2","3"))));
 
         // zero is NOT OK
-        assert_eq!(repeat1(digit()).parse("abc"),
+        assert_eq!(repeat1(digit()).apply("abc"),
                    Err("abc"));
     }
 
