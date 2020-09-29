@@ -57,6 +57,21 @@ fn map<'a, P, F, A, B>(parser: P, func: F) -> impl Parser<'a, B>
             .map(|(rest, output)| (rest, func(output)))
 }
 
+fn repeat<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
+    where
+        P: Parser<'a, A>
+{
+    move |input| {
+        let mut outputs = Vec::new();
+        let mut rest = input;
+        while let Ok((next, output)) = parser.parse(rest) {
+            rest = next;
+            outputs.push(output);
+        }
+        Ok((rest, outputs))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,5 +115,18 @@ mod tests {
                    Ok(("bc", 'a')));
         assert_eq!(alphabetic().parse("123"),
                    Err("123"));
+    }
+
+    #[test]
+    fn repeat_captures_while_satisfied() {
+
+        // consume up to not satisfied
+        assert_eq!(repeat(digit()).parse("123abc"),
+                   Ok(("abc", vec!('1','2','3'))));
+
+        // consume full input
+        assert_eq!(repeat(digit()).parse("123"),
+                   Ok(("", vec!('1','2','3'))));
+
     }
 }
