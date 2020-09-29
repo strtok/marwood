@@ -18,14 +18,8 @@ impl<'a, F, Output> Parser<'a, Output> for F
 fn satisfy<'a>(f: impl Fn(char) -> bool) -> impl Parser<'a, char> {
     move |input: &'a str| {
         match input.chars().next() {
-            Some(ch) => {
-                if f(ch) {
-                    Ok((&input[1..], ch))
-                } else {
-                    Err(input)
-                }
-            },
-            None => Err(input)
+            Some(ch) if f(ch) => Ok((&input[1..], ch)),
+            _ => Err(input)
         }
     }
 }
@@ -35,9 +29,9 @@ fn empty(input: &str) -> ParseResult<()> {
 }
 
 fn any<'a>(input: &str) -> ParseResult<char> {
-    match input.len() {
-        0 => Err(input),
-        _ => Ok((&input[1..], input.chars().next().unwrap()))
+    match input.chars().next() {
+        Some(ch) => Ok((&input[1..], ch)),
+        None => Err(input)
     }
 }
 
