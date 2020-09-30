@@ -54,10 +54,7 @@ pub fn mapv<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
         F: Fn(A) -> B,
 {
     map(parser, move |output| {
-        match output {
-            None => None,
-            Some(output) => Some(f(output))
-        }
+        output.map(|output| f(output))
     })
 }
 
@@ -168,7 +165,8 @@ mod tests {
     #[test]
     fn digit_parsing() {
         let parser =
-            mapv( repeat1(digit_char()), |v| {
+            mapv(
+                repeat1(digit_char()), |v| {
                 v.iter()
                     .map(|s| s.chars().next().unwrap())
                     .map(|c| c as u8 - 48)
