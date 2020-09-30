@@ -62,14 +62,27 @@ fn whitespace_char<'a>() -> impl Parser<'a, &'a str, &'a str>  {
 // Combinators
 //
 
-fn map<'a, P, F, I, A, B>(parser: P, func: F) -> impl Parser<'a, I, B>
+fn map<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
     where
         P: Parser<'a, I, A>,
         F: Fn(Option<A>) -> Option<B>,
 {
     move |input|
         parser.apply(input)
-            .map(|(rest, output)| (rest, func(output)))
+            .map(|(rest, output)| (rest, f(output)))
+}
+
+fn mapv<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
+    where
+        P: Parser<'a, I, A>,
+        F: Fn(Option<A>) -> Option<B>,
+{
+    map(parser, move |input| {
+        match input {
+            None => None,
+            Some(output) => f(Some(output))
+        }
+    })
 }
 
 fn repeat<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
