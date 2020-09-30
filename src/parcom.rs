@@ -34,7 +34,7 @@ where
     P: Parser<'a, I, O>,
     I: Copy,
 {
-    move |input| parser.apply(input).and_then(|(rest, _)| Ok((rest, None)))
+    move |input| parser.apply(input).map(|(rest, _)| (rest, None))
 }
 
 pub fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
@@ -119,7 +119,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_doesnt_consume() {
+    fn empty_does_not_consume() {
         assert_eq!(empty("dog"), Ok(("dog", None)));
     }
 

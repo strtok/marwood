@@ -1,6 +1,6 @@
 use crate::parcom::*;
 
-fn any_char<'a>(input: &str) -> ParseResult<&str, &str> {
+fn any_char(input: &str) -> ParseResult<&str, &str> {
     match input.chars().next() {
         Some(c) => Ok((&input[c.len_utf8()..], Some(&input[0..c.len_utf8()]))),
         None => Err(input),
