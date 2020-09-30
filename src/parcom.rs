@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 pub type ParseResult<'a, I, O> = Result<(I, Option<O>), I>;
 
 pub trait Parser<'a, I, O> {
@@ -18,6 +16,30 @@ pub fn empty<'a, I>(input: I) -> ParseResult<'a, I, ()> {
     Ok((input, None))
 }
 
+//
+// Combinators
+//
+
+pub fn optional<'a, P, I, O>(parser: P) -> impl Parser<'a, I, O>
+    where
+        P: Parser<'a, I, O>,
+        I: Copy
+{
+    move |input| {
+        parser.apply(input).or(Ok((input, None)))
+    }
+}
+
+pub fn discard<'a, P, I, O>(parser: P) -> impl Parser<'a, I, O>
+    where
+        P: Parser<'a, I, O>,
+        I: Copy
+{
+    move |input| {
+        parser.apply(input).and_then(|(rest, _)| Ok((rest, None)))
+    }
+}
+
 pub fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
     where
         F: Fn(&O) -> bool,
@@ -32,10 +54,6 @@ pub fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
         }
     }
 }
-
-//
-// Combinators
-//
 
 pub fn map<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
     where
@@ -123,7 +141,7 @@ mod tests {
 
     #[test]
     fn map_all() {
-        assert_eq!(map(any_char, |input| Some("x")).apply("dog"),
+        assert_eq!(map(any_char, |_| Some("x")).apply("dog"),
                    Ok(("og", Some("x"))));
     }
 
@@ -172,5 +190,21 @@ mod tests {
         assert_eq!(parser.apply("42"), Ok(("", Some(42))));
         assert_eq!(parser.apply("012"), Ok(("", Some(12))));
         assert_eq!(parser.apply("abc"), Err("abc"));
+    }
+
+    #[test]
+    fn optional_maps_err_to_empty_value() {
+        assert_eq!(optional(digit_char()).apply("dog"),
+            Ok(("dog", None)));
+        assert_eq!(optional(digit_char()).apply("123"),
+                   Ok(("23", Some("1"))));
+    }
+
+    #[test]
+    fn discard_maps_value_to_empty_value() {
+        assert_eq!(discard(digit_char()).apply("dog"),
+                   Err("dog"));
+        assert_eq!(discard(digit_char()).apply("123"),
+                   Ok(("23", None)));
     }
 }
