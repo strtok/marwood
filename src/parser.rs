@@ -161,6 +161,12 @@ mod tests {
     }
 
     #[test]
+    fn map_all() {
+        assert_eq!(map(any_char, |input| Some("x")).apply("dog"),
+                   Ok(("og", Some("x"))));
+    }
+
+    #[test]
     fn repeat_captures_while_satisfied() {
 
         // consume up to not satisfied
