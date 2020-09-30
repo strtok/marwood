@@ -182,11 +182,11 @@ mod tests {
         let parser =
             mapv(
                 repeat1(digit_char()), |v| {
-                v.iter()
-                    .map(|s| s.chars().next().unwrap())
-                    .map(|c| c as u8 - 48)
-                    .fold(0, |acc, e| acc * 10 + e)
-            });
+                    v.iter()
+                        .map(|s| s.chars().next().unwrap())
+                        .map(|c| c as u8 - 48)
+                        .fold(0, |acc, e| acc * 10 + e)
+                });
         assert_eq!(parser.apply("42"), Ok(("", Some(42))));
         assert_eq!(parser.apply("012"), Ok(("", Some(12))));
         assert_eq!(parser.apply("abc"), Err("abc"));
