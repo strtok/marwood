@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 
-type ParseResult<'a, I, O> = Result<(I, Option<O>), I>;
+pub type ParseResult<'a, I, O> = Result<(I, Option<O>), I>;
 
-trait Parser<'a, I, O> {
+pub trait Parser<'a, I, O> {
     fn apply(&self, input: I) -> ParseResult<'a, I, O>;
 }
 
@@ -14,19 +14,11 @@ impl<'a, F, I, O> Parser<'a, I, O> for F
     }
 }
 
-fn any_char<'a>(input: &str) -> ParseResult<&str, &str> {
-    match input.chars().next() {
-        Some(c) => Ok((&input[c.len_utf8()..], Some(&input[0..c.len_utf8()]))),
-        None => Err(input)
-    }
-}
-
-fn empty<'a, I>(input: I) -> ParseResult<'a, I, ()> {
+pub fn empty<'a, I>(input: I) -> ParseResult<'a, I, ()> {
     Ok((input, None))
 }
 
-
-fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
+pub fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
     where
         F: Fn(&O) -> bool,
         P: Parser<'a, I, O>,
@@ -42,27 +34,11 @@ fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
 }
 
 
-fn ch<'a>(expected: char) -> impl Parser<'a, &'a str, &'a str> {
-    satisfy(any_char, move  |&s| s.chars().next().unwrap() == expected)
-}
-
-fn digit_char<'a>() -> impl Parser<'a, &'a str, &'a str> {
-    satisfy(any_char, |&s| s.chars().next().unwrap().is_digit(10))
-}
-
-fn alphabetic_char<'a>() -> impl Parser<'a, &'a str, &'a str>  {
-    satisfy(any_char,  |&s| s.chars().next().unwrap().is_alphabetic())
-}
-
-fn whitespace_char<'a>() -> impl Parser<'a, &'a str, &'a str>  {
-    satisfy(any_char,  |&s| s.chars().next().unwrap().is_whitespace())
-}
-
 //
 // Combinators
 //
 
-fn map<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
+pub fn map<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
     where
         P: Parser<'a, I, A>,
         F: Fn(Option<A>) -> Option<B>,
@@ -72,20 +48,20 @@ fn map<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
             .map(|(rest, output)| (rest, f(output)))
 }
 
-fn mapv<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
+pub fn mapv<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
     where
         P: Parser<'a, I, A>,
         F: Fn(Option<A>) -> Option<B>,
 {
-    map(parser, move |input| {
-        match input {
+    map(parser, move |output| {
+        match output {
             None => None,
             Some(output) => f(Some(output))
         }
     })
 }
 
-fn repeat<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
+pub fn repeat<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
     where
         P: Parser<'a, I, A>,
         I: Copy
@@ -106,7 +82,7 @@ fn repeat<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
     }
 }
 
-fn repeat1<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
+pub fn repeat1<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
     where
         P: Parser<'a, I, A>,
         I: Copy
@@ -125,14 +101,20 @@ fn repeat1<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
 mod tests {
     use super::*;
 
-    #[test]
-    fn empty_doesnt_consume() {
-        assert_eq!(empty("dog"), Ok(("dog", None)));
+    fn any_char<'a>(input: &str) -> ParseResult<&str, &str> {
+        match input.chars().next() {
+            Some(c) => Ok((&input[c.len_utf8()..], Some(&input[0..c.len_utf8()]))),
+            None => Err(input)
+        }
+    }
+
+    fn digit_char<'a>() -> impl Parser<'a, &'a str, &'a str> {
+        satisfy(any_char, |&s| s.chars().next().unwrap().is_digit(10))
     }
 
     #[test]
-    fn any_char_returns_any_char() {
-        assert_eq!(any_char("dog"), Ok(("og", Some("d"))));
+    fn empty_doesnt_consume() {
+        assert_eq!(empty("dog"), Ok(("dog", None)));
     }
 
     #[test]
@@ -141,36 +123,6 @@ mod tests {
                    Ok(("og", Some("d"))));
         assert_eq!(satisfy(any_char, |&s| s == "d").apply("cat"),
                    Err("cat"));
-    }
-
-    #[test]
-    fn chars() {
-        assert_eq!(ch('a').apply("abc"),
-                   Ok(("bc", Some("a"))));
-        assert_eq!(ch('b').apply("cba"),
-                   Err("cba"));
-    }
-
-    #[test]
-    fn digits() {
-        assert_eq!(digit_char().apply("42"),
-                   Ok(("2", Some("4"))));
-        assert_eq!(digit_char().apply("dog"),
-                   Err("dog"));
-    }
-
-    #[test]
-    fn alphabetics() {
-        assert_eq!(alphabetic_char().apply("abc"),
-                   Ok(("bc", Some("a"))));
-        assert_eq!(alphabetic_char().apply("123"),
-                   Err("123"));
-    }
-
-    #[test]
-    fn whitespaces() {
-        assert_eq!(whitespace_char().apply(" bc"),
-                   Ok(("bc", Some(" "))));
     }
 
     #[test]
