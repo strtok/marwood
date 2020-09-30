@@ -33,7 +33,6 @@ pub fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
     }
 }
 
-
 //
 // Combinators
 //
@@ -127,8 +126,6 @@ mod tests {
         assert_eq!(map(any_char, |input| Some("x")).apply("dog"),
                    Ok(("og", Some("x"))));
     }
-
-
 
     #[test]
     fn repeat_captures_while_satisfied() {
