@@ -1,34 +1,36 @@
-type ParseResult<'a, Output> = Result<(&'a str, Output), &'a str>;
+type ParseResult<'a, I, O> = Result<(I, O), I>;
 
-trait Parser<'a, Output> {
-    fn apply(&self, input: &'a str) -> ParseResult<'a, Output>;
+trait Parser<'a, I, O> {
+    fn apply(&self, input: I) -> ParseResult<'a, I, O>;
 }
 
-impl<'a, F, Output> Parser<'a, Output> for F
-    where F: Fn(&'a str) -> ParseResult<Output>,
+impl<'a, F, I, O> Parser<'a, I, O> for F
+    where F: Fn(I) -> ParseResult<'a, I, O>,
 {
-    fn apply(&self, input: &'a str) -> ParseResult<'a, Output> {
+    fn apply(&self, input: I) -> ParseResult<'a, I, O> {
         self(input)
     }
 }
 
-fn any<'a>(input: &str) -> ParseResult<char> {
+fn any_char<'a>(input: &str) -> ParseResult<&str, &str> {
     match input.chars().next() {
-        Some(c) => Ok((&input[1..], c)),
+        Some(c) => Ok((&input[c.len_utf8()..], &input[0..c.len_utf8()])),
         None => Err(input)
     }
 }
 
-fn empty(input: &str) -> ParseResult<()> {
+fn empty<'a, I>(input: I) -> ParseResult<'a, I, ()> {
     Ok((input, ()))
 }
 
-fn satisfy<'a, P, F, A>(parser: P, f: F) -> impl Parser<'a, A>
+
+fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
     where
-        F: Fn(&A) -> bool,
-        P: Parser<'a, A>
+        F: Fn(&O) -> bool,
+        P: Parser<'a, I, O>,
+        I: Copy
 {
-    move |input: &'a str| {
+    move |input| {
         match parser.apply(input) {
             Ok((rest, output)) if f(&output) => Ok((rest, output)),
             _ => Err(input)
@@ -36,34 +38,30 @@ fn satisfy<'a, P, F, A>(parser: P, f: F) -> impl Parser<'a, A>
     }
 }
 
-fn any_char(input: &str) -> ParseResult<char> {
-    match input.chars().next() {
-        Some(c) => Ok((&input[c.len_utf8()..], c)),
-        None => Err(input),
-    }
+
+fn ch<'a>(expected: char) -> impl Parser<'a, &'a str, &'a str> {
+    satisfy(any_char, move  |&s| s.chars().next().unwrap() == expected)
 }
 
-fn ch<'a>(expected: char) -> impl Parser<'a, char> {
-    satisfy(any_char, move |&c| c == expected)
+fn digit_char<'a>() -> impl Parser<'a, &'a str, &'a str> {
+    satisfy(any_char, |&s| s.chars().next().unwrap().is_digit(10))
 }
 
-fn digit_char<'a>() -> impl Parser<'a, char> {
-    satisfy(any_char, |&c| c.is_digit(10))
+fn alphabetic_char<'a>() -> impl Parser<'a, &'a str, &'a str>  {
+    satisfy(any_char,  |&s| s.chars().next().unwrap().is_alphabetic())
 }
 
-fn alphabetic_char<'a>() -> impl Parser<'a, char> {
-    satisfy(any_char,  |&c| c.is_alphabetic())
+fn whitespace_char<'a>() -> impl Parser<'a, &'a str, &'a str>  {
+    satisfy(any_char,  |&s| s.chars().next().unwrap().is_whitespace())
 }
 
-fn whitespace_char<'a>() -> impl Parser<'a, char> {
-    satisfy(any_char,  |&c| c.is_whitespace())
-}
-
+//
 // Combinators
+//
 
-fn map<'a, P, F, A, B>(parser: P, func: F) -> impl Parser<'a, B>
+fn map<'a, P, F, I, A, B>(parser: P, func: F) -> impl Parser<'a, I, B>
     where
-        P: Parser<'a, A>,
+        P: Parser<'a, I, A>,
         F: Fn(A) -> B,
 {
     move |input|
@@ -71,9 +69,10 @@ fn map<'a, P, F, A, B>(parser: P, func: F) -> impl Parser<'a, B>
             .map(|(rest, output)| (rest, func(output)))
 }
 
-fn repeat<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
+fn repeat<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
     where
-        P: Parser<'a, A>
+        P: Parser<'a, I, A>,
+        I: Copy
 {
     move |input| {
         let mut outputs = Vec::new();
@@ -86,9 +85,10 @@ fn repeat<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
     }
 }
 
-fn repeat1<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
+fn repeat1<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
     where
-        P: Parser<'a, A>
+        P: Parser<'a, I, A>,
+        I: Copy
 {
     let parser = repeat(parser);
     move |input| {
@@ -110,30 +110,30 @@ mod tests {
     }
 
     #[test]
-    fn any_returns_any_token() {
-        assert_eq!(any("dog"), Ok(("og", 'd')));
+    fn any_char_returns_any_char() {
+        assert_eq!(any_char("dog"), Ok(("og", "d")));
     }
 
     #[test]
     fn satisfy_returns_matched_char() {
-        assert_eq!(satisfy(any_char, |&c| c == 'd').apply("dog"),
-                   Ok(("og", 'd')));
-        assert_eq!(satisfy(any_char, |&c| c == 'o').apply("dog"),
-                   Err("dog"));
+        assert_eq!(satisfy(any_char, |&s| s == "d").apply("dog"),
+                   Ok(("og", "d")));
+        assert_eq!(satisfy(any_char, |&s| s == "d").apply("cat"),
+                   Err("cat"));
     }
 
     #[test]
     fn chars() {
         assert_eq!(ch('a').apply("abc"),
-                   Ok(("bc", 'a')));
-        assert_eq!(ch('a').apply("cba"),
+                   Ok(("bc", "a")));
+        assert_eq!(ch('b').apply("cba"),
                    Err("cba"));
     }
 
     #[test]
     fn digits() {
         assert_eq!(digit_char().apply("42"),
-                   Ok(("2", '4')));
+                   Ok(("2", "4")));
         assert_eq!(digit_char().apply("dog"),
                    Err("dog"));
     }
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn alphabetics() {
         assert_eq!(alphabetic_char().apply("abc"),
-                   Ok(("bc", 'a')));
+                   Ok(("bc", "a")));
         assert_eq!(alphabetic_char().apply("123"),
                    Err("123"));
     }
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn whitespaces() {
         assert_eq!(whitespace_char().apply(" bc"),
-                   Ok(("bc", ' ')));
+                   Ok(("bc", " ")));
     }
 
     #[test]
@@ -157,11 +157,11 @@ mod tests {
 
         // consume up to not satisfied
         assert_eq!(repeat(digit_char()).apply("123abc"),
-                   Ok(("abc", vec!('1','2','3'))));
+                   Ok(("abc", vec!("1","2","3"))));
 
         // consume full input
         assert_eq!(repeat(digit_char()).apply("123"),
-                   Ok(("", vec!('1','2','3'))));
+                   Ok(("", vec!("1","2","3"))));
 
         // zero is OK
         assert_eq!(repeat(digit_char()).apply("abc"),
@@ -173,15 +173,14 @@ mod tests {
 
         // consume up to not satisfied
         assert_eq!(repeat1(digit_char()).apply("123abc"),
-                   Ok(("abc", vec!('1','2','3'))));
+                   Ok(("abc", vec!("1","2","3"))));
 
         // consume full input
         assert_eq!(repeat1(digit_char()).apply("123"),
-                   Ok(("", vec!('1','2','3'))));
+                   Ok(("", vec!("1","2","3"))));
 
         // zero is NOT OK
         assert_eq!(repeat1(digit_char()).apply("abc"),
                    Err("abc"));
     }
-
 }
