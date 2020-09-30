@@ -51,12 +51,12 @@ pub fn map<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
 pub fn mapv<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
     where
         P: Parser<'a, I, A>,
-        F: Fn(Option<A>) -> Option<B>,
+        F: Fn(A) -> B,
 {
     map(parser, move |output| {
         match output {
             None => None,
-            Some(output) => f(Some(output))
+            Some(output) => Some(f(output))
         }
     })
 }
@@ -131,6 +131,8 @@ mod tests {
                    Ok(("og", Some("x"))));
     }
 
+
+
     #[test]
     fn repeat_captures_while_satisfied() {
 
@@ -161,5 +163,19 @@ mod tests {
         // zero is NOT OK
         assert_eq!(repeat1(digit_char()).apply("abc"),
                    Err("abc"));
+    }
+
+    #[test]
+    fn digit_parsing() {
+        let parser =
+            mapv( repeat1(digit_char()), |v| {
+                v.iter()
+                    .map(|s| s.chars().next().unwrap())
+                    .map(|c| c as u8 - 48)
+                    .fold(0, |acc, e| acc * 10 + e)
+            });
+        assert_eq!(parser.apply("42"), Ok(("", Some(42))));
+        assert_eq!(parser.apply("012"), Ok(("", Some(12))));
+        assert_eq!(parser.apply("abc"), Err("abc"));
     }
 }
