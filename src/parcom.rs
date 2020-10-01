@@ -1,19 +1,19 @@
-pub type ParseResult<'a, I, O> = Result<(I, Option<O>), I>;
+pub type ParseResult<I, O> = Result<(I, Option<O>), I>;
 
-pub trait Parser<'a, I, O> {
-    fn apply(&self, input: I) -> ParseResult<'a, I, O>;
+pub trait Parser<I, O> {
+    fn apply(&self, input: I) -> ParseResult<I, O>;
 }
 
-impl<'a, F, I, O> Parser<'a, I, O> for F
+impl<F, I, O> Parser<I, O> for F
 where
-    F: Fn(I) -> ParseResult<'a, I, O>,
+    F: Fn(I) -> ParseResult<I, O>,
 {
-    fn apply(&self, input: I) -> ParseResult<'a, I, O> {
+    fn apply(&self, input: I) -> ParseResult<I, O> {
         self(input)
     }
 }
 
-pub fn empty<'a, I>(input: I) -> ParseResult<'a, I, ()> {
+pub fn empty<I>(input: I) -> ParseResult<I, ()> {
     Ok((input, None))
 }
 
@@ -21,26 +21,26 @@ pub fn empty<'a, I>(input: I) -> ParseResult<'a, I, ()> {
 // Combinators
 //
 
-pub fn optional<'a, P, I, O>(parser: P) -> impl Parser<'a, I, O>
+pub fn optional<P, I, O>(parser: P) -> impl Parser<I, O>
 where
-    P: Parser<'a, I, O>,
+    P: Parser<I, O>,
     I: Copy,
 {
     move |input| parser.apply(input).or(Ok((input, None)))
 }
 
-pub fn discard<'a, P, I, O>(parser: P) -> impl Parser<'a, I, O>
+pub fn discard<P, I, O>(parser: P) -> impl Parser<I, O>
 where
-    P: Parser<'a, I, O>,
+    P: Parser<I, O>,
     I: Copy,
 {
     move |input| parser.apply(input).map(|(rest, _)| (rest, None))
 }
 
-pub fn satisfy<'a, P, F, I, O>(parser: P, f: F) -> impl Parser<'a, I, O>
+pub fn satisfy<P, F, I, O>(parser: P, f: F) -> impl Parser<I, O>
 where
     F: Fn(&O) -> bool,
-    P: Parser<'a, I, O>,
+    P: Parser<I, O>,
     I: Copy,
 {
     move |input| match parser.apply(input) {
@@ -50,25 +50,25 @@ where
     }
 }
 
-pub fn map<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
+pub fn map<P, F, I, A, B>(parser: P, f: F) -> impl Parser<I, B>
 where
-    P: Parser<'a, I, A>,
+    P: Parser<I, A>,
     F: Fn(Option<A>) -> Option<B>,
 {
     move |input| parser.apply(input).map(|(rest, output)| (rest, f(output)))
 }
 
-pub fn mapv<'a, P, F, I, A, B>(parser: P, f: F) -> impl Parser<'a, I, B>
+pub fn mapv<P, F, I, A, B>(parser: P, f: F) -> impl Parser<I, B>
 where
-    P: Parser<'a, I, A>,
+    P: Parser<I, A>,
     F: Fn(A) -> B,
 {
     map(parser, move |output| output.map(|output| f(output)))
 }
 
-pub fn repeat<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
+pub fn repeat<P, I, A>(parser: P) -> impl Parser<I, Vec<A>>
 where
-    P: Parser<'a, I, A>,
+    P: Parser<I, A>,
     I: Copy,
 {
     move |input| {
@@ -90,9 +90,9 @@ where
     }
 }
 
-pub fn repeat1<'a, P, I, A>(parser: P) -> impl Parser<'a, I, Vec<A>>
+pub fn repeat1<P, I, A>(parser: P) -> impl Parser<I, Vec<A>>
 where
-    P: Parser<'a, I, A>,
+    P: Parser<I, A>,
     I: Copy,
 {
     let parser = repeat(parser);
@@ -107,14 +107,14 @@ where
 mod tests {
     use super::*;
 
-    fn any_char<'a>(input: &str) -> ParseResult<&str, &str> {
+    fn any_char(input: &str) -> ParseResult<&str, &str> {
         match input.chars().next() {
             Some(c) => Ok((&input[c.len_utf8()..], Some(&input[0..c.len_utf8()]))),
             None => Err(input),
         }
     }
 
-    fn digit_char<'a>() -> impl Parser<'a, &'a str, &'a str> {
+    fn digit_char<'a>() -> impl Parser<&'a str, &'a str> {
         satisfy(any_char, |&s| s.chars().next().unwrap().is_digit(10))
     }
 

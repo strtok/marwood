@@ -7,19 +7,19 @@ fn any_char(input: &str) -> ParseResult<&str, &str> {
     }
 }
 
-fn ch<'a>(expected: char) -> impl Parser<'a, &'a str, &'a str> {
+fn ch<'a>(expected: char) -> impl Parser<&'a str, &'a str> {
     satisfy(any_char, move |&s| s.chars().next().unwrap() == expected)
 }
 
-fn digit_char<'a>() -> impl Parser<'a, &'a str, &'a str> {
+fn digit_char<'a>() -> impl Parser<&'a str, &'a str> {
     satisfy(any_char, |&s| s.chars().next().unwrap().is_digit(10))
 }
 
-fn alphabetic_char<'a>() -> impl Parser<'a, &'a str, &'a str> {
+fn alphabetic_char<'a>() -> impl Parser<&'a str, &'a str> {
     satisfy(any_char, |&s| s.chars().next().unwrap().is_alphabetic())
 }
 
-fn whitespace_char<'a>() -> impl Parser<'a, &'a str, &'a str> {
+fn whitespace_char<'a>() -> impl Parser<&'a str, &'a str> {
     satisfy(any_char, |&s| s.chars().next().unwrap().is_whitespace())
 }
 
