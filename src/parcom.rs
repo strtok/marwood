@@ -282,7 +282,7 @@ mod tests {
     }
 
     #[test]
-    fn sequence_parses_sequence_but_returns_first_err() {
+    fn seq_parses_sequence_but_returns_first_err() {
         let parser = seq!(digit_char(), alphabetic_char(), digit_char());
         assert_eq!(parser.apply("1a2"), Ok(("", Some(vec!("1", "a", "2")))));
         assert_eq!(
@@ -291,5 +291,12 @@ mod tests {
         );
         assert_eq!(parser.apply("dog"), Err("dog"));
         assert_eq!(parser.apply("1dog"), Err("1dog"));
+    }
+
+    #[test]
+    fn seq_ignores_none() {
+        let parser = seq!(digit_char(), optional(alphabetic_char()), digit_char());
+        assert_eq!(parser.apply("1a2"), Ok(("", Some(vec!("1", "a", "2")))));
+        assert_eq!(parser.apply("12"), Ok(("", Some(vec!("1", "2")))));
     }
 }
