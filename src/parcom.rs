@@ -66,9 +66,9 @@ where
     map(parser, move |output| output.map(|output| f(output)))
 }
 
-pub fn repeat<P, I, A>(parser: P) -> impl Parser<I, Vec<A>>
+pub fn repeat<P, I, O>(parser: P) -> impl Parser<I, Vec<O>>
 where
-    P: Parser<I, A>,
+    P: Parser<I, O>,
     I: Copy,
 {
     move |input| {
@@ -90,9 +90,9 @@ where
     }
 }
 
-pub fn repeat1<P, I, A>(parser: P) -> impl Parser<I, Vec<A>>
+pub fn repeat1<P, I, O>(parser: P) -> impl Parser<I, Vec<O>>
 where
-    P: Parser<I, A>,
+    P: Parser<I, O>,
     I: Copy,
 {
     let parser = repeat(parser);
@@ -101,6 +101,32 @@ where
         Ok(output) => Ok(output),
         Err(e) => Err(e),
     }
+}
+
+fn one_of<I, O>(parsers: Vec<Box<dyn Parser<I, O>>>) -> impl Parser<I, O>
+where
+    I: Copy,
+{
+    move |input| {
+        parsers
+            .iter()
+            .map(|p| p.apply(input))
+            .find(|o| o.is_ok())
+            .unwrap_or_else(|| Err(input))
+    }
+}
+
+#[macro_export]
+macro_rules! one_of {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut v = Vec::<Box<dyn Parser<_, _>>>::new();
+            $(
+                v.push(Box::new($x));
+            )*
+            one_of(v)
+        }
+    };
 }
 
 #[cfg(test)]
@@ -116,6 +142,10 @@ mod tests {
 
     fn digit_char<'a>() -> impl Parser<&'a str, &'a str> {
         satisfy(any_char, |&s| s.chars().next().unwrap().is_digit(10))
+    }
+
+    fn alphabetic_char<'a>() -> impl Parser<&'a str, &'a str> {
+        satisfy(any_char, |&s| s.chars().next().unwrap().is_alphabetic())
     }
 
     #[test]
@@ -199,5 +229,18 @@ mod tests {
     fn discard_maps_value_to_empty_value() {
         assert_eq!(discard(digit_char()).apply("dog"), Err("dog"));
         assert_eq!(discard(digit_char()).apply("123"), Ok(("23", None)));
+    }
+
+    #[test]
+    fn one_of_finds_a_successful_parser() {
+        assert_eq!(
+            one_of!(digit_char(), alphabetic_char()).apply("1a"),
+            Ok(("a", Some("1")))
+        );
+        assert_eq!(
+            one_of!(alphabetic_char(), digit_char()).apply("1a"),
+            Ok(("a", Some("1")))
+        );
+        assert_eq!(one_of!(alphabetic_char()).apply("1a"), Err("1a"));
     }
 }
