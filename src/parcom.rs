@@ -17,10 +17,6 @@ pub fn empty<I>(input: I) -> ParseResult<I, ()> {
     Ok((input, None))
 }
 
-//
-// Combinators
-//
-
 pub fn optional<P, I, O>(parser: P) -> impl Parser<I, O>
 where
     P: Parser<I, O>,
