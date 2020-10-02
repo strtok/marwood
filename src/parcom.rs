@@ -125,6 +125,47 @@ macro_rules! one_of {
     };
 }
 
+fn seq<I, O>(parsers: Vec<Box<dyn Parser<I, O>>>) -> impl Parser<I, Vec<O>>
+where
+    I: Copy,
+{
+    move |input| {
+        let mut outputs = Vec::new();
+        let mut rest = input;
+        for parser in &parsers {
+            match parser.apply(rest) {
+                Ok((next, output)) => {
+                    if let Some(output) = output {
+                        outputs.push(output);
+                    }
+                    rest = next;
+                }
+                Err(_) => return Err(input),
+            }
+        }
+        Ok((
+            rest,
+            match outputs.is_empty() {
+                true => None,
+                false => Some(outputs),
+            },
+        ))
+    }
+}
+
+#[macro_export]
+macro_rules! seq {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut v = Vec::<Box<dyn Parser<_, _>>>::new();
+            $(
+                v.push(Box::new($x));
+            )*
+            seq(v)
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,5 +279,17 @@ mod tests {
             Ok(("a", Some("1")))
         );
         assert_eq!(one_of!(alphabetic_char()).apply("1a"), Err("1a"));
+    }
+
+    #[test]
+    fn sequence_parses_sequence_but_returns_first_err() {
+        let parser = seq!(digit_char(), alphabetic_char(), digit_char());
+        assert_eq!(parser.apply("1a2"), Ok(("", Some(vec!("1", "a", "2")))));
+        assert_eq!(
+            parser.apply("1a2other"),
+            Ok(("other", Some(vec!("1", "a", "2"))))
+        );
+        assert_eq!(parser.apply("dog"), Err("dog"));
+        assert_eq!(parser.apply("1dog"), Err("1dog"));
     }
 }
