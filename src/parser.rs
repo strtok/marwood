@@ -6,7 +6,7 @@ use std::ops::Deref;
 #[rustfmt::skip]
 pub fn initial_identifier<'a>() -> impl Parser<&'a str, String> {
     into(one_of!(alphabetic_char(),
-            one_of_char("!$%&*/:<=>?^_~")))
+                 one_of_char("!$%&*/:<=>?^_~")))
 }
 
 #[rustfmt::skip]
@@ -24,8 +24,9 @@ pub fn subsequent_identifier<'a>() -> impl Parser<&'a str, String> {
 #[rustfmt::skip]
 pub fn identifier<'a>() -> impl Parser<&'a str, Cell> {
     mapv(
-        one_of!(seqc!(initial_identifier(), repeatc(subsequent_identifier())),
-                            peculiar_identifier()),
+        one_of!(seqc!(initial_identifier(),
+                      repeatc(subsequent_identifier())),
+                peculiar_identifier()),
         |s| Cell::Symbol(s),
     )
 }
