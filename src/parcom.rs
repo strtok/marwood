@@ -99,9 +99,19 @@ where
     }
 }
 
-fn one_of<I, O>(parsers: Vec<Box<dyn Parser<I, O>>>) -> impl Parser<I, O>
+pub fn repeatc<P, I, O, U>(parser: P) -> impl Parser<I, U>
 where
+    P: Parser<I, O>,
     I: Copy,
+    U: std::iter::FromIterator<<Vec<O> as IntoIterator>::Item>,
+{
+    mapv(repeat(parser), |v| v.into_iter().collect())
+}
+
+pub fn one_of<'a, I, O>(parsers: Vec<Box<dyn 'a + Parser<I, O>>>) -> impl 'a + Parser<I, O>
+where
+    I: Copy + 'a,
+    O: 'a,
 {
     move |input| {
         parsers
@@ -125,9 +135,10 @@ macro_rules! one_of {
     };
 }
 
-fn seq<I, O>(parsers: Vec<Box<dyn Parser<I, O>>>) -> impl Parser<I, Vec<O>>
+pub fn seq<'a, I, O>(parsers: Vec<Box<dyn 'a + Parser<I, O>>>) -> impl 'a + Parser<I, Vec<O>>
 where
-    I: Copy,
+    I: Copy + 'a,
+    O: 'a,
 {
     move |input| {
         let mut outputs = Vec::new();
@@ -166,23 +177,55 @@ macro_rules! seq {
     };
 }
 
+#[macro_export]
+macro_rules! seqc {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut v = Vec::<Box<dyn Parser<_, _>>>::new();
+            $(
+                v.push(Box::new($x));
+            )*
+            collect(seq(v))
+        }
+    };
+}
+
+pub fn collect<P, I, O, U>(parser: P) -> impl Parser<I, U>
+where
+    P: Parser<I, O>,
+    I: Copy,
+    O: IntoIterator,
+    U: std::iter::FromIterator<O::Item>,
+{
+    mapv(parser, |v| v.into_iter().collect())
+}
+
+pub fn into<P, I, O, U>(parser: P) -> impl Parser<I, U>
+where
+    P: Parser<I, O>,
+    I: Copy,
+    O: Into<U>,
+{
+    mapv(parser, |output| output.into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn any_char(input: &str) -> ParseResult<&str, &str> {
+    fn any_char(input: &str) -> ParseResult<&str, char> {
         match input.chars().next() {
-            Some(c) => Ok((&input[c.len_utf8()..], Some(&input[0..c.len_utf8()]))),
+            Some(c) => Ok((&input[c.len_utf8()..], Some(c))),
             None => Err(input),
         }
     }
 
-    fn digit_char<'a>() -> impl Parser<&'a str, &'a str> {
-        satisfy(any_char, |&s| s.chars().next().unwrap().is_digit(10))
+    fn digit_char<'a>() -> impl Parser<&'a str, char> {
+        satisfy(any_char, |&c| c.is_digit(10))
     }
 
-    fn alphabetic_char<'a>() -> impl Parser<&'a str, &'a str> {
-        satisfy(any_char, |&s| s.chars().next().unwrap().is_alphabetic())
+    pub fn alphabetic_char<'a>() -> impl Parser<&'a str, char> {
+        satisfy(any_char, |&c| c.is_alphabetic())
     }
 
     #[test]
@@ -193,10 +236,10 @@ mod tests {
     #[test]
     fn satisfy_returns_matched_char() {
         assert_eq!(
-            satisfy(any_char, |&s| s == "d").apply("dog"),
-            Ok(("og", Some("d")))
+            satisfy(any_char, |&c| c == 'd').apply("dog"),
+            Ok(("og", Some('d')))
         );
-        assert_eq!(satisfy(any_char, |&s| s == "d").apply("cat"), Err("cat"));
+        assert_eq!(satisfy(any_char, |&c| c == 'd').apply("cat"), Err("cat"));
     }
 
     #[test]
@@ -212,13 +255,13 @@ mod tests {
         // consume up to not satisfied
         assert_eq!(
             repeat(digit_char()).apply("123abc"),
-            Ok(("abc", Some(vec!("1", "2", "3"))))
+            Ok(("abc", Some(vec!('1', '2', '3'))))
         );
 
         // consume full input
         assert_eq!(
             repeat(digit_char()).apply("123"),
-            Ok(("", Some(vec!("1", "2", "3"))))
+            Ok(("", Some(vec!('1', '2', '3'))))
         );
 
         // zero is OK
@@ -230,13 +273,13 @@ mod tests {
         // consume up to not satisfied
         assert_eq!(
             repeat1(digit_char()).apply("123abc"),
-            Ok(("abc", Some(vec!("1", "2", "3"))))
+            Ok(("abc", Some(vec!('1', '2', '3'))))
         );
 
         // consume full input
         assert_eq!(
             repeat1(digit_char()).apply("123"),
-            Ok(("", Some(vec!("1", "2", "3"))))
+            Ok(("", Some(vec!('1', '2', '3'))))
         );
 
         // zero is NOT OK
@@ -247,8 +290,7 @@ mod tests {
     fn digit_parsing() {
         let parser = mapv(repeat1(digit_char()), |v| {
             v.iter()
-                .map(|s| s.chars().next().unwrap())
-                .map(|c| c as u8 - 48)
+                .map(|&c| c as u8 - 48)
                 .fold(0, |acc, e| acc * 10 + e)
         });
         assert_eq!(parser.apply("42"), Ok(("", Some(42))));
@@ -259,7 +301,7 @@ mod tests {
     #[test]
     fn optional_maps_err_to_empty_value() {
         assert_eq!(optional(digit_char()).apply("dog"), Ok(("dog", None)));
-        assert_eq!(optional(digit_char()).apply("123"), Ok(("23", Some("1"))));
+        assert_eq!(optional(digit_char()).apply("123"), Ok(("23", Some('1'))));
     }
 
     #[test]
@@ -272,11 +314,11 @@ mod tests {
     fn one_of_finds_a_successful_parser() {
         assert_eq!(
             one_of!(digit_char(), alphabetic_char()).apply("1a"),
-            Ok(("a", Some("1")))
+            Ok(("a", Some('1')))
         );
         assert_eq!(
             one_of!(alphabetic_char(), digit_char()).apply("1a"),
-            Ok(("a", Some("1")))
+            Ok(("a", Some('1')))
         );
         assert_eq!(one_of!(alphabetic_char()).apply("1a"), Err("1a"));
     }
@@ -284,10 +326,10 @@ mod tests {
     #[test]
     fn seq_parses_sequence_but_returns_first_err() {
         let parser = seq!(digit_char(), alphabetic_char(), digit_char());
-        assert_eq!(parser.apply("1a2"), Ok(("", Some(vec!("1", "a", "2")))));
+        assert_eq!(parser.apply("1a2"), Ok(("", Some(vec!('1', 'a', '2')))));
         assert_eq!(
             parser.apply("1a2other"),
-            Ok(("other", Some(vec!("1", "a", "2"))))
+            Ok(("other", Some(vec!('1', 'a', '2'))))
         );
         assert_eq!(parser.apply("dog"), Err("dog"));
         assert_eq!(parser.apply("1dog"), Err("1dog"));
@@ -296,7 +338,25 @@ mod tests {
     #[test]
     fn seq_ignores_none() {
         let parser = seq!(digit_char(), optional(alphabetic_char()), digit_char());
-        assert_eq!(parser.apply("1a2"), Ok(("", Some(vec!("1", "a", "2")))));
-        assert_eq!(parser.apply("12"), Ok(("", Some(vec!("1", "2")))));
+        assert_eq!(parser.apply("1a2"), Ok(("", Some(vec!('1', 'a', '2')))));
+        assert_eq!(parser.apply("12"), Ok(("", Some(vec!('1', '2')))));
+    }
+
+    #[test]
+    fn flatten() {
+        fn parser<'a>() -> impl Parser<&'a str, String> {
+            super::collect(seq!(digit_char(), alphabetic_char()))
+        }
+
+        assert_eq!(parser().apply("1a"), Ok(("", Some("1a".to_owned()))));
+    }
+
+    #[test]
+    fn into() {
+        fn parser<'a>() -> impl Parser<&'a str, String> {
+            super::into(alphabetic_char())
+        }
+
+        assert_eq!(parser().apply("a"), Ok(("", Some("a".to_owned()))));
     }
 }
