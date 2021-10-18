@@ -27,7 +27,7 @@ pub fn identifier<'a>() -> impl Parser<&'a str, Cell> {
         one_of!(seqc!(initial_identifier(),
                       repeatc(subsequent_identifier())),
                 peculiar_identifier()),
-        |s| Cell::Symbol(s),
+        Cell::Symbol,
     )
 }
 
