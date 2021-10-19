@@ -1,7 +1,6 @@
 use crate::cell::Cell;
-use crate::parcom::{collect, into, mapv, one_of, repeat, repeatc, seq, ParseResult, Parser};
-use crate::parcom_str::{alphabetic_char, ch, digit_char, one_of_char};
-use std::ops::Deref;
+use crate::parcom::{collect, into, mapv, one_of, repeatc, seq, Parser};
+use crate::parcom_str::{alphabetic_char, digit_char, one_of_char};
 
 #[rustfmt::skip]
 pub fn initial_identifier<'a>() -> impl Parser<&'a str, String> {
