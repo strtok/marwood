@@ -190,6 +190,38 @@ macro_rules! seqc {
     };
 }
 
+pub fn between<A, B, C, OA, OB, OC, I>(prefix: A, parser: B, suffix: C) -> impl Parser<I, OB>
+where
+    A: Parser<I, OA>,
+    B: Parser<I, OB>,
+    C: Parser<I, OC>,
+    I: Copy,
+{
+    move |input| {
+        let mut rest = input;
+        match prefix.apply(rest) {
+            Ok((next, _)) => {
+                rest = next;
+            }
+            Err(_) => return Err(input),
+        }
+
+        return match parser.apply(rest) {
+            Ok((next, output)) => {
+                rest = next;
+                match suffix.apply(rest) {
+                    Ok((next, _)) => {
+                        rest = next;
+                        Ok((rest, output))
+                    }
+                    Err(_) => Err(input),
+                }
+            }
+            Err(_) => Err(input),
+        };
+    }
+}
+
 pub fn collect<P, I, O, U>(parser: P) -> impl Parser<I, U>
 where
     P: Parser<I, O>,
@@ -218,6 +250,10 @@ mod tests {
             Some(c) => Ok((&input[c.len_utf8()..], Some(c))),
             None => Err(input),
         }
+    }
+
+    pub fn ch<'a>(expected: char) -> impl Parser<&'a str, char> {
+        satisfy(any_char, move |&c| c == expected)
     }
 
     fn digit_char<'a>() -> impl Parser<&'a str, char> {
@@ -358,5 +394,16 @@ mod tests {
         }
 
         assert_eq!(parser().apply("a"), Ok(("", Some("a".to_owned()))));
+    }
+
+    #[test]
+    fn between() {
+        fn parser<'a>() -> impl Parser<&'a str, String> {
+            super::between(ch('('), collect(repeat(digit_char())), ch(')'))
+        }
+        assert_eq!(
+            parser().apply("(12345)"),
+            Ok(("", Some("12345".to_owned())))
+        );
     }
 }
