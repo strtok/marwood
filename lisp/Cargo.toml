@@ -9,4 +9,4 @@ edition = "2021"
 [dependencies]
 parcom = { path = "../parcom" }
 pretty_env_logger = "0.4.0"
-rustyline = "6.3.0"
+rustyline = "9.0.0"
