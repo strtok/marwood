@@ -118,7 +118,7 @@ where
             .iter()
             .map(|p| p.apply(input))
             .find(|o| o.is_ok())
-            .unwrap_or_else(|| Err(input))
+            .unwrap_or(Err(input))
     }
 }
 
@@ -206,7 +206,7 @@ where
             Err(_) => return Err(input),
         }
 
-        return match parser.apply(rest) {
+        match parser.apply(rest) {
             Ok((next, output)) => {
                 rest = next;
                 match suffix.apply(rest) {
@@ -218,7 +218,7 @@ where
                 }
             }
             Err(_) => Err(input),
-        };
+        }
     }
 }
 
