@@ -81,11 +81,13 @@ mod tests {
             super::procedure_call().apply("( foo )"),
             Ok(("", Some(Cell::Symbol("foo".to_owned()))))
         );
-
         assert_eq!(
             super::procedure_call().apply("( foo bar baz )"),
             Ok(("", Some(Cell::Symbol("foo".to_owned()))))
         );
+        assert_eq!(super::procedure_call().apply("()"), Err("()"));
+        assert_eq!(super::procedure_call().apply("( )"), Err("( )"));
+        assert_eq!(super::procedure_call().apply("(  )"), Err("(  )"));
     }
 
     #[test]
