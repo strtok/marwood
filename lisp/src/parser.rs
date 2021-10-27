@@ -1,9 +1,9 @@
 use crate::cell::Cell;
 use parcom::parcom::{
-    between, collect, discard, mapv, one_of, optional, repeat, repeatc, seq, Parser,
+    between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, Parser,
 };
 use parcom::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespace_char};
-use parcom::{one_of, seq, seqc};
+use parcom::{one_of, seqc};
 
 #[rustfmt::skip]
 pub fn initial_identifier<'a>() -> impl Parser<&'a str, String> {
@@ -31,8 +31,8 @@ pub fn identifier<'a>() -> impl Parser<&'a str, String> {
 }
 
 #[rustfmt::skip]
-pub fn variable<'a>() -> impl Parser<&'a str, String> {
-    identifier()
+pub fn variable<'a>() -> impl Parser<&'a str, Cell> {
+    mapv(identifier(), Cell::Symbol)
 }
 
 #[rustfmt::skip]
@@ -44,13 +44,11 @@ pub fn ows<'a>() -> impl Parser<&'a str, String> {
 pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
     mapv(
         between(ch('('), 
-                repeat(
-                    collect(
-                        seq!(ows(), variable(), ows())
-                    )
+                repeat1(
+                    between(ows(), variable(), ows())
                 ), 
                 ch(')')),
-        |v: Vec<String>| Cell::Symbol(v.first().unwrap().to_owned()),
+        |v: Vec<Cell>| v.into_iter().next().unwrap(),
     )
 }
 
