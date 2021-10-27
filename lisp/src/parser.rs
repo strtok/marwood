@@ -1,8 +1,9 @@
 use crate::cell::Cell;
-use crate::parcom::{
+use parcom::parcom::{
     between, collect, discard, mapv, one_of, optional, repeat, repeatc, seq, Parser,
 };
-use crate::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespace_char};
+use parcom::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespace_char};
+use parcom::{one_of, seq, seqc};
 
 #[rustfmt::skip]
 pub fn initial_identifier<'a>() -> impl Parser<&'a str, String> {
