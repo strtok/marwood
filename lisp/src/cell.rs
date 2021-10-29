@@ -1,3 +1,6 @@
+use std::borrow::{Borrow, BorrowMut};
+use std::ops::{Deref, DerefMut};
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum Cell {
     Number(i64),
@@ -5,6 +8,28 @@ pub enum Cell {
     Cons(Box<Cell>, Box<Cell>),
     Quote(Box<Cell>),
     Nil,
+}
+
+impl<T> From<T> for Cell
+where
+    T: IntoIterator<Item = Cell>
+{
+    fn from(iter: T) -> Self {
+        let mut head = Cell::Nil;
+        let mut tail = &mut head;
+        for cell in iter {
+            match tail {
+                Cell::Cons(_, next) => {
+                    *next = Box::new(Cell::Cons(Box::new(cell), Box::new(Cell::Nil)));
+                    tail = &mut (**next);
+                }
+                _ => {
+                    *tail = Cell::Cons(Box::new(cell), Box::new(Cell::Nil));
+                }
+            }
+        }
+        head
+    }
 }
 
 #[cfg(test)]

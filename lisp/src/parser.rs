@@ -1,3 +1,4 @@
+use std::env::var;
 use parcom::parcom::{
     between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, Parser,
 };
@@ -48,13 +49,14 @@ pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
                     between(ows(), variable(), ows())
                 ), 
                 ch(')')),
-        |v: Vec<Cell>| v.into_iter().next().unwrap(),
+        Cell::from,
     )
 }
 
 #[rustfmt::skip]
 pub fn expression<'a>() -> impl Parser<&'a str, Cell> {
-    one_of!(procedure_call())
+    one_of!(procedure_call(),
+            variable())
 }
 
 #[cfg(test)]
