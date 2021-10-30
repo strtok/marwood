@@ -1,7 +1,5 @@
 use std::env::var;
-use parcom::parcom::{
-    between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, Parser,
-};
+use parcom::parcom::{between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, Parser, map};
 use parcom::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespace_char};
 use parcom::{one_of, seqc};
 use crate::cell::Cell;
@@ -32,6 +30,27 @@ pub fn identifier<'a>() -> impl Parser<&'a str, String> {
 }
 
 #[rustfmt::skip]
+pub fn digit<'a>() -> impl Parser<&'a str, String> {
+    one_of_char("0123456789")
+}
+
+#[rustfmt::skip]
+pub fn num10<'a>() -> impl Parser<&'a str, Cell> {
+    mapv(collect(repeat1(digit())),
+        |s: String| {
+            match s.parse::<i64>() {
+                Ok(n) => Cell::Number(n),
+                Err(e) => Cell::Number(0)
+            }
+        })
+}
+
+#[rustfmt::skip]
+pub fn number<'a>() -> impl Parser<&'a str, Cell> {
+    mapv(one_of!(num10()), Cell::from)
+}
+
+#[rustfmt::skip]
 pub fn variable<'a>() -> impl Parser<&'a str, Cell> {
     mapv(identifier(), Cell::Symbol)
 }
@@ -46,7 +65,7 @@ pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
     mapv(
         between(ch('('), 
                 repeat1(
-                    between(ows(), variable(), ows())
+                    between(ows(), one_of!(variable(), number()), ows())
                 ), 
                 ch(')')),
         Cell::from,
@@ -56,7 +75,8 @@ pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
 #[rustfmt::skip]
 pub fn expression<'a>() -> impl Parser<&'a str, Cell> {
     one_of!(procedure_call(),
-            variable())
+            variable(),
+            number())
 }
 
 #[cfg(test)]
@@ -97,6 +117,14 @@ mod tests {
         assert_eq!(
             super::expression().apply("(foo)"),
             Ok(("", Some(Cell::Symbol("foo".to_owned()))))
+        );
+    }
+
+    #[test]
+    fn number() {
+        assert_eq!(
+            super::number().apply("42"),
+            Ok(("", Some(Cell::Number(42))))
         );
     }
 }
