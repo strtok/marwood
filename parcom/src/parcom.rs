@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 pub type ParseResult<I, O> = Result<(I, Option<O>), I>;
 
 pub trait Parser<I, O> {
@@ -10,6 +12,15 @@ where
 {
     fn apply(&self, input: I) -> ParseResult<I, O> {
         self(input)
+    }
+}
+
+impl<I, O, P> Parser<I, O> for Rc<P>
+where
+    P: Parser<I, O>
+{
+    fn apply(&self, input: I) -> ParseResult<I, O> {
+        (**self).apply(input)
     }
 }
 
@@ -405,5 +416,12 @@ mod tests {
             parser().apply("(12345)"),
             Ok(("", Some("12345".to_owned())))
         );
+    }
+
+    #[test]
+    fn rc_parser() {
+        let parser = Rc::new(digit_char());
+        let combined_parser = repeat(parser.clone());
+        assert_eq!(combined_parser.apply("123"), Ok(("", Some(vec!('1', '2', '3')))));
     }
 }

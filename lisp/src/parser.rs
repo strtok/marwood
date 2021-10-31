@@ -81,6 +81,7 @@ pub fn expression<'a>() -> impl Parser<&'a str, Cell> {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
     use super::*;
 
     #[test]
