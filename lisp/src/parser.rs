@@ -1,8 +1,9 @@
-use std::env::var;
-use parcom::parcom::{between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, Parser, map};
+use crate::cell::Cell;
+use parcom::parcom::{
+    between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, Parser,
+};
 use parcom::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespace_char};
 use parcom::{one_of, seqc};
-use crate::cell::Cell;
 
 #[rustfmt::skip]
 pub fn initial_identifier<'a>() -> impl Parser<&'a str, String> {
@@ -40,7 +41,7 @@ pub fn num10<'a>() -> impl Parser<&'a str, Cell> {
         |s: String| {
             match s.parse::<i64>() {
                 Ok(n) => Cell::Number(n),
-                Err(e) => Cell::Number(0)
+                Err(_) => Cell::Number(0)
             }
         })
 }
@@ -81,7 +82,6 @@ pub fn expression<'a>() -> impl Parser<&'a str, Cell> {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
     use super::*;
 
     #[test]

@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
 
 pub type ParseResult<I, O> = Result<(I, Option<O>), I>;
@@ -17,7 +19,7 @@ where
 
 impl<I, O, P> Parser<I, O> for Rc<P>
 where
-    P: Parser<I, O>
+    P: Parser<I, O>,
 {
     fn apply(&self, input: I) -> ParseResult<I, O> {
         (**self).apply(input)
@@ -252,6 +254,27 @@ where
     mapv(parser, |output| output.into())
 }
 
+struct SharedMutableParser<I, O> {
+    parser: Rc<RefCell<Box<dyn Parser<I, O>>>>,
+}
+
+impl<I, O> SharedMutableParser<I, O> {
+    fn new<'a>(parser: Box<dyn Parser<I, O>>) -> SharedMutableParser<I, O> {
+        SharedMutableParser {
+            parser: Rc::new(RefCell::new(parser)),
+        }
+    }
+
+    fn update(&mut self, parser: Box<dyn Parser<I, O>>) {
+        self.parser.replace(parser);
+    }
+
+    fn make(&self) -> impl Parser<I, O> {
+        let p = self.parser.clone();
+        move |input| p.deref().borrow().apply(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -422,6 +445,17 @@ mod tests {
     fn rc_parser() {
         let parser = Rc::new(digit_char());
         let combined_parser = repeat(parser.clone());
-        assert_eq!(combined_parser.apply("123"), Ok(("", Some(vec!('1', '2', '3')))));
+        assert_eq!(
+            combined_parser.apply("123"),
+            Ok(("", Some(vec!('1', '2', '3'))))
+        );
+    }
+
+    #[test]
+    fn shared_parser() {
+        let mut shared_parser = SharedMutableParser::new(Box::new(ch('f')));
+        let parser = one_of!(shared_parser.make());
+        shared_parser.update(Box::new(digit_char()));
+        assert_eq!(parser.apply("123"), Ok(("23", Some('1'))));
     }
 }

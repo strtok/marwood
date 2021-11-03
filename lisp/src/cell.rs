@@ -1,6 +1,3 @@
-use std::borrow::{Borrow, BorrowMut};
-use std::ops::{Deref, DerefMut};
-
 #[derive(Debug, Eq, PartialEq)]
 pub enum Cell {
     Number(i64),
@@ -12,7 +9,7 @@ pub enum Cell {
 
 impl<T> From<T> for Cell
 where
-    T: IntoIterator<Item = Cell>
+    T: IntoIterator<Item = Cell>,
 {
     fn from(iter: T) -> Self {
         let mut head = Cell::Nil;
