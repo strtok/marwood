@@ -69,7 +69,7 @@ pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
                     between(ows(), expression, ows())
                 ), 
                 ch(')')),
-        Cell::cons,
+        Cell::list,
     )
 }
 
@@ -98,17 +98,17 @@ mod tests {
     fn procedure_call() {
         assert_eq!(
             super::procedure_call().apply("(foo)"),
-            Ok(("", Some(Cell::cons(vec!(Cell::symbol("foo"))))))
+            Ok(("", Some(Cell::list(vec!(Cell::symbol("foo"))))))
         );
         assert_eq!(
             super::procedure_call().apply("( foo )"),
-            Ok(("", Some(Cell::cons(vec!(Cell::symbol("foo"))))))
+            Ok(("", Some(Cell::list(vec!(Cell::symbol("foo"))))))
         );
         assert_eq!(
             super::procedure_call().apply("( foo bar baz )"),
             Ok((
                 "",
-                Some(Cell::cons(vec!(
+                Some(Cell::list(vec!(
                     Cell::symbol("foo"),
                     Cell::symbol("bar"),
                     Cell::symbol("baz")
@@ -126,9 +126,9 @@ mod tests {
             super::expression("(foo (bar baz))"),
             Ok((
                 "",
-                Some(Cell::cons(vec!(
+                Some(Cell::list(vec!(
                     Cell::symbol("foo"),
-                    Cell::cons(vec!(Cell::symbol("bar"), Cell::symbol("baz")))
+                    Cell::list(vec!(Cell::symbol("bar"), Cell::symbol("baz")))
                 )))
             ))
         );

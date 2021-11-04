@@ -11,7 +11,7 @@ impl Cell {
     pub fn symbol(val: &str) -> Cell {
         Cell::Symbol(val.to_string())
     }
-    pub fn cons<T: IntoIterator<Item = Cell>>(iter: T) -> Cell {
+    pub fn list<T: IntoIterator<Item = Cell>>(iter: T) -> Cell {
         let mut head = Cell::Nil;
         let mut tail = &mut head;
         for cell in iter {
