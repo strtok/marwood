@@ -1,6 +1,6 @@
 use crate::cell::Cell;
 use parcom::parcom::{
-    between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, Parser,
+    between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, ParseResult, Parser,
 };
 use parcom::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespace_char};
 use parcom::{one_of, seqc};
@@ -66,7 +66,7 @@ pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
     mapv(
         between(ch('('), 
                 repeat1(
-                    between(ows(), one_of!(variable(), number()), ows())
+                    between(ows(), expression, ows())
                 ), 
                 ch(')')),
         Cell::from,
@@ -74,10 +74,10 @@ pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
 }
 
 #[rustfmt::skip]
-pub fn expression<'a>() -> impl Parser<&'a str, Cell> {
+pub fn expression(input: &str) -> ParseResult<&str, Cell> {
     one_of!(procedure_call(),
             variable(),
-            number())
+            number()).apply(input)
 }
 
 #[cfg(test)]
@@ -98,15 +98,39 @@ mod tests {
     fn procedure_call() {
         assert_eq!(
             super::procedure_call().apply("(foo)"),
-            Ok(("", Some(Cell::Symbol("foo".to_owned()))))
+            Ok((
+                "",
+                Some(Cell::Cons(
+                    Box::new(Cell::Symbol("foo".to_owned())),
+                    Box::new(Cell::Nil)
+                ))
+            ))
         );
         assert_eq!(
             super::procedure_call().apply("( foo )"),
-            Ok(("", Some(Cell::Symbol("foo".to_owned()))))
+            Ok((
+                "",
+                Some(Cell::Cons(
+                    Box::new(Cell::Symbol("foo".to_owned())),
+                    Box::new(Cell::Nil)
+                ))
+            ))
         );
         assert_eq!(
             super::procedure_call().apply("( foo bar baz )"),
-            Ok(("", Some(Cell::Symbol("foo".to_owned()))))
+            Ok((
+                "",
+                Some(Cell::Cons(
+                    Box::new(Cell::Symbol("foo".to_owned())),
+                    Box::new(Cell::Cons(
+                        Box::new(Cell::Symbol("bar".to_owned())),
+                        Box::new(Cell::Cons(
+                            Box::new(Cell::Symbol("baz".to_owned())),
+                            Box::new(Cell::Nil)
+                        ))
+                    ))
+                ))
+            ))
         );
         assert_eq!(super::procedure_call().apply("()"), Err("()"));
         assert_eq!(super::procedure_call().apply("( )"), Err("( )"));
@@ -116,8 +140,14 @@ mod tests {
     #[test]
     fn expression() {
         assert_eq!(
-            super::expression().apply("(foo)"),
-            Ok(("", Some(Cell::Symbol("foo".to_owned()))))
+            super::expression("(foo)"),
+            Ok((
+                "",
+                Some(Cell::Cons(
+                    Box::new(Cell::Symbol("foo".to_owned())),
+                    Box::new(Cell::Nil)
+                ))
+            ))
         );
     }
 
