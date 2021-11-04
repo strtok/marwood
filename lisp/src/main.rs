@@ -9,17 +9,25 @@ fn main() {
     loop {
         let readline = rl.readline(">> ");
         match readline {
-            Ok(line) => match parser::expression(&line) {
-                Ok((_, Some(cell))) => {
-                    println!("{:?}", cell);
+            Ok(line) => {
+                let mut remaining = line.as_str();
+                while !remaining.is_empty() {
+                    match parser::expression(&remaining) {
+                        Ok((rest, Some(cell))) => {
+                            remaining = rest;
+                            println!("{:?}", cell);
+                        }
+                        Ok((_, None)) => {
+                            eprintln!("error: expected expression");
+                            break;
+                        }
+                        Err(e) => {
+                            eprintln!("error parsing '{}'", e);
+                            break;
+                        }
+                    }
                 }
-                Ok((_, None)) => {
-                    eprintln!("error: expected expression");
-                }
-                Err(e) => {
-                    eprintln!("error parsing '{}'", e);
-                }
-            },
+            }
             Err(ReadlineError::Interrupted | ReadlineError::Eof) => break,
             Err(err) => {
                 println!("error: {:?}", err);
