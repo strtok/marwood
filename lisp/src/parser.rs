@@ -36,8 +36,13 @@ pub fn digit<'a>() -> impl Parser<&'a str, String> {
 }
 
 #[rustfmt::skip]
+pub fn sign<'a>() -> impl Parser<&'a str, String> {
+    one_of_char("+-")
+}
+
+#[rustfmt::skip]
 pub fn num10<'a>() -> impl Parser<&'a str, Cell> {
-    mapv(collect(repeat1(digit())),
+    mapv(seqc!(optional(sign()), collect(repeat1(digit()))),
         |s: String| {
             match s.parse::<i64>() {
                 Ok(n) => Cell::Number(n),
@@ -76,8 +81,8 @@ pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
 #[rustfmt::skip]
 pub fn expression(input: &str) -> ParseResult<&str, Cell> {
     one_of!(procedure_call(),
-            variable(),
-            number()).apply(input)
+            number(),
+            variable()).apply(input)
 }
 
 #[cfg(test)]

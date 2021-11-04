@@ -12,7 +12,7 @@ fn main() {
             Ok(line) => {
                 let mut remaining = line.as_str();
                 while !remaining.is_empty() {
-                    match parser::expression(&remaining) {
+                    match parser::expression(remaining) {
                         Ok((rest, Some(cell))) => {
                             remaining = rest;
                             println!("{:?}", cell);
