@@ -69,7 +69,7 @@ pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
                     between(ows(), expression, ows())
                 ), 
                 ch(')')),
-        Cell::from,
+        Cell::cons,
     )
 }
 
@@ -98,20 +98,20 @@ mod tests {
     fn procedure_call() {
         assert_eq!(
             super::procedure_call().apply("(foo)"),
-            Ok(("", Some(Cell::from(vec!(Cell::Symbol("foo".to_string()))))))
+            Ok(("", Some(Cell::cons(vec!(Cell::symbol("foo"))))))
         );
         assert_eq!(
             super::procedure_call().apply("( foo )"),
-            Ok(("", Some(Cell::from(vec!(Cell::Symbol("foo".to_string()))))))
+            Ok(("", Some(Cell::cons(vec!(Cell::symbol("foo"))))))
         );
         assert_eq!(
             super::procedure_call().apply("( foo bar baz )"),
             Ok((
                 "",
-                Some(Cell::from(vec!(
-                    Cell::Symbol("foo".to_string()),
-                    Cell::Symbol("bar".to_string()),
-                    Cell::Symbol("baz".to_string())
+                Some(Cell::cons(vec!(
+                    Cell::symbol("foo"),
+                    Cell::symbol("bar"),
+                    Cell::symbol("baz")
                 )))
             ))
         );
@@ -123,13 +123,13 @@ mod tests {
     #[test]
     fn expression() {
         assert_eq!(
-            super::expression("(foo)"),
+            super::expression("(foo (bar baz))"),
             Ok((
                 "",
-                Some(Cell::Cons(
-                    Box::new(Cell::Symbol("foo".to_owned())),
-                    Box::new(Cell::Nil)
-                ))
+                Some(Cell::cons(vec!(
+                    Cell::symbol("foo"),
+                    Cell::cons(vec!(Cell::symbol("bar"), Cell::symbol("baz")))
+                )))
             ))
         );
     }
