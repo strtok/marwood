@@ -98,38 +98,21 @@ mod tests {
     fn procedure_call() {
         assert_eq!(
             super::procedure_call().apply("(foo)"),
-            Ok((
-                "",
-                Some(Cell::Cons(
-                    Box::new(Cell::Symbol("foo".to_owned())),
-                    Box::new(Cell::Nil)
-                ))
-            ))
+            Ok(("", Some(Cell::from(vec!(Cell::Symbol("foo".to_string()))))))
         );
         assert_eq!(
             super::procedure_call().apply("( foo )"),
-            Ok((
-                "",
-                Some(Cell::Cons(
-                    Box::new(Cell::Symbol("foo".to_owned())),
-                    Box::new(Cell::Nil)
-                ))
-            ))
+            Ok(("", Some(Cell::from(vec!(Cell::Symbol("foo".to_string()))))))
         );
         assert_eq!(
             super::procedure_call().apply("( foo bar baz )"),
             Ok((
                 "",
-                Some(Cell::Cons(
-                    Box::new(Cell::Symbol("foo".to_owned())),
-                    Box::new(Cell::Cons(
-                        Box::new(Cell::Symbol("bar".to_owned())),
-                        Box::new(Cell::Cons(
-                            Box::new(Cell::Symbol("baz".to_owned())),
-                            Box::new(Cell::Nil)
-                        ))
-                    ))
-                ))
+                Some(Cell::from(vec!(
+                    Cell::Symbol("foo".to_string()),
+                    Cell::Symbol("bar".to_string()),
+                    Cell::Symbol("baz".to_string())
+                )))
             ))
         );
         assert_eq!(super::procedure_call().apply("()"), Err("()"));
