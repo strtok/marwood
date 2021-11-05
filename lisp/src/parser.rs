@@ -6,59 +6,35 @@ use parcom::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespac
 use parcom::{one_of, seqc};
 
 #[rustfmt::skip]
-pub fn initial_identifier<'a>() -> impl Parser<&'a str, String> {
-    one_of!(alphabetic_char(),
-             one_of_char("!$%&*/:<=>?^_~"))
-}
-
-#[rustfmt::skip]
-pub fn peculiar_identifier<'a>() -> impl Parser<&'a str, String> {
-    one_of_char("+-")
-}
-
-#[rustfmt::skip]
-pub fn subsequent_identifier<'a>() -> impl Parser<&'a str, String> {
-    one_of!(initial_identifier(),
-            alphabetic_char(),
-            digit_char())
-}
-
-#[rustfmt::skip]
 pub fn identifier<'a>() -> impl Parser<&'a str, String> {
-        one_of!(seqc!(initial_identifier(),
-                      repeatc(subsequent_identifier())),
-                peculiar_identifier())
-}
-
-#[rustfmt::skip]
-pub fn digit<'a>() -> impl Parser<&'a str, String> {
-    one_of_char("0123456789")
-}
-
-#[rustfmt::skip]
-pub fn sign<'a>() -> impl Parser<&'a str, String> {
-    one_of_char("+-")
-}
-
-#[rustfmt::skip]
-pub fn num10<'a>() -> impl Parser<&'a str, Cell> {
-    mapv(seqc!(optional(sign()), collect(repeat1(digit()))),
-        |s: String| {
-            match s.parse::<i64>() {
-                Ok(n) => Cell::Number(n),
-                Err(_) => Cell::Number(0)
-            }
-        })
-}
-
-#[rustfmt::skip]
-pub fn number<'a>() -> impl Parser<&'a str, Cell> {
-    mapv(one_of!(num10()), Cell::from)
+    let initial_identifier = || 
+        one_of!(alphabetic_char(), 
+                one_of_char("!$%&*/:<=>?^_~"));
+    let peculiar_identifier = one_of_char("+-");
+    let subsequent_identifier = 
+        one_of!(initial_identifier(),
+                alphabetic_char(),
+                digit_char());
+    one_of!(seqc!(initial_identifier(), repeatc(subsequent_identifier)), 
+            peculiar_identifier)
 }
 
 #[rustfmt::skip]
 pub fn variable<'a>() -> impl Parser<&'a str, Cell> {
     mapv(identifier(), Cell::Symbol)
+}
+
+pub fn number<'a>() -> impl Parser<&'a str, Cell> {
+    let digit = one_of_char("0123456789");
+    let sign = one_of_char("+-");
+    let num10 = mapv(
+        seqc!(optional(sign), collect(repeat1(digit))),
+        |s: String| match s.parse::<i64>() {
+            Ok(n) => Cell::Number(n),
+            Err(_) => Cell::Number(0),
+        },
+    );
+    mapv(one_of!(num10), Cell::from)
 }
 
 #[rustfmt::skip]
@@ -144,6 +120,14 @@ mod tests {
         assert_eq!(
             super::number().apply("42"),
             Ok(("", Some(Cell::Number(42))))
+        );
+        assert_eq!(
+            super::number().apply("+42"),
+            Ok(("", Some(Cell::Number(42))))
+        );
+        assert_eq!(
+            super::number().apply("-42"),
+            Ok(("", Some(Cell::Number(-42))))
         );
     }
 }
