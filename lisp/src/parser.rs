@@ -52,70 +52,62 @@ pub fn expression(input: &str) -> ParseResult<&str, Cell> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{cell, list};
 
-    #[test]
-    fn identifier() {
-        assert_eq!(
-            super::identifier().apply("foo"),
-            Ok(("", Some("foo".to_owned())))
-        );
+    macro_rules! parses {
+        ($parser:expr, $($lhs:expr => $rhs:expr),+) => {{
+             $(
+                assert_eq!($parser.apply($lhs), Ok(("", Some($rhs))));
+             )+
+        }};
+    }
 
-        assert_eq!(super::identifier().apply("...foo"), Err("...foo",));
+    macro_rules! fails {
+        ($parser:expr, $($lhs:expr),+) => {{
+             $(
+                assert_eq!($parser.apply($lhs), Err($lhs));
+             )+
+        }};
     }
 
     #[test]
-    fn procedure_call() {
-        assert_eq!(
-            super::procedure_call().apply("(foo)"),
-            Ok(("", Some(Cell::list(vec!(Cell::symbol("foo"))))))
+    fn variables() {
+        parses!(variable(),
+            "foo" => cell!["foo"],
+            "bar" => cell!["bar"]
         );
-        assert_eq!(
-            super::procedure_call().apply("( foo )"),
-            Ok(("", Some(Cell::list(vec!(Cell::symbol("foo"))))))
+        fails!(variable(), "...foo");
+    }
+
+    #[test]
+    fn procedures() {
+        parses!(procedure_call(),
+            "(foo)" => list!["foo"],
+            "( foo )" => list!["foo"],
+            "(foo bar baz)" => list!["foo", "bar", "baz"]
         );
-        assert_eq!(
-            super::procedure_call().apply("( foo bar baz )"),
-            Ok((
-                "",
-                Some(Cell::list(vec!(
-                    Cell::symbol("foo"),
-                    Cell::symbol("bar"),
-                    Cell::symbol("baz")
-                )))
-            ))
+
+        fails!(procedure_call(), "()", "( )", "(  )");
+    }
+
+    #[test]
+    fn numbers() {
+        parses!(number(),
+            "42" => cell![42],
+            "+42" => cell![42],
+            "-42" => cell![-42]
         );
-        assert_eq!(super::procedure_call().apply("()"), Err("()"));
-        assert_eq!(super::procedure_call().apply("( )"), Err("( )"));
-        assert_eq!(super::procedure_call().apply("(  )"), Err("(  )"));
     }
 
     #[test]
     fn expression() {
-        assert_eq!(
-            super::expression("(foo (bar baz))"),
-            Ok((
-                "",
-                Some(Cell::list(vec!(
-                    Cell::symbol("foo"),
-                    Cell::list(vec!(Cell::symbol("bar"), Cell::symbol("baz")))
-                )))
-            ))
-        );
-    }
-
-    #[test]
-    fn number() {
-        assert_eq!(
-            super::number().apply("42"),
-            Ok(("", Some(Cell::Number(42))))
-        );
-        assert_eq!(
-            super::number().apply("+42"),
-            Ok(("", Some(Cell::Number(42))))
-        );
-        assert_eq!(
-            super::number().apply("-42"),
-            Ok(("", Some(Cell::Number(-42))))
+        let expression = |input| super::expression(input);
+        parses!(expression,
+            "foo" => cell!["foo"],
+            "42" => cell![42],
+            "-18" => cell![-18],
+            "(foo)" => list!["foo"],
+            "(foo (bar baz))" => list!["foo", list!["bar", "baz"]]
         );
     }
 }

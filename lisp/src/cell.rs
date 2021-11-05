@@ -66,6 +66,18 @@ macro_rules! cell {
     }};
 }
 
+#[macro_export]
+macro_rules! list {
+    () => {
+        Cell::list(vec!())
+    };
+    ($($elt:expr),+) => {{
+        let mut v = vec![];
+        $(v.push(Cell::from($elt));)+
+        Cell::from(v)
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,5 +118,7 @@ mod tests {
                 Cell::list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
             ))
         );
+        assert_eq!(list![], Cell::list(vec!()));
+        assert_eq!(list!["foo"], Cell::list(vec!(Cell::symbol("foo"))));
     }
 }
