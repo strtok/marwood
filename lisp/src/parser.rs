@@ -9,6 +9,7 @@ pub fn identifier<'a>() -> impl Parser<&'a str, String> {
     let initial_identifier = || one_of!(alphabetic_char(), one_of_char("!$%&*/:<=>?^_~"));
     let peculiar_identifier = one_of_char("+-");
     let subsequent_identifier = one_of!(initial_identifier(), alphabetic_char(), digit_char());
+
     one_of!(
         seqc!(initial_identifier(), repeatc(subsequent_identifier)),
         peculiar_identifier
@@ -29,6 +30,7 @@ pub fn number<'a>() -> impl Parser<&'a str, Cell> {
             Err(_) => Cell::Number(0),
         },
     );
+
     mapv(one_of!(num10), Cell::from)
 }
 
