@@ -5,21 +5,16 @@ use parcom::parcom::{
 use parcom::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespace_char};
 use parcom::{one_of, seqc};
 
-#[rustfmt::skip]
 pub fn identifier<'a>() -> impl Parser<&'a str, String> {
-    let initial_identifier = || 
-        one_of!(alphabetic_char(), 
-                one_of_char("!$%&*/:<=>?^_~"));
+    let initial_identifier = || one_of!(alphabetic_char(), one_of_char("!$%&*/:<=>?^_~"));
     let peculiar_identifier = one_of_char("+-");
-    let subsequent_identifier = 
-        one_of!(initial_identifier(),
-                alphabetic_char(),
-                digit_char());
-    one_of!(seqc!(initial_identifier(), repeatc(subsequent_identifier)), 
-            peculiar_identifier)
+    let subsequent_identifier = one_of!(initial_identifier(), alphabetic_char(), digit_char());
+    one_of!(
+        seqc!(initial_identifier(), repeatc(subsequent_identifier)),
+        peculiar_identifier
+    )
 }
 
-#[rustfmt::skip]
 pub fn variable<'a>() -> impl Parser<&'a str, Cell> {
     mapv(identifier(), Cell::Symbol)
 }
@@ -37,28 +32,19 @@ pub fn number<'a>() -> impl Parser<&'a str, Cell> {
     mapv(one_of!(num10), Cell::from)
 }
 
-#[rustfmt::skip]
 pub fn ows<'a>() -> impl Parser<&'a str, String> {
     discard(optional(whitespace_char()))
 }
 
-#[rustfmt::skip]
 pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
     mapv(
-        between(ch('('), 
-                repeat1(
-                    between(ows(), expression, ows())
-                ), 
-                ch(')')),
+        between(ch('('), repeat1(between(ows(), expression, ows())), ch(')')),
         Cell::list,
     )
 }
 
-#[rustfmt::skip]
 pub fn expression(input: &str) -> ParseResult<&str, Cell> {
-    one_of!(procedure_call(),
-            number(),
-            variable()).apply(input)
+    one_of!(procedure_call(), number(), variable()).apply(input)
 }
 
 #[cfg(test)]
