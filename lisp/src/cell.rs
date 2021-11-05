@@ -33,6 +33,39 @@ impl Cell {
     }
 }
 
+impl From<&str> for Cell {
+    fn from(val: &str) -> Self {
+        Cell::Symbol(val.to_string())
+    }
+}
+
+impl From<i64> for Cell {
+    fn from(val: i64) -> Self {
+        Cell::Number(val)
+    }
+}
+
+impl From<Vec<Cell>> for Cell {
+    fn from(val: Vec<Cell>) -> Self {
+        Cell::list(val)
+    }
+}
+
+#[macro_export]
+macro_rules! cell {
+    () => {
+        Cell::Nil
+    };
+    ($elt:expr) => {
+        Cell::from($elt)
+    };
+    ($($elt:expr),+) => {{
+        let mut v = vec![];
+        $(v.push(Cell::from($elt));)+
+        Cell::from(v)
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -50,5 +83,28 @@ mod tests {
             Cell::quote(Cell::symbol("foo")),
         );
         assert_eq!(Cell::Nil, Cell::Nil);
+    }
+
+    #[test]
+    fn cell_macro() {
+        assert_eq!(cell![], Cell::Nil);
+        assert_eq!(cell!["foo"], Cell::Symbol("foo".to_string()));
+        assert_eq!(cell![42], Cell::Number(42));
+        assert_eq!(cell![-42], Cell::Number(-42));
+        assert_eq!(
+            cell![0, 1, 2],
+            Cell::list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
+        );
+        assert_eq!(
+            cell!["foo", 42],
+            Cell::list(vec!(Cell::symbol("foo"), Cell::Number(42)))
+        );
+        assert_eq!(
+            cell!["foo", cell![0, 1, 2]],
+            Cell::list(vec!(
+                Cell::symbol("foo"),
+                Cell::list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
+            ))
+        );
     }
 }
