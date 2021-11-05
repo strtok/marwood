@@ -100,8 +100,7 @@ mod tests {
     }
 
     #[test]
-    fn expression() {
-        let expression = |input| super::expression(input);
+    fn expressions() {
         parses!(expression,
             "foo" => cell!["foo"],
             "42" => cell![42],
