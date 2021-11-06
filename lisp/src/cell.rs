@@ -1,11 +1,11 @@
 use std::borrow::Borrow;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Cell {
     Number(i64),
     Symbol(String),
     Cons(Box<Cell>, Box<Cell>),
-    Quote(Box<Cell>),
     Nil,
 }
 
@@ -28,10 +28,6 @@ impl Cell {
             }
         }
         head
-    }
-
-    pub fn quote(cell: Cell) -> Cell {
-        Cell::Quote(Box::new(cell))
     }
 
     pub fn iter(&self) -> IntoIter {
@@ -111,6 +107,34 @@ impl IntoIterator for Cell {
     }
 }
 
+impl Display for Cell {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Cell::Cons(_, _) => {
+                write!(f, "(")?;
+                let mut iter = self.iter().peekable();
+                while let Some(cell) = iter.next() {
+                    if iter.peek().is_some() {
+                        write!(f, "{} ", cell)?;
+                    } else {
+                        write!(f, "{}", cell)?;
+                    }
+                }
+                write!(f, ")")
+            }
+            Cell::Number(val) => {
+                write!(f, "{}", val)
+            }
+            Cell::Symbol(val) => {
+                write!(f, "{}", val)
+            }
+            Cell::Nil => {
+                write!(f, "'()")
+            }
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! cell {
     () => {
@@ -149,10 +173,6 @@ mod tests {
         assert_eq!(
             Cell::list(vec!(Cell::symbol("foo"), Cell::symbol("bar"))),
             Cell::list(vec!(Cell::symbol("foo"), Cell::symbol("bar")))
-        );
-        assert_eq!(
-            Cell::quote(Cell::symbol("foo")),
-            Cell::quote(Cell::symbol("foo")),
         );
         assert_eq!(Cell::Nil, Cell::Nil);
     }
@@ -208,6 +228,18 @@ mod tests {
                 .flatten()
                 .collect::<Vec<Cell>>(),
             vec![cell![1], cell![2], cell![3], cell![4], cell![5], cell![6]]
+        );
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(format!("{}", Cell::Nil), "'()");
+        assert_eq!(format!("{}", cell![42]), "42");
+        assert_eq!(format!("{}", cell!["foo"]), "foo");
+        assert_eq!(format!("{}", list![1, 2, 3]), "(1 2 3)");
+        assert_eq!(
+            format!("{}", list![1, 2, 3, list![5, 6, 7]]),
+            "(1 2 3 (5 6 7))"
         );
     }
 }

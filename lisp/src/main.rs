@@ -15,7 +15,7 @@ fn main() {
                     match parser::expression(remaining) {
                         Ok((rest, Some(cell))) => {
                             remaining = rest;
-                            println!("{:?}", cell);
+                            println!("{}", cell);
                         }
                         Ok((_, None)) => {
                             eprintln!("error: expected expression");
