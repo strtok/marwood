@@ -1,4 +1,6 @@
-#[derive(Debug, Eq, PartialEq)]
+use std::borrow::Borrow;
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Cell {
     Number(i64),
     Symbol(String),
@@ -31,6 +33,10 @@ impl Cell {
     pub fn quote(cell: Cell) -> Cell {
         Cell::Quote(Box::new(cell))
     }
+
+    pub fn iter(&self) -> IntoIter {
+        IntoIter { next: self }
+    }
 }
 
 impl From<&str> for Cell {
@@ -48,6 +54,35 @@ impl From<i64> for Cell {
 impl From<Vec<Cell>> for Cell {
     fn from(val: Vec<Cell>) -> Self {
         Cell::list(val)
+    }
+}
+
+pub struct IntoIter<'a> {
+    next: &'a Cell,
+}
+
+impl<'a> Iterator for IntoIter<'a> {
+    type Item = &'a Cell;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.next {
+            Cell::Cons(car, cdr) => {
+                let car = car.borrow();
+                let cdr = cdr.borrow();
+                self.next = cdr;
+                Some(car)
+            }
+            _ => None,
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a Cell {
+    type Item = &'a Cell;
+    type IntoIter = IntoIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter { next: self }
     }
 }
 
@@ -120,5 +155,14 @@ mod tests {
         );
         assert_eq!(list![], Cell::list(vec!()));
         assert_eq!(list!["foo"], Cell::list(vec!(Cell::symbol("foo"))));
+    }
+
+    #[test]
+    fn into_iter() {
+        assert_eq!(
+            list![1, 2, 3].iter().cloned().collect::<Vec<Cell>>(),
+            vec![cell![1], cell![2], cell![3]]
+        );
+        assert_eq!(cell![1].iter().cloned().collect::<Vec<Cell>>(), vec![]);
     }
 }
