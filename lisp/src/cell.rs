@@ -33,6 +33,31 @@ impl Cell {
     pub fn iter(&self) -> IntoIter {
         IntoIter { next: self }
     }
+
+    pub fn is_list(&self) -> bool {
+        match self {
+            Cell::Cons(_, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_procedure(&self) -> bool {
+        self.is_list()
+    }
+
+    pub fn car(&self) -> Option<&Cell> {
+        match self {
+            Cell::Cons(car, _) => Some(car),
+            _ => None,
+        }
+    }
+
+    pub fn cdr(&self) -> Option<&Cell> {
+        match self {
+            Cell::Cons(_, cdr) => Some(cdr),
+            _ => None,
+        }
+    }
 }
 
 impl From<&str> for Cell {
@@ -241,5 +266,17 @@ mod tests {
             format!("{}", list![1, 2, 3, list![5, 6, 7]]),
             "(1 2 3 (5 6 7))"
         );
+    }
+
+    #[test]
+    fn is_list() {
+        assert!(list![1, 2, 3].is_list());
+        assert!(!cell![42].is_list());
+    }
+
+    #[test]
+    fn car_and_cdr() {
+        assert_eq!(list![1, 2, 3].car(), Some(&cell![1]));
+        assert_eq!(list![1, 2, 3].cdr(), Some(&list![2, 3]));
     }
 }
