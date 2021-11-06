@@ -55,6 +55,13 @@ impl Cell {
             _ => None,
         }
     }
+
+    pub fn as_number(&self) -> Option<i64> {
+        match self {
+            Cell::Number(n) => Some(*n),
+            _ => None,
+        }
+    }
 }
 
 impl From<&str> for Cell {

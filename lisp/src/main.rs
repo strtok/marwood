@@ -62,14 +62,9 @@ fn eval_add(cdr: Cell) -> Result<Cell, String> {
     let mut val = 0;
     for cell in cdr {
         let cell = eval(cell)?;
-        match cell {
-            Cell::Number(n) => {
-                val += n;
-            }
-            _ => {
-                return Err(format!("'{}' is not a number", cell));
-            }
-        }
+        val += cell
+            .as_number()
+            .ok_or_else(|| format!("'{}' is not a number", cell))?;
     }
 
     Ok(Cell::Number(val))
@@ -79,14 +74,9 @@ fn eval_mul(cdr: Cell) -> Result<Cell, String> {
     let mut val = 1;
     for cell in cdr {
         let cell = eval(cell)?;
-        match cell {
-            Cell::Number(n) => {
-                val *= n;
-            }
-            _ => {
-                return Err(format!("'{}' is not a number", cell));
-            }
-        }
+        val *= cell
+            .as_number()
+            .ok_or_else(|| format!("'{}' is not a number", cell))?;
     }
     Ok(Cell::Number(val))
 }
