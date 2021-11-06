@@ -47,11 +47,8 @@ fn parse_and_eval(mut line: &str) {
 fn eval(cell: Cell) -> Result<Cell, String> {
     match cell {
         Cell::Cons(car, cdr) => match *car {
-            Cell::Symbol(s) => match s.as_str() {
-                "+" => eval_add(*cdr),
-                "*" => eval_mul(*cdr),
-                _ => Err(format!("'{}' is not a known procedure", s)),
-            },
+            Cell::Symbol(s) if s.eq("+") => eval_add(*cdr),
+            Cell::Symbol(s) if s.eq("*") => eval_mul(*cdr),
             _ => Err(format!("'{}' is not a known procedure", car)),
         },
         _ => Ok(cell),
