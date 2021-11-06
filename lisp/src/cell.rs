@@ -67,10 +67,8 @@ impl<'a> Iterator for IntoIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.next {
             Cell::Cons(car, cdr) => {
-                let car = car.borrow();
-                let cdr = cdr.borrow();
-                self.next = cdr;
-                Some(car)
+                self.next = cdr.borrow();
+                Some(car.borrow())
             }
             _ => None,
         }
@@ -83,6 +81,33 @@ impl<'a> IntoIterator for &'a Cell {
 
     fn into_iter(self) -> Self::IntoIter {
         IntoIter { next: self }
+    }
+}
+
+pub struct Iter {
+    next: Option<Cell>,
+}
+
+impl Iterator for Iter {
+    type Item = Cell;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.next.take() {
+            Some(Cell::Cons(car, cdr)) => {
+                self.next = Some(*cdr);
+                Some(*car)
+            }
+            _ => None,
+        }
+    }
+}
+
+impl IntoIterator for Cell {
+    type Item = Cell;
+    type IntoIter = Iter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter { next: Some(self) }
     }
 }
 
@@ -164,5 +189,14 @@ mod tests {
             vec![cell![1], cell![2], cell![3]]
         );
         assert_eq!(cell![1].iter().cloned().collect::<Vec<Cell>>(), vec![]);
+    }
+
+    #[test]
+    fn iter() {
+        assert_eq!(
+            list![1, 2, 3].into_iter().collect::<Vec<Cell>>(),
+            vec![cell![1], cell![2], cell![3]]
+        );
+        assert_eq!(cell![1].into_iter().collect::<Vec<Cell>>(), vec![]);
     }
 }
