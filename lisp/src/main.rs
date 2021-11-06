@@ -1,8 +1,6 @@
 use crate::cell::Cell;
-use crate::cell::Cell::Number;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use std::ops::Deref;
 
 mod cell;
 mod parser;
@@ -13,26 +11,7 @@ fn main() {
         let readline = rl.readline(">> ");
         match readline {
             Ok(line) => {
-                let mut remaining = line.as_str();
-                while !remaining.is_empty() {
-                    match parser::expression(remaining) {
-                        Ok((rest, Some(cell))) => {
-                            remaining = rest;
-                            match eval(cell) {
-                                Ok(cell) => println!("{}", cell),
-                                Err(e) => eprintln!("{}", e),
-                            };
-                        }
-                        Ok((_, None)) => {
-                            eprintln!("error: expected expression");
-                            break;
-                        }
-                        Err(e) => {
-                            eprintln!("error parsing '{}'", e);
-                            break;
-                        }
-                    }
-                }
+                parse_and_eval(&line);
             }
             Err(ReadlineError::Interrupted | ReadlineError::Eof) => break,
             Err(err) => {
@@ -43,36 +22,26 @@ fn main() {
     }
 }
 
-fn eval_add(cdr: Cell) -> Result<Cell, String> {
-    let mut val = 0;
-    for cell in cdr {
-        let cell = eval(cell)?;
-        match cell {
-            Cell::Number(n) => {
-                val = val + n;
+fn parse_and_eval(mut line: &str) {
+    while !line.is_empty() {
+        match parser::expression(line) {
+            Ok((rest, Some(cell))) => {
+                line = rest;
+                match eval(cell) {
+                    Ok(cell) => println!("{}", cell),
+                    Err(e) => eprintln!("{}", e),
+                };
             }
-            _ => {
-                return Err(format!("'{}' is not a number", cell));
+            Ok((_, None)) => {
+                eprintln!("error: expected expression");
+                break;
             }
-        }
-    }
-    return Ok(Cell::Number(val));
-}
-
-fn eval_mul(cdr: Cell) -> Result<Cell, String> {
-    let mut val = 1;
-    for cell in cdr {
-        let cell = eval(cell)?;
-        match cell {
-            Cell::Number(n) => {
-                val = val * n;
-            }
-            _ => {
-                return Err(format!("'{}' is not a number", cell));
+            Err(e) => {
+                eprintln!("error parsing '{}'", e);
+                break;
             }
         }
     }
-    return Ok(Cell::Number(val));
 }
 
 fn eval(cell: Cell) -> Result<Cell, String> {
@@ -87,4 +56,37 @@ fn eval(cell: Cell) -> Result<Cell, String> {
         },
         _ => Ok(cell),
     }
+}
+
+fn eval_add(cdr: Cell) -> Result<Cell, String> {
+    let mut val = 0;
+    for cell in cdr {
+        let cell = eval(cell)?;
+        match cell {
+            Cell::Number(n) => {
+                val += n;
+            }
+            _ => {
+                return Err(format!("'{}' is not a number", cell));
+            }
+        }
+    }
+
+    Ok(Cell::Number(val))
+}
+
+fn eval_mul(cdr: Cell) -> Result<Cell, String> {
+    let mut val = 1;
+    for cell in cdr {
+        let cell = eval(cell)?;
+        match cell {
+            Cell::Number(n) => {
+                val *= n;
+            }
+            _ => {
+                return Err(format!("'{}' is not a number", cell));
+            }
+        }
+    }
+    Ok(Cell::Number(val))
 }

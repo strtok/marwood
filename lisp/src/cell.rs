@@ -35,10 +35,7 @@ impl Cell {
     }
 
     pub fn is_list(&self) -> bool {
-        match self {
-            Cell::Cons(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Cell::Cons(_, _))
     }
 
     pub fn is_procedure(&self) -> bool {
