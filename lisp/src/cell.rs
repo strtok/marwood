@@ -199,4 +199,15 @@ mod tests {
         );
         assert_eq!(cell![1].into_iter().collect::<Vec<Cell>>(), vec![]);
     }
+
+    #[test]
+    fn flatten() {
+        assert_eq!(
+            list![list![1, 2, 3], list![4, 5, 6]]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<Cell>>(),
+            vec![cell![1], cell![2], cell![3], cell![4], cell![5], cell![6]]
+        );
+    }
 }
