@@ -1,9 +1,10 @@
-# R5RS &emsp; [![License]]
+# R5RS Scheme &emsp; ![License]
 
-[License]: https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=for-the-badge&logo=appveyor
+[License]: https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat&logo=appveyor
 
-This project is a playground for experimenting with an R5RS (Scheme) interpreter
-written completely from scratch in rust with very few dependencies.
+This is a work in progress [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) implementation for rust, featuring:
+
+* A parser combinator based parser loosely following the [Parsec Paper](https://www.microsoft.com/en-us/research/publication/parsec-direct-style-monadic-parser-combinators-for-the-real-world/)
 
 # License
 Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
