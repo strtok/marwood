@@ -1,6 +1,7 @@
-# R5RS Scheme &emsp; ![License]
+# R5RS Scheme &emsp; [![License Badge]][License]
 
-[License]: https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat&logo=appveyor
+[License Badge]: https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat&logo=appveyor
+[License]: LICENSE-MIT
 
 This is a work in progress [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) implementation for rust, featuring:
 
