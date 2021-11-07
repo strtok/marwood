@@ -146,11 +146,11 @@ impl Display for Cell {
                 let mut cdr = cdr;
                 loop {
                     match (*cdr).as_ref() {
-                        &Cell::Nil => {
+                        Cell::Nil => {
                             write!(f, "{})", car)?;
                             return Ok(());
                         }
-                        &Cell::Cons(ref ncar, ref ncdr) => {
+                        Cell::Cons(ncar, ncdr) => {
                             write!(f, "{} ", car)?;
                             car = ncar;
                             cdr = ncdr;
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn display() {
-        assert_eq!(format!("{}", Cell::Nil), "'()");
+        assert_eq!(format!("{}", Cell::Nil), "()");
         assert_eq!(format!("{}", cell![42]), "42");
         assert_eq!(format!("{}", cell!["foo"]), "foo");
         assert_eq!(format!("{}", list![1, 2, 3]), "(1 2 3)");
