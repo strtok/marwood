@@ -41,7 +41,7 @@ pub fn ows<'a>() -> impl Parser<&'a str, String> {
 pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
     mapv(
         between(ch('('), repeat1(between(ows(), expression, ows())), ch(')')),
-        Cell::list,
+        Cell::new_list,
     )
 }
 

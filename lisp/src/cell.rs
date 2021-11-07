@@ -10,10 +10,11 @@ pub enum Cell {
 }
 
 impl Cell {
-    pub fn symbol(val: &str) -> Cell {
+    pub fn new_symbol(val: &str) -> Cell {
         Cell::Symbol(val.to_string())
     }
-    pub fn list<T: IntoIterator<Item = Cell>>(iter: T) -> Cell {
+
+    pub fn new_list<T: IntoIterator<Item = Cell>>(iter: T) -> Cell {
         let mut head = Cell::Nil;
         let mut tail = &mut head;
         for cell in iter {
@@ -30,6 +31,10 @@ impl Cell {
         head
     }
 
+    pub fn new_cons(car: Cell, cdr: Cell) -> Cell {
+        Cell::Cons(Box::new(car), Box::new(cdr))
+    }
+
     pub fn iter(&self) -> IntoIter {
         IntoIter { next: self }
     }
@@ -38,14 +43,14 @@ impl Cell {
         matches!(self, Cell::Nil)
     }
 
-    pub fn car(&self) -> Option<&Cell> {
+    pub fn as_car(&self) -> Option<&Cell> {
         match self {
             Cell::Cons(car, _) => Some(car),
             _ => None,
         }
     }
 
-    pub fn cdr(&self) -> Option<&Cell> {
+    pub fn as_cdr(&self) -> Option<&Cell> {
         match self {
             Cell::Cons(_, cdr) => Some(cdr),
             _ => None,
@@ -74,7 +79,7 @@ impl From<i64> for Cell {
 
 impl From<Vec<Cell>> for Cell {
     fn from(val: Vec<Cell>) -> Self {
-        Cell::list(val)
+        Cell::new_list(val)
     }
 }
 
@@ -135,17 +140,27 @@ impl IntoIterator for Cell {
 impl Display for Cell {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Cell::Cons(_, _) => {
+            Cell::Cons(car, cdr) => {
                 write!(f, "(")?;
-                let mut iter = self.iter().peekable();
-                while let Some(cell) = iter.next() {
-                    if iter.peek().is_some() {
-                        write!(f, "{} ", cell)?;
-                    } else {
-                        write!(f, "{}", cell)?;
+                let mut car = car;
+                let mut cdr = cdr;
+                loop {
+                    match (*cdr).as_ref() {
+                        &Cell::Nil => {
+                            write!(f, "{})", car)?;
+                            return Ok(());
+                        }
+                        &Cell::Cons(ref ncar, ref ncdr) => {
+                            write!(f, "{} ", car)?;
+                            car = ncar;
+                            cdr = ncdr;
+                        }
+                        _ => {
+                            write!(f, "{} . {})", car, cdr)?;
+                            return Ok(());
+                        }
                     }
                 }
-                write!(f, ")")
             }
             Cell::Number(val) => {
                 write!(f, "{}", val)
@@ -176,9 +191,22 @@ macro_rules! cell {
 }
 
 #[macro_export]
+macro_rules! cons {
+    () => {
+        Cell::new_cons(Cell::Nil, Cell::Nil)
+    };
+    ($car:expr) => {
+        Cell::new_cons($car, Cell::Nil)
+    };
+    ($car:expr, $cdr:expr) => {
+        Cell::new_cons($car, $cdr)
+    };
+}
+
+#[macro_export]
 macro_rules! list {
     () => {
-        Cell::list(vec!())
+        Cell::new_list(vec!())
     };
     ($($elt:expr),+) => {{
         let mut v = vec![];
@@ -194,10 +222,10 @@ mod tests {
     #[test]
     fn eq() {
         assert_eq!(Cell::Number(16), Cell::Number(16));
-        assert_eq!(Cell::symbol("foo"), Cell::symbol("foo"));
+        assert_eq!(Cell::new_symbol("foo"), Cell::new_symbol("foo"));
         assert_eq!(
-            Cell::list(vec!(Cell::symbol("foo"), Cell::symbol("bar"))),
-            Cell::list(vec!(Cell::symbol("foo"), Cell::symbol("bar")))
+            Cell::new_list(vec!(Cell::new_symbol("foo"), Cell::new_symbol("bar"))),
+            Cell::new_list(vec!(Cell::new_symbol("foo"), Cell::new_symbol("bar")))
         );
         assert_eq!(Cell::Nil, Cell::Nil);
     }
@@ -210,21 +238,21 @@ mod tests {
         assert_eq!(cell![-42], Cell::Number(-42));
         assert_eq!(
             cell![0, 1, 2],
-            Cell::list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
+            Cell::new_list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
         );
         assert_eq!(
             cell!["foo", 42],
-            Cell::list(vec!(Cell::symbol("foo"), Cell::Number(42)))
+            Cell::new_list(vec!(Cell::new_symbol("foo"), Cell::Number(42)))
         );
         assert_eq!(
             cell!["foo", cell![0, 1, 2]],
-            Cell::list(vec!(
-                Cell::symbol("foo"),
-                Cell::list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
+            Cell::new_list(vec!(
+                Cell::new_symbol("foo"),
+                Cell::new_list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
             ))
         );
-        assert_eq!(list![], Cell::list(vec!()));
-        assert_eq!(list!["foo"], Cell::list(vec!(Cell::symbol("foo"))));
+        assert_eq!(list![], Cell::new_list(vec!()));
+        assert_eq!(list!["foo"], Cell::new_list(vec!(Cell::new_symbol("foo"))));
     }
 
     #[test]
@@ -266,11 +294,20 @@ mod tests {
             format!("{}", list![1, 2, 3, list![5, 6, 7]]),
             "(1 2 3 (5 6 7))"
         );
+        assert_eq!(format!("{}", cons!(cell!("foo"))), "(foo)");
+        assert_eq!(
+            format!("{}", cons!(cell!("foo"), cell!("bar"))),
+            "(foo . bar)"
+        );
+        assert_eq!(
+            format!("{}", cons!(cell!(1), cons!(cell!(2), cell!(3)))),
+            "(1 2 . 3)"
+        );
     }
 
     #[test]
     fn car_and_cdr() {
-        assert_eq!(list![1, 2, 3].car(), Some(&cell![1]));
-        assert_eq!(list![1, 2, 3].cdr(), Some(&list![2, 3]));
+        assert_eq!(list![1, 2, 3].as_car(), Some(&cell![1]));
+        assert_eq!(list![1, 2, 3].as_cdr(), Some(&list![2, 3]));
     }
 }
