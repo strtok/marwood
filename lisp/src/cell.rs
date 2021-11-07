@@ -34,12 +34,8 @@ impl Cell {
         IntoIter { next: self }
     }
 
-    pub fn is_list(&self) -> bool {
-        matches!(self, Cell::Cons(_, _))
-    }
-
-    pub fn is_procedure(&self) -> bool {
-        self.is_list()
+    pub fn is_nil(&self) -> bool {
+        matches!(self, Cell::Nil)
     }
 
     pub fn car(&self) -> Option<&Cell> {
@@ -270,12 +266,6 @@ mod tests {
             format!("{}", list![1, 2, 3, list![5, 6, 7]]),
             "(1 2 3 (5 6 7))"
         );
-    }
-
-    #[test]
-    fn is_list() {
-        assert!(list![1, 2, 3].is_list());
-        assert!(!cell![42].is_list());
     }
 
     #[test]
