@@ -169,7 +169,7 @@ impl Display for Cell {
                 write!(f, "{}", val)
             }
             Cell::Nil => {
-                write!(f, "'()")
+                write!(f, "()")
             }
         }
     }
@@ -303,6 +303,7 @@ mod tests {
             format!("{}", cons!(cell!(1), cons!(cell!(2), cell!(3)))),
             "(1 2 . 3)"
         );
+        assert_eq!(format!("{}", cons!(cell!(), cell!(42))), "(() . 42)")
     }
 
     #[test]
