@@ -1,0 +1,40 @@
+[package]
+name = "wasm-repl"
+version = "0.1.0"
+authors = ["Erik Bremen"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies.web-sys]
+version = "0.3.39"
+features = [
+  'Document',
+  'Element',
+  'HtmlElement',
+  'HtmlDivElement',
+  'Node',
+  'Window',
+  'CssStyleDeclaration',
+  'EventTarget',
+  'MessageEvent',
+]
+
+[dependencies]
+xterm-js-rs = { version = "0.1.1", features = ["xterm-addon-fit"] }
+js-sys = "0.3.55"
+wasm-bindgen = "0.2.78"
+lisp = { path="../lisp" }
+
+console_error_panic_hook = { version = "0.1.6", optional = true }
+wee_alloc = { version = "0.4.5", optional = true }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.28"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

@@ -1,3 +1,7 @@
 /target
 .idea/*
 Cargo.lock
+node_modules/
+pkg/
+wasm-repl/package-lock.json
+wasm-repl/www/package-lock.json

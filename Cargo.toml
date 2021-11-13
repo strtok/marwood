@@ -2,5 +2,7 @@
 
 members = [
     "parcom",
-    "lisp"
+    "lisp",
+    "repl",
+    "wasm-repl"
 ]

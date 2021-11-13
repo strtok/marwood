@@ -1,5 +1,5 @@
 [package]
-name = "lisp"
+name = "repl"
 version = "0.1.0"
 authors = ["Erik Bremen <strtok@strtok.net>"]
 edition = "2021"
@@ -8,3 +8,6 @@ edition = "2021"
 
 [dependencies]
 parcom = { path = "../parcom" }
+lisp = { path = "../lisp" }
+pretty_env_logger = "0.4.0"
+rustyline = "9.0.0"
