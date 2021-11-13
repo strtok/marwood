@@ -25,7 +25,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v1
 
-      - name: Build example
+      - name: Build wasm 
         run: |
           wasm-pack build
           npm install
@@ -35,7 +35,7 @@ jobs:
         run: |
           npm install
           npm run build
-        working-directory: ./wasm-rpl/www
+        working-directory: ./wasm-repl/www
 
       - name: Deploy to gh-pages
         if: success()
