@@ -1,12 +1,12 @@
-use rustyline::error::ReadlineError;
-use rustyline::Editor;
 use lisp::eval::eval;
 use lisp::parse;
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 fn main() {
     let mut rl = Editor::<()>::new();
     loop {
-        let readline = rl.readline(">> ");
+        let readline = rl.readline("> ");
         match readline {
             Ok(line) => {
                 parse_and_eval(&line);
