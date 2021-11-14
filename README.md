@@ -1,4 +1,4 @@
-# Scheme R5RS &emsp; [![License Badge]][License] [![Build Badge]][Build]
+# Scheme R5RS &emsp; [![License Badge]][License] [![Test Badge]][Test] [![Deploy Badge]][Deploy]
 
 [License Badge]: https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat&logo=appveyor
 [License]: LICENSE-MIT
