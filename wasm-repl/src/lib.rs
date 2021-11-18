@@ -134,7 +134,7 @@ fn parse_and_eval(term: &Terminal, text: &str) {
                 break;
             }
             Err(_) => {
-                term.writeln(&format!("error: parse failed"));
+                term.writeln("error: parse failed");
             }
         }
     }
