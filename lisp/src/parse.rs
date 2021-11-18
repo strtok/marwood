@@ -1,107 +1,146 @@
 use crate::cell::Cell;
-use parcom::parcom::{
-    between, collect, discard, mapv, one_of, optional, repeat1, repeatc, seq, ParseResult, Parser,
-};
-use parcom::parcom_str::{alphabetic_char, ch, digit_char, one_of_char, whitespace_char};
-use parcom::{one_of, seqc};
+use crate::lexer::{Token, TokenType};
+use std::iter::Peekable;
 
-pub fn identifier<'a>() -> impl Parser<&'a str, String> {
-    let initial_identifier = || one_of!(alphabetic_char(), one_of_char("!$%&*/:<=>?^_~"));
-    let peculiar_identifier = one_of_char("+-");
-    let subsequent_identifier = one_of!(initial_identifier(), alphabetic_char(), digit_char());
+#[derive(Debug, Eq, PartialEq)]
+pub struct ParseError {}
 
-    one_of!(
-        seqc!(initial_identifier(), repeatc(subsequent_identifier)),
-        peculiar_identifier
-    )
-}
-
-pub fn variable<'a>() -> impl Parser<&'a str, Cell> {
-    mapv(identifier(), Cell::Symbol)
-}
-
-pub fn number<'a>() -> impl Parser<&'a str, Cell> {
-    let digit = one_of_char("0123456789");
-    let sign = one_of_char("+-");
-    let num10 = mapv(
-        seqc!(optional(sign), collect(repeat1(digit))),
-        |s: String| match s.parse::<i64>() {
-            Ok(n) => Cell::Number(n),
-            Err(_) => Cell::Number(0),
+/// Parse one expression from the token stream.
+///
+/// # Arguments
+/// *`cur` - An iterator over the token stream. The parser will only
+///          advance the iterator enough to satisfy one expression.
+/// *`text` - The text backed by the token spans.
+pub fn parse<'a, T: Iterator<Item = &'a Token>>(
+    text: &str,
+    cur: &mut Peekable<T>,
+) -> Result<Option<Cell>, ParseError> {
+    let token = match cur.next() {
+        Some(token) => token,
+        None => return Ok(None),
+    };
+    let token_text = token.span_text(text);
+    match token.token_type {
+        TokenType::RightParen => Err(ParseError {}),
+        TokenType::LeftParen => {
+            let mut list = vec![];
+            while let Some(&token) = cur.peek() {
+                match token.token_type {
+                    TokenType::RightParen => {
+                        cur.next();
+                        return if list.is_empty() {
+                            Err(ParseError {})
+                        } else {
+                            Ok(Some(Cell::new_list(list)))
+                        };
+                    }
+                    TokenType::Dot => {
+                        cur.next();
+                        return Ok(Some(Cell::Nil));
+                    }
+                    _ => match parse(text, cur) {
+                        Ok(Some(cell)) => list.push(cell),
+                        Ok(None) => {}
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                }
+            }
+            Err(ParseError {})
+        }
+        TokenType::Symbol => Ok(Some(Cell::new_symbol(token_text))),
+        TokenType::Number => match token_text.parse::<i64>() {
+            Ok(n) => Ok(Some(Cell::Number(n))),
+            Err(_) => match token_text.parse::<f64>() {
+                Ok(n) => Ok(Some(Cell::Number(n as i64))),
+                Err(_) => Ok(Some(Cell::Symbol(token_text.to_string()))),
+            },
         },
-    );
-
-    mapv(one_of!(num10), Cell::from)
-}
-
-pub fn ows<'a>() -> impl Parser<&'a str, String> {
-    discard(optional(whitespace_char()))
-}
-
-pub fn procedure_call<'a>() -> impl Parser<&'a str, Cell> {
-    mapv(
-        between(ch('('), repeat1(between(ows(), expression, ows())), ch(')')),
-        Cell::new_list,
-    )
-}
-
-pub fn expression(input: &str) -> ParseResult<&str, Cell> {
-    one_of!(procedure_call(), number(), variable()).apply(input)
+        _ => Ok(None),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{cell, list};
+    use crate::cell;
+    use crate::lexer;
+    use crate::list;
 
     macro_rules! parses {
-        ($parser:expr, $($lhs:expr => $rhs:expr),+) => {{
+        ($($lhs:expr => $rhs:expr),+) => {{
              $(
-                assert_eq!($parser.apply($lhs), Ok(("", Some($rhs))));
+                assert_eq!(parse($lhs, &mut lexer::tokenize($lhs).iter().peekable()), Ok(Some($rhs)));
              )+
         }};
     }
 
     macro_rules! fails {
-        ($parser:expr, $($lhs:expr),+) => {{
+        ($($lhs:expr),+) => {{
              $(
-                assert_eq!($parser.apply($lhs), Err($lhs));
+                assert!(matches!(parse($lhs, &mut lexer::tokenize($lhs).iter().peekable()), Err(_)));
              )+
         }};
     }
 
     #[test]
+    fn paren_mismatch() {
+        fails!("(", ")");
+    }
+
+    #[test]
     fn variables() {
-        parses!(variable(),
+        parses!(
             "foo" => cell!["foo"],
             "bar" => cell!["bar"]
         );
-        fails!(variable(), "...foo");
+    }
+
+    #[test]
+    fn consumes_one_expression_per_call() {
+        let text = "foo bar baz";
+        let tokens = lexer::tokenize(text);
+        let mut cur = (&tokens).iter().peekable();
+        assert_eq!(parse(text, &mut cur), Ok(Some(cell!["foo"])));
+        assert_eq!(parse(text, &mut cur), Ok(Some(cell!["bar"])));
+        assert_eq!(parse(text, &mut cur), Ok(Some(cell!["baz"])));
+        assert_eq!(parse(text, &mut cur), Ok(None));
+    }
+
+    #[test]
+    fn lists_are_fully_consumed() {
+        let text = "(foo bar)";
+        let tokens = lexer::tokenize(text);
+        let mut cur = (&tokens).iter().peekable();
+        assert_eq!(parse(text, &mut cur), Ok(Some(list!["foo", "bar"])));
+        assert_eq!(parse(text, &mut cur), Ok(None));
     }
 
     #[test]
     fn procedures() {
-        parses!(procedure_call(),
+        parses!(
             "(foo)" => list!["foo"],
             "( foo )" => list!["foo"],
             "(foo bar baz)" => list!["foo", "bar", "baz"]
         );
 
-        fails!(procedure_call(), "()", "( )", "(  )");
+        fails!("()", "( )", "(  )");
     }
 
     #[test]
     fn numbers() {
-        parses!(number(),
+        parses!(
             "42" => cell![42],
             "+42" => cell![42],
-            "-42" => cell![-42]
+            "-42" => cell![-42],
+            "42..1" => cell!["42..1"]
         );
     }
 
     #[test]
     fn expressions() {
-        parses!(expression,
+        parses!(
             "foo" => cell!["foo"],
             "42" => cell![42],
             "-18" => cell![-18],

@@ -1,5 +1,6 @@
 use lisp::eval::eval;
-use lisp::parse;
+use lisp::lexer::tokenize;
+use lisp::parse::parse;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use xterm_js_rs::addons::fit::FitAddon;
@@ -21,7 +22,6 @@ const CURSOR_RIGHT: &str = "\x1b[C";
 
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
-
     // forward panics to console.error
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
@@ -61,7 +61,7 @@ pub fn main() -> Result<(), JsValue> {
             KEY_ENTER => {
                 if !line.is_empty() {
                     term.writeln("");
-                    eval_and_print(&term, &line);
+                    parse_and_eval(&term, &line);
                     line.clear();
                     cursor_col = 0;
                 }
@@ -118,27 +118,23 @@ fn write_prompt(term: &Terminal) {
     term.write("> ");
 }
 
-fn eval_and_print(term: &Terminal, mut line: &str) {
-    while !line.is_empty() {
-        match parse::expression(line) {
-            Ok((rest, Some(cell))) => {
+fn parse_and_eval(term: &Terminal, text: &str) {
+    let tokens = tokenize(text);
+    let mut cur = tokens.iter().peekable();
+
+    while cur.peek().is_some() {
+        match parse(text, &mut cur) {
+            Ok(Some(cell)) => {
                 match eval(cell) {
-                    Ok(cell) => {
-                        term.writeln(&format!("{}", cell));
-                    }
-                    Err(e) => {
-                        term.writeln(&e);
-                    }
-                }
-                line = rest;
+                    Ok(cell) => term.writeln(&format!("{}", cell)),
+                    Err(e) => term.writeln(&format!("error: {}", e)),
+                };
             }
-            Ok((rest, None)) => {
-                term.writeln(&format!("'{}' is not an expression", line));
-                line = rest;
+            Ok(None) => {
+                break;
             }
-            Err(e) => {
-                term.writeln(&format!("'{}' could not be parsed", e));
-                return;
+            Err(_) => {
+                term.writeln(&format!("error: parse failed"));
             }
         }
     }

@@ -1,7 +1,6 @@
 [workspace]
 
 members = [
-    "parcom",
     "lisp",
     "repl",
     "wasm-repl"
