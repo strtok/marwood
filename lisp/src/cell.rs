@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Cell {
+    Bool(bool),
     Number(i64),
     Symbol(String),
     Cons(Box<Cell>, Box<Cell>),
@@ -59,9 +60,22 @@ impl Cell {
 
     pub fn as_number(&self) -> Option<i64> {
         match self {
-            Cell::Number(n) => Some(*n),
+            Cell::Number(val) => Some(*val),
             _ => None,
         }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            Cell::Bool(val) => Some(*val),
+            _ => None,
+        }
+    }
+}
+
+impl From<bool> for Cell {
+    fn from(val: bool) -> Self {
+        Cell::Bool(val)
     }
 }
 
@@ -161,6 +175,9 @@ impl Display for Cell {
                         }
                     }
                 }
+            }
+            Cell::Bool(val) => {
+                write!(f, "{}", if *val { "#t" } else { "#f" })
             }
             Cell::Number(val) => {
                 write!(f, "{}", val)
@@ -287,6 +304,8 @@ mod tests {
     #[test]
     fn display() {
         assert_eq!(format!("{}", Cell::Nil), "()");
+        assert_eq!(format!("{}", cell![true]), "#t");
+        assert_eq!(format!("{}", cell![false]), "#f");
         assert_eq!(format!("{}", cell![42]), "42");
         assert_eq!(format!("{}", cell!["foo"]), "foo");
         assert_eq!(format!("{}", list![1, 2, 3]), "(1 2 3)");

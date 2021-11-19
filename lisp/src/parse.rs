@@ -49,6 +49,8 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
             }
             Err(ParseError {})
         }
+        TokenType::True => Ok(Some(Cell::Bool(true))),
+        TokenType::False => Ok(Some(Cell::Bool(false))),
         TokenType::Symbol => Ok(Some(Cell::new_symbol(token_text))),
         TokenType::Number => match token_text.parse::<i64>() {
             Ok(n) => Ok(Some(Cell::Number(n))),
