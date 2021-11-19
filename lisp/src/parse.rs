@@ -28,11 +28,7 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
                 match token.token_type {
                     TokenType::RightParen => {
                         cur.next();
-                        return if list.is_empty() {
-                            Err(ParseError {})
-                        } else {
-                            Ok(Some(Cell::new_list(list)))
-                        };
+                        return Ok(Some(Cell::new_list(list)));
                     }
                     TokenType::Dot => {
                         cur.next();
@@ -124,10 +120,10 @@ mod tests {
         parses!(
             "(foo)" => list!["foo"],
             "( foo )" => list!["foo"],
-            "(foo bar baz)" => list!["foo", "bar", "baz"]
+            "(foo bar baz)" => list!["foo", "bar", "baz"],
+            "()" => cell![],
+            "( )" => cell![]
         );
-
-        fails!("()", "( )", "(  )");
     }
 
     #[test]
