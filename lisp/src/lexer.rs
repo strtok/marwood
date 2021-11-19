@@ -34,7 +34,7 @@ pub fn tokenize(text: &str) -> Vec<Token> {
     let mut tokens = vec![];
     let mut cur = text.char_indices().peekable();
 
-    while let Some(&(offset, c)) = cur.peek() {
+    while let Some(&(start, c)) = cur.peek() {
         let token = match c {
             '(' | ')' | '\'' | '.' => {
                 cur.next();
@@ -47,18 +47,18 @@ pub fn tokenize(text: &str) -> Vec<Token> {
                         continue;
                     }
                 };
-                Some(Token::new((offset, offset + c.len_utf8()), token_type))
+                Some(Token::new((start, start + c.len_utf8()), token_type))
             }
             '#' => {
                 cur.next();
                 match cur.next() {
-                    Some((offset, c_next)) => match c {
+                    Some((_, c_next)) => match c_next {
                         't' => Some(Token::new(
-                            (offset, offset + c.len_utf8() + c_next.len_utf16()),
+                            (start, start + c.len_utf8() + c_next.len_utf8()),
                             TokenType::True,
                         )),
                         'f' => Some(Token::new(
-                            (offset, offset + c.len_utf8() + c_next.len_utf16()),
+                            (start, start + c.len_utf8() + c_next.len_utf8()),
                             TokenType::False,
                         )),
                         _ => None,
