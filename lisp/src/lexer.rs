@@ -36,6 +36,15 @@ pub struct Error {
     pub error_type: ErrorType,
 }
 
+impl Error {
+    fn new(context: (usize, usize), error_type: ErrorType) -> Error {
+        Error {
+            context,
+            error_type,
+        }
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum ErrorType {
     #[error("vectors are not supported")]
@@ -76,23 +85,24 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
                             TokenType::False,
                         )),
                         '(' => {
-                            return Err(Error {
-                                context: (start, start + c_next.len_utf8()),
-                                error_type: ErrorType::VectorsNotSupported,
-                            });
+                            return Err(Error::new(
+                                (start, start + c_next.len_utf8()),
+                                ErrorType::VectorsNotSupported,
+                            ));
                         }
+
                         _ => {
-                            return Err(Error {
-                                context: (start, start + c.len_utf8() + c_next.len_utf8()),
-                                error_type: ErrorType::UnexpectedCharacter('#'),
-                            });
+                            return Err(Error::new(
+                                (start, start + c_next.len_utf8()),
+                                ErrorType::VectorsNotSupported,
+                            ));
                         }
                     },
                     None => {
-                        return Err(Error {
-                            context: (start, start + c.len_utf8()),
-                            error_type: ErrorType::UnexpectedCharacter('#'),
-                        });
+                        return Err(Error::new(
+                            (start, start + c.len_utf8()),
+                            ErrorType::UnexpectedCharacter('#'),
+                        ));
                     }
                 }
             }
@@ -103,7 +113,10 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
                 None
             }
             _ => {
-                panic!("unknown character {}", c);
+                return Err(Error::new(
+                    (start, start + c.len_utf8()),
+                    ErrorType::UnexpectedCharacter(c),
+                ))
             }
         };
         if let Some(token) = token {
