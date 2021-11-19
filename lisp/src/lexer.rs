@@ -4,11 +4,13 @@ use std::str::CharIndices;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TokenType {
     Dot,
+    False,
     LeftParen,
     Number,
     RightParen,
     SingleQuote,
     Symbol,
+    True,
     WhiteSpace,
 }
 
@@ -33,47 +35,52 @@ pub fn tokenize(text: &str) -> Vec<Token> {
     let mut cur = text.char_indices().peekable();
 
     while let Some(&(offset, c)) = cur.peek() {
-        let token_type = map_token_start(c);
-        if let Some(token) = match token_type {
-            Some(
-                TokenType::LeftParen
-                | TokenType::RightParen
-                | TokenType::SingleQuote
-                | TokenType::Dot,
-            ) => {
+        let token = match c {
+            '(' | ')' | '\'' | '.' => {
                 cur.next();
-                Some(Token::new(
-                    (offset, offset + c.len_utf8()),
-                    token_type.unwrap(),
-                ))
+                let token_type = match c {
+                    '(' => TokenType::LeftParen,
+                    ')' => TokenType::RightParen,
+                    '\'' => TokenType::SingleQuote,
+                    '.' => TokenType::Dot,
+                    _ => {
+                        continue;
+                    }
+                };
+                Some(Token::new((offset, offset + c.len_utf8()), token_type))
             }
-            Some(TokenType::Symbol) => Some(scan_symbol(&mut cur)),
-            Some(TokenType::Number) => Some(scan_number(&mut cur)),
-            Some(TokenType::WhiteSpace) => {
+            '#' => {
+                cur.next();
+                match cur.next() {
+                    Some((offset, c_next)) => match c {
+                        't' => Some(Token::new(
+                            (offset, offset + c.len_utf8() + c_next.len_utf16()),
+                            TokenType::True,
+                        )),
+                        'f' => Some(Token::new(
+                            (offset, offset + c.len_utf8() + c_next.len_utf16()),
+                            TokenType::False,
+                        )),
+                        _ => None,
+                    },
+                    None => None,
+                }
+            }
+            _ if is_initial_identifier(c) => Some(scan_symbol(&mut cur)),
+            _ if is_initial_number(c) => Some(scan_number(&mut cur)),
+            _ if c.is_whitespace() => {
                 cur.next();
                 None
             }
             _ => {
                 panic!("unknown character {}", c);
             }
-        } {
+        };
+        if let Some(token) = token {
             tokens.push(token);
         }
     }
     tokens
-}
-
-fn map_token_start(c: char) -> Option<TokenType> {
-    match c {
-        '(' => Some(TokenType::LeftParen),
-        ')' => Some(TokenType::RightParen),
-        '\'' => Some(TokenType::SingleQuote),
-        '.' => Some(TokenType::Dot),
-        _ if is_initial_identifier(c) => Some(TokenType::Symbol),
-        _ if is_initial_number(c) => Some(TokenType::Number),
-        _ if c.is_whitespace() => Some(TokenType::WhiteSpace),
-        _ => None,
-    }
 }
 
 fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Token {
@@ -220,5 +227,13 @@ mod tests {
             (")", TokenType::RightParen),
             (")", TokenType::RightParen)
         );
+    }
+
+    #[test]
+    fn boolean_tokens() {
+        lexes!(
+            "#t" => TokenType::True,
+            "#f" => TokenType::False
+        )
     }
 }
