@@ -32,16 +32,13 @@ impl Token {
 
 #[derive(Debug)]
 pub struct Error {
-    pub context: (usize, usize),
+    pub pos: usize,
     pub error_type: ErrorType,
 }
 
 impl Error {
-    fn new(context: (usize, usize), error_type: ErrorType) -> Error {
-        Error {
-            context,
-            error_type,
-        }
+    fn new(pos: usize, error_type: ErrorType) -> Error {
+        Error { pos, error_type }
     }
 }
 
@@ -49,8 +46,8 @@ impl Error {
 pub enum ErrorType {
     #[error("vectors are not supported")]
     VectorsNotSupported,
-    #[error("unexpected character '{0}'")]
-    UnexpectedCharacter(char),
+    #[error("unexpected token '{0}'")]
+    UnexpectedToken(char),
 }
 
 pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
@@ -75,34 +72,13 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
             '#' => {
                 cur.next();
                 match cur.next() {
-                    Some((_, c_next)) => match c_next {
-                        't' => Some(Token::new(
-                            (start, start + c.len_utf8() + c_next.len_utf8()),
-                            TokenType::True,
-                        )),
-                        'f' => Some(Token::new(
-                            (start, start + c.len_utf8() + c_next.len_utf8()),
-                            TokenType::False,
-                        )),
-                        '(' => {
-                            return Err(Error::new(
-                                (start, start + c_next.len_utf8()),
-                                ErrorType::VectorsNotSupported,
-                            ));
-                        }
-
-                        _ => {
-                            return Err(Error::new(
-                                (start, start + c_next.len_utf8()),
-                                ErrorType::VectorsNotSupported,
-                            ));
-                        }
-                    },
-                    None => {
-                        return Err(Error::new(
-                            (start, start + c.len_utf8()),
-                            ErrorType::UnexpectedCharacter('#'),
-                        ));
+                    Some((_, 't')) => Some(Token::new((start, start + 2), TokenType::True)),
+                    Some((_, 'f')) => Some(Token::new((start, start + 2), TokenType::False)),
+                    Some((_, '(')) => {
+                        return Err(Error::new(start, ErrorType::VectorsNotSupported));
+                    }
+                    _ => {
+                        return Err(Error::new(start, ErrorType::UnexpectedToken('#')));
                     }
                 }
             }
@@ -112,12 +88,7 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
                 cur.next();
                 None
             }
-            _ => {
-                return Err(Error::new(
-                    (start, start + c.len_utf8()),
-                    ErrorType::UnexpectedCharacter(c),
-                ))
-            }
+            _ => return Err(Error::new(start, ErrorType::UnexpectedToken(c))),
         };
         if let Some(token) = token {
             tokens.push(token);
