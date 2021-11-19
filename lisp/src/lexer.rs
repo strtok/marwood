@@ -56,32 +56,8 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
 
     while let Some(&(start, c)) = cur.peek() {
         tokens.push(match c {
-            '(' | ')' | '\'' | '.' => {
-                cur.next();
-                let token_type = match c {
-                    '(' => TokenType::LeftParen,
-                    ')' => TokenType::RightParen,
-                    '\'' => TokenType::SingleQuote,
-                    '.' => TokenType::Dot,
-                    _ => {
-                        continue;
-                    }
-                };
-                Token::new((start, start + c.len_utf8()), token_type)
-            }
-            '#' => {
-                cur.next();
-                match cur.next() {
-                    Some((_, 't')) => Token::new((start, start + 2), TokenType::True),
-                    Some((_, 'f')) => Token::new((start, start + 2), TokenType::False),
-                    Some((_, '(')) => {
-                        return Err(Error::new(start, ErrorType::VectorsNotSupported));
-                    }
-                    _ => {
-                        return Err(Error::new(start, ErrorType::UnexpectedToken('#')));
-                    }
-                }
-            }
+            '(' | ')' | '\'' | '.' => scan_simple_token(&mut cur)?,
+            '#' => scan_hash_token(&mut cur)?,
             _ if is_initial_identifier(c) => scan_symbol(&mut cur)?,
             _ if is_initial_number(c) => scan_number(&mut cur)?,
             _ if c.is_whitespace() => {
@@ -93,6 +69,36 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
     }
 
     Ok(tokens)
+}
+
+fn scan_simple_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
+    let (start, c) = cur.next().unwrap();
+    Ok(Token::new(
+        (start, start + c.len_utf8()),
+        match c {
+            '(' => TokenType::LeftParen,
+            ')' => TokenType::RightParen,
+            '\'' => TokenType::SingleQuote,
+            '.' => TokenType::Dot,
+            _ => {
+                panic!();
+            }
+        },
+    ))
+}
+
+fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
+    let (start, _) = cur.next().unwrap();
+    let (_, c) = cur
+        .next()
+        .ok_or_else(|| Error::new(start, ErrorType::UnexpectedToken('#')))?;
+
+    match c {
+        't' => Ok(Token::new((start, start + 2), TokenType::True)),
+        'f' => Ok(Token::new((start, start + 2), TokenType::False)),
+        '(' => Err(Error::new(start, ErrorType::VectorsNotSupported)),
+        _ => Err(Error::new(start, ErrorType::UnexpectedToken('#'))),
+    }
 }
 
 fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
