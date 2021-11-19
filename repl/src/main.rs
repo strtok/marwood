@@ -27,13 +27,12 @@ fn parse_and_eval(text: &str) {
     let tokens = tokenize(text);
     let mut cur = tokens.iter().peekable();
 
-    trace!("tokens: {:?}", tokens);
+    trace!("lexer: {:?}", tokens);
 
     while cur.peek().is_some() {
-        trace!("passing '{:?}' to parse()", cur.peek());
         match parse(text, &mut cur) {
             Ok(Some(cell)) => {
-                trace!("{}", cell);
+                trace!("parser: {:?}", cell);
                 match eval(cell) {
                     Ok(cell) => println!("{}", cell),
                     Err(e) => eprintln!("error: {}", e),
