@@ -55,7 +55,7 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
     let mut cur = text.char_indices().peekable();
 
     while let Some(&(start, c)) = cur.peek() {
-        let token = match c {
+        tokens.push(match c {
             '(' | ')' | '\'' | '.' => {
                 cur.next();
                 let token_type = match c {
@@ -67,13 +67,13 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
                         continue;
                     }
                 };
-                Some(Token::new((start, start + c.len_utf8()), token_type))
+                Token::new((start, start + c.len_utf8()), token_type)
             }
             '#' => {
                 cur.next();
                 match cur.next() {
-                    Some((_, 't')) => Some(Token::new((start, start + 2), TokenType::True)),
-                    Some((_, 'f')) => Some(Token::new((start, start + 2), TokenType::False)),
+                    Some((_, 't')) => Token::new((start, start + 2), TokenType::True),
+                    Some((_, 'f')) => Token::new((start, start + 2), TokenType::False),
                     Some((_, '(')) => {
                         return Err(Error::new(start, ErrorType::VectorsNotSupported));
                     }
@@ -82,23 +82,20 @@ pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
                     }
                 }
             }
-            _ if is_initial_identifier(c) => Some(scan_symbol(&mut cur)),
-            _ if is_initial_number(c) => Some(scan_number(&mut cur)),
+            _ if is_initial_identifier(c) => scan_symbol(&mut cur)?,
+            _ if is_initial_number(c) => scan_number(&mut cur)?,
             _ if c.is_whitespace() => {
                 cur.next();
-                None
+                continue;
             }
             _ => return Err(Error::new(start, ErrorType::UnexpectedToken(c))),
-        };
-        if let Some(token) = token {
-            tokens.push(token);
-        }
+        });
     }
 
     Ok(tokens)
 }
 
-fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Token {
+fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     let start = cur.peek().unwrap().0;
     let mut end = start;
     while let Some(&(offset, c)) = cur.peek() {
@@ -108,10 +105,10 @@ fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Token {
         end = offset + c.len_utf8();
         cur.next();
     }
-    Token::new((start, end), TokenType::Symbol)
+    Ok(Token::new((start, end), TokenType::Symbol))
 }
 
-fn scan_number(cur: &mut Peekable<CharIndices>) -> Token {
+fn scan_number(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     let start = cur.peek().unwrap().0;
     let mut end = start;
     while let Some(&(offset, c)) = cur.peek() {
@@ -121,7 +118,7 @@ fn scan_number(cur: &mut Peekable<CharIndices>) -> Token {
         end = offset + c.len_utf8();
         cur.next();
     }
-    Token::new((start, end), TokenType::Number)
+    Ok(Token::new((start, end), TokenType::Number))
 }
 
 fn is_initial_number(c: char) -> bool {
