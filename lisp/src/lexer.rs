@@ -30,7 +30,21 @@ impl Token {
     }
 }
 
-pub fn tokenize(text: &str) -> Vec<Token> {
+#[derive(Debug)]
+pub struct Error {
+    pub context: (usize, usize),
+    pub error_type: ErrorType,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ErrorType {
+    #[error("vectors are not supported")]
+    VectorsNotSupported,
+    #[error("unexpected character '{0}'")]
+    UnexpectedCharacter(char),
+}
+
+pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
     let mut tokens = vec![];
     let mut cur = text.char_indices().peekable();
 
@@ -61,9 +75,25 @@ pub fn tokenize(text: &str) -> Vec<Token> {
                             (start, start + c.len_utf8() + c_next.len_utf8()),
                             TokenType::False,
                         )),
-                        _ => None,
+                        '(' => {
+                            return Err(Error {
+                                context: (start, start + c_next.len_utf8()),
+                                error_type: ErrorType::VectorsNotSupported,
+                            });
+                        }
+                        _ => {
+                            return Err(Error {
+                                context: (start, start + c.len_utf8() + c_next.len_utf8()),
+                                error_type: ErrorType::UnexpectedCharacter('#'),
+                            });
+                        }
                     },
-                    None => None,
+                    None => {
+                        return Err(Error {
+                            context: (start, start + c.len_utf8()),
+                            error_type: ErrorType::UnexpectedCharacter('#'),
+                        });
+                    }
                 }
             }
             _ if is_initial_identifier(c) => Some(scan_symbol(&mut cur)),
@@ -80,7 +110,8 @@ pub fn tokenize(text: &str) -> Vec<Token> {
             tokens.push(token);
         }
     }
-    tokens
+
+    Ok(tokens)
 }
 
 fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Token {
@@ -162,11 +193,11 @@ mod tests {
         ($lhs:expr => $(($token_text:expr, $token_type:expr)),+) => {{
             let mut v = vec![];
             $(v.push(($token_text, $token_type));)+
-            assert_eq!(expand(tokenize($lhs), $lhs), v);
+            assert_eq!(expand(tokenize($lhs).unwrap(), $lhs), v);
         }};
         ($($lhs:expr => $rhs:expr),+) => {{
              $(
-                assert_eq!(expand(tokenize($lhs), $lhs).iter().next().unwrap(), &($lhs, $rhs));
+                assert_eq!(expand(tokenize($lhs).unwrap(), $lhs).iter().next().unwrap(), &($lhs, $rhs));
              )+
         }};
     }

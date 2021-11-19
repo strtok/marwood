@@ -119,7 +119,14 @@ fn write_prompt(term: &Terminal) {
 }
 
 fn parse_and_eval(term: &Terminal, text: &str) {
-    let tokens = tokenize(text);
+    let tokens = match tokenize(text) {
+        Ok(tokens) => tokens,
+        Err(e) => {
+            term.writeln(&format!("error: {:?}", e.error_type));
+            return;
+        }
+    };
+
     let mut cur = tokens.iter().peekable();
 
     while cur.peek().is_some() {

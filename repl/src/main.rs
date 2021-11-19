@@ -24,7 +24,14 @@ fn main() {
 }
 
 fn parse_and_eval(text: &str) {
-    let tokens = tokenize(text);
+    let tokens = match tokenize(text) {
+        Ok(tokens) => tokens,
+        Err(e) => {
+            eprintln!("error: {}", e.error_type);
+            return;
+        }
+    };
+
     let mut cur = tokens.iter().peekable();
 
     trace!("lexer: {:?}", tokens);
