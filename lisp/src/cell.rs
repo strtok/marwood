@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::fmt::{Display, Formatter};
+use std::ops::DerefMut;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Cell {
@@ -16,6 +17,29 @@ impl Cell {
     }
 
     pub fn new_list<T: IntoIterator<Item = Cell>>(iter: T) -> Cell {
+        Cell::construct_list(iter, None)
+    }
+
+    pub fn new_improper_list<T: IntoIterator<Item = Cell>>(iter: T, cdr: Cell) -> Cell {
+        Cell::construct_list(iter, Some(cdr))
+    }
+
+    /// Construct List
+    ///
+    /// This constructs a list composed of cons cells, where each value of the list
+    /// is stored in car, and the remainder of the list is stored in cdr. The very
+    /// last cons cell's cdr is set to the empty list (Cell::Nil).
+    ///
+    /// If `last_cdr` is set, the very last cell's cdr is set to the value in `last_cdr`,
+    /// making this an improper list.
+    ///
+    /// An improper list uses the dotted notation form, for example: `(1 2 3 . 4)`
+    ///
+    /// # Arguments
+    /// `iter` - An iterator over Cell used to construct the list
+    /// `last_cdr` - If Some(cell), then set the last cell in the list's cdr to last_cdr
+    ///              instead of Cell::Nil
+    fn construct_list<T: IntoIterator<Item = Cell>>(iter: T, mut last_cdr: Option<Cell>) -> Cell {
         let mut head = Cell::Nil;
         let mut tail = &mut head;
         for cell in iter {
@@ -29,6 +53,13 @@ impl Cell {
                 }
             }
         }
+
+        if last_cdr.is_some() {
+            if let &mut Cell::Cons(_, ref mut cdr) = tail.deref_mut() {
+                *cdr = Box::new(last_cdr.take().unwrap());
+            }
+        }
+
         head
     }
 
@@ -270,6 +301,13 @@ mod tests {
         );
         assert_eq!(list![], Cell::new_list(vec!()));
         assert_eq!(list!["foo"], Cell::new_list(vec!(Cell::new_symbol("foo"))));
+    }
+
+    #[test]
+    fn improper_list() {
+        let improper_list = Cell::new_improper_list(vec![cell![1], cell![2]].into_iter(), cell![3]);
+        assert_eq!(improper_list, cons!(cell!(1), cons!(cell!(2), cell!(3))));
+        assert_eq!(format!("{}", improper_list), "(1 2 . 3)");
     }
 
     #[test]
