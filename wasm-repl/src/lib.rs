@@ -49,12 +49,6 @@ pub fn main() -> Result<(), JsValue> {
         .unwrap();
     terminal.writeln("");
     terminal.open(elem.dyn_into()?);
-    terminal.writeln(&format!(
-        "build {} ({} {})",
-        env!("VERGEN_GIT_SHA_SHORT"),
-        env!("VERGEN_BUILD_DATE"),
-        env!("VERGEN_BUILD_TIME")
-    ));
     write_prompt(&terminal);
 
     let mut cursor_col = 0;
