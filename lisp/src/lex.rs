@@ -1,6 +1,10 @@
 use std::iter::Peekable;
 use std::str::CharIndices;
 
+/// Token Type
+///
+/// [`TokenType`] represents the type of a lexeme as recognized
+/// by the scanner.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TokenType {
     Dot,
@@ -14,25 +18,53 @@ pub enum TokenType {
     WhiteSpace,
 }
 
+/// Token
+/// [`Token`] is the main unit of output of the scanner, and is
+/// the pairing of a lexeme with its scanned type. The `lexeme`
+/// field contains a start and end index from the original scanned
+/// &str and may be used to extract the lexeme from the original
+/// text (e.g. `text[token.lexeme.0..token.lexeme.1]`).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Token {
-    pub span: (usize, usize),
+    /// (start, end) index of original lexeme in the source &str
+    pub lexeme: (usize, usize),
+    /// The type output by the scanner
     pub token_type: TokenType,
 }
 
 impl Token {
     pub fn new(span: (usize, usize), token_type: TokenType) -> Token {
-        Token { span, token_type }
+        Token {
+            lexeme: span,
+            token_type,
+        }
     }
 
-    pub fn span_text<'a, 'b>(&'a self, text: &'b str) -> &'b str {
-        &text[self.span.0..self.span.1]
+    /// Lexeme
+    ///
+    /// Given the originally scanned &str, extract the lexeme from the
+    /// &str given the (start, end) indexes stored in self.lexeme.
+    ///
+    /// # Arguments
+    /// `text` - The originally scanned &str
+    ///
+    /// # Safety
+    /// This method assumes the originally scanned &str be used, and
+    /// may panic otherwise.
+    pub fn lexeme<'a, 'b>(&'a self, text: &'b str) -> &'b str {
+        &text[self.lexeme.0..self.lexeme.1]
     }
 }
 
+/// Error
+///
+/// An error returned by the scanner if the input text contains invalid
+/// grammar.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Error {
+    /// The position of the start of the invalid grammar
     pub pos: usize,
+    /// The type of error encountered
     pub error_type: ErrorType,
 }
 
@@ -42,6 +74,9 @@ impl Error {
     }
 }
 
+/// Error Type
+///
+/// The type of error encountered by the scanner.
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum ErrorType {
     #[error("vectors are not supported")]
@@ -50,7 +85,29 @@ pub enum ErrorType {
     UnexpectedToken(char),
 }
 
-pub fn tokenize(text: &str) -> Result<Vec<Token>, Error> {
+/// Scan
+///
+/// [`scan`] scans the provided text and returns a vector of all
+/// scanned [`Token`]s.
+///
+/// If `scan` is provided partial input it may or may not result
+/// in an error depending on the final token's grammar. For examole,
+/// if the user intended to input `quote` and instead input `quot`,
+/// the lexer would return a valid token stream because `quot` is a
+/// valid symbol.
+///
+/// # Examples
+///
+/// ```
+///     use lisp::lex;
+///     use lisp::lex::Token;
+///     let text = "'(1 2 3)";
+///     let tokens = lex::scan(text);
+/// ```
+///
+/// # Arguments
+/// `text` - the text to return tokens for
+pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
     let mut tokens = vec![];
     let mut cur = text.char_indices().peekable();
 
@@ -166,13 +223,10 @@ mod tests {
     use super::*;
 
     // Map tokens to a vector of (lexeme, type) pairs.
-    fn expand<T: IntoIterator<Item = Token>>(
-        tokens: T,
-        original_text: &str,
-    ) -> Vec<(&str, TokenType)> {
+    fn expand<T: IntoIterator<Item = Token>>(tokens: T, text: &str) -> Vec<(&str, TokenType)> {
         tokens
             .into_iter()
-            .map(|token| (token.span_text(original_text), token.token_type.clone()))
+            .map(|token| (token.lexeme(text), token.token_type.clone()))
             .collect()
     }
 
@@ -180,11 +234,11 @@ mod tests {
         ($lhs:expr => $(($token_text:expr, $token_type:expr)),+) => {{
             let mut v = vec![];
             $(v.push(($token_text, $token_type));)+
-            assert_eq!(expand(tokenize($lhs).unwrap(), $lhs), v);
+            assert_eq!(expand(scan($lhs).unwrap(), $lhs), v);
         }};
         ($($lhs:expr => $rhs:expr),+) => {{
              $(
-                assert_eq!(expand(tokenize($lhs).unwrap(), $lhs).iter().next().unwrap(), &($lhs, $rhs));
+                assert_eq!(expand(scan($lhs).unwrap(), $lhs).iter().next().unwrap(), &($lhs, $rhs));
              )+
         }};
     }
@@ -192,7 +246,7 @@ mod tests {
     macro_rules! fails {
         ($($lhs:expr => $rhs:expr),+) => {{
              $(
-             assert_eq!(tokenize($lhs).unwrap_err(), $rhs);
+             assert_eq!(scan($lhs).unwrap_err(), $rhs);
              )+
         }};
     }

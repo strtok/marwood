@@ -1,5 +1,5 @@
 use lisp::eval::eval;
-use lisp::lex::tokenize;
+use lisp::lex::scan;
 use lisp::parse::parse;
 use log::trace;
 use rustyline::error::ReadlineError;
@@ -24,7 +24,7 @@ fn main() {
 }
 
 fn parse_and_eval(text: &str) {
-    let tokens = match tokenize(text) {
+    let tokens = match scan(text) {
         Ok(tokens) => tokens,
         Err(e) => {
             eprintln!("error: {}", e.error_type);
