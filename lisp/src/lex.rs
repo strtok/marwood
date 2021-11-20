@@ -19,6 +19,7 @@ pub enum TokenType {
 }
 
 /// Token
+///
 /// [`Token`] is the main unit of output of the scanner, and is
 /// the pairing of a lexeme with its scanned type. The `lexeme`
 /// field contains a start and end index from the original scanned

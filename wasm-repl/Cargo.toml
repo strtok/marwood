@@ -3,6 +3,11 @@ name = "wasm-repl"
 version = "0.1.0"
 authors = ["Erik Bremen"]
 edition = "2021"
+build = "build.rs"
+
+[build-dependencies]
+vergen = { version = "5", default-features=false, features=["build", "git"] }
+anyhow = "1.0.47"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
