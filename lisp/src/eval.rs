@@ -7,7 +7,7 @@ pub fn eval(cell: Cell) -> Result<Cell, String> {
             Cell::Symbol(s) if s.eq("*") => eval_mul(*cdr),
             _ => Err(format!("{} is not a known procedure", car)),
         },
-        Cell::Nil => Err(format!("invalid syntax ()")),
+        Cell::Nil => Err("invalid syntax ()".to_string()),
         _ => Ok(cell),
     }
 }
