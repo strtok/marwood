@@ -19,43 +19,52 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
         Some(token) => token,
         None => return Ok(None),
     };
-    let token_text = token.lexeme(text);
     match token.token_type {
         TokenType::RightParen => Err(ParseError {}),
-        TokenType::LeftParen => {
-            let mut list = vec![];
-            while let Some(&token) = cur.peek() {
-                match token.token_type {
-                    TokenType::RightParen => {
-                        cur.next();
-                        return Ok(Some(Cell::new_list(list)));
-                    }
-                    TokenType::Dot => {
-                        cur.next();
-                        return Ok(Some(Cell::Nil));
-                    }
-                    _ => match parse(text, cur) {
-                        Ok(Some(cell)) => list.push(cell),
-                        Ok(None) => {}
-                        Err(e) => {
-                            return Err(e);
-                        }
-                    },
-                }
-            }
-            Err(ParseError {})
-        }
+        TokenType::LeftParen => parse_list(text, cur),
         TokenType::True => Ok(Some(Cell::Bool(true))),
         TokenType::False => Ok(Some(Cell::Bool(false))),
-        TokenType::Symbol => Ok(Some(Cell::new_symbol(token_text))),
-        TokenType::Number => match token_text.parse::<i64>() {
-            Ok(n) => Ok(Some(Cell::Number(n))),
-            Err(_) => match token_text.parse::<f64>() {
-                Ok(n) => Ok(Some(Cell::Number(n as i64))),
-                Err(_) => Ok(Some(Cell::Symbol(token_text.to_string()))),
-            },
-        },
+        TokenType::Symbol => Ok(Some(Cell::new_symbol(token.lexeme(text)))),
+        TokenType::Number => parse_number(text, token),
         _ => Ok(None),
+    }
+}
+
+pub fn parse_list<'a, T: Iterator<Item = &'a Token>>(
+    text: &str,
+    cur: &mut Peekable<T>,
+) -> Result<Option<Cell>, ParseError> {
+    let mut list = vec![];
+    while let Some(&token) = cur.peek() {
+        match token.token_type {
+            TokenType::RightParen => {
+                cur.next();
+                return Ok(Some(Cell::new_list(list)));
+            }
+            TokenType::Dot => {
+                cur.next();
+                return Ok(Some(Cell::Nil));
+            }
+            _ => match parse(text, cur) {
+                Ok(Some(cell)) => list.push(cell),
+                Ok(None) => {}
+                Err(e) => {
+                    return Err(e);
+                }
+            },
+        }
+    }
+    Err(ParseError {})
+}
+
+pub fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, ParseError> {
+    let lexeme = token.lexeme(text);
+    match lexeme.parse::<i64>() {
+        Ok(n) => Ok(Some(Cell::Number(n))),
+        Err(_) => match lexeme.parse::<f64>() {
+            Ok(n) => Ok(Some(Cell::Number(n as i64))),
+            Err(_) => Ok(Some(Cell::Symbol(lexeme.to_string()))),
+        },
     }
 }
 
