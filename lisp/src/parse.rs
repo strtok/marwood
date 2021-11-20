@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::lexer::{Token, TokenType};
+use crate::lex::{Token, TokenType};
 use std::iter::Peekable;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -63,13 +63,13 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
 mod tests {
     use super::*;
     use crate::cell;
-    use crate::lexer;
+    use crate::lex;
     use crate::list;
 
     macro_rules! parses {
         ($($lhs:expr => $rhs:expr),+) => {{
              $(
-                assert_eq!(parse($lhs, &mut lexer::tokenize($lhs).unwrap().iter().peekable()), Ok(Some($rhs)));
+                assert_eq!(parse($lhs, &mut lex::tokenize($lhs).unwrap().iter().peekable()), Ok(Some($rhs)));
              )+
         }};
     }
@@ -77,7 +77,7 @@ mod tests {
     macro_rules! fails {
         ($($lhs:expr),+) => {{
              $(
-                assert!(matches!(parse($lhs, &mut lexer::tokenize($lhs).unwrap().iter().peekable()), Err(_)));
+                assert!(matches!(parse($lhs, &mut lex::tokenize($lhs).unwrap().iter().peekable()), Err(_)));
              )+
         }};
     }
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn consumes_one_expression_per_call() {
         let text = "foo bar baz";
-        let tokens = lexer::tokenize(text).unwrap();
+        let tokens = lex::tokenize(text).unwrap();
         let mut cur = (&tokens).iter().peekable();
         assert_eq!(parse(text, &mut cur), Ok(Some(cell!["foo"])));
         assert_eq!(parse(text, &mut cur), Ok(Some(cell!["bar"])));
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn lists_are_fully_consumed() {
         let text = "(foo bar)";
-        let tokens = lexer::tokenize(text).unwrap();
+        let tokens = lex::tokenize(text).unwrap();
         let mut cur = (&tokens).iter().peekable();
         assert_eq!(parse(text, &mut cur), Ok(Some(list!["foo", "bar"])));
         assert_eq!(parse(text, &mut cur), Ok(None));

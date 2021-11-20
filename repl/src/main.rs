@@ -1,5 +1,5 @@
 use lisp::eval::eval;
-use lisp::lexer::tokenize;
+use lisp::lex::tokenize;
 use lisp::parse::parse;
 use log::trace;
 use rustyline::error::ReadlineError;

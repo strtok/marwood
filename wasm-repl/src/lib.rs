@@ -1,5 +1,5 @@
 use lisp::eval::eval;
-use lisp::lexer::tokenize;
+use lisp::lex::tokenize;
 use lisp::parse::parse;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;

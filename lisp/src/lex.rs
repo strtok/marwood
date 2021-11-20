@@ -30,7 +30,7 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Error {
     pub pos: usize,
     pub error_type: ErrorType,
@@ -42,7 +42,7 @@ impl Error {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum ErrorType {
     #[error("vectors are not supported")]
     VectorsNotSupported,
@@ -165,7 +165,7 @@ fn is_subsequent_identifier(c: char) -> bool {
 mod tests {
     use super::*;
 
-    /// Map tokens to a vector (text, type) pairs.
+    // Map tokens to a vector of (lexeme, type) pairs.
     fn expand<T: IntoIterator<Item = Token>>(
         tokens: T,
         original_text: &str,
@@ -185,6 +185,14 @@ mod tests {
         ($($lhs:expr => $rhs:expr),+) => {{
              $(
                 assert_eq!(expand(tokenize($lhs).unwrap(), $lhs).iter().next().unwrap(), &($lhs, $rhs));
+             )+
+        }};
+    }
+
+    macro_rules! fails {
+        ($($lhs:expr => $rhs:expr),+) => {{
+             $(
+             assert_eq!(tokenize($lhs).unwrap_err(), $rhs);
              )+
         }};
     }
@@ -248,10 +256,15 @@ mod tests {
     }
 
     #[test]
-    fn boolean_tokens() {
+    fn hash_prefixed_tokens() {
         lexes!(
             "#t" => TokenType::True,
             "#f" => TokenType::False
-        )
+        );
+
+        fails!(
+            "#(vector)" => Error::new(0, ErrorType::VectorsNotSupported),
+            "#b" => Error::new(0, ErrorType::UnexpectedToken('#'))
+        );
     }
 }
