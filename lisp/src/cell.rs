@@ -1,7 +1,7 @@
 use ::lazy_static::lazy_static;
 use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter};
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Cell {
@@ -84,6 +84,10 @@ impl Cell {
 
     pub fn is_nil(&self) -> bool {
         matches!(self, Cell::Nil)
+    }
+
+    pub fn is_cons(&self) -> bool {
+        matches!(self, Cell::Cons(_, _))
     }
 
     pub fn car(&self) -> Option<&Cell> {
@@ -202,7 +206,7 @@ impl Display for Cell {
         match self {
             Cell::Cons(car, cdr) => {
                 // sugarize any quote procedure
-                if **car == *QUOTE && matches!(cdr.deref(), Cell::Cons(_, _)) {
+                if **car == *QUOTE && (*cdr).is_cons() {
                     write!(f, "'")?;
                     return std::fmt::Display::fmt(cdr.car().unwrap(), f);
                 }
