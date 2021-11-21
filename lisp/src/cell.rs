@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
-use std::fmt::{Display, Formatter};
-use std::ops::DerefMut;
+use std::fmt::{Debug, Display, Formatter};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Cell {
@@ -85,14 +85,14 @@ impl Cell {
         matches!(self, Cell::Nil)
     }
 
-    pub fn as_car(&self) -> Option<&Cell> {
+    pub fn car(&self) -> Option<&Cell> {
         match self {
             Cell::Cons(car, _) => Some(car),
             _ => None,
         }
     }
 
-    pub fn as_cdr(&self) -> Option<&Cell> {
+    pub fn cdr(&self) -> Option<&Cell> {
         match self {
             Cell::Cons(_, cdr) => Some(cdr),
             _ => None,
@@ -196,6 +196,13 @@ impl Display for Cell {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Cell::Cons(car, cdr) => {
+                // sugarize any quote procedure
+                if let Cell::Symbol(s) = car.deref() {
+                    if s == "quote" {
+                        write!(f, "'")?;
+                        return std::fmt::Display::fmt(&cdr.car().unwrap(), f);
+                    }
+                }
                 write!(f, "(")?;
                 let mut car = car;
                 let mut cdr = cdr;
@@ -363,12 +370,13 @@ mod tests {
         assert_eq!(format!("{}", cons!("foo")), "(foo)");
         assert_eq!(format!("{}", cons!("foo", "bar")), "(foo . bar)");
         assert_eq!(format!("{}", cons!(1, cons!(2, 3))), "(1 2 . 3)");
-        assert_eq!(format!("{}", cons!(cell!(), 42)), "(() . 42)")
+        assert_eq!(format!("{}", cons!(cell!(), 42)), "(() . 42)");
+        assert_eq!(format!("{}", list!["quote", list![1, 2]]), "'(1 2)");
     }
 
     #[test]
     fn car_and_cdr() {
-        assert_eq!(list![1, 2, 3].as_car(), Some(&cell![1]));
-        assert_eq!(list![1, 2, 3].as_cdr(), Some(&list![2, 3]));
+        assert_eq!(list![1, 2, 3].car(), Some(&cell![1]));
+        assert_eq!(list![1, 2, 3].cdr(), Some(&list![2, 3]));
     }
 }
