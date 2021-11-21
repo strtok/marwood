@@ -205,8 +205,8 @@ impl Display for Cell {
 
         match self {
             Cell::Cons(car, cdr) => {
-                // sugarize any quote procedure
-                if **car == *QUOTE && (*cdr).is_cons() {
+                // sugar quote any list in the exact form (quote x)
+                if **car == *QUOTE && (*cdr).is_cons() && (*cdr).cdr().unwrap().is_nil() {
                     write!(f, "'")?;
                     return std::fmt::Display::fmt(cdr.car().unwrap(), f);
                 }
@@ -382,6 +382,20 @@ mod tests {
         assert_eq!(
             format!("{}", list!["quote", cons!["quote", 1]]),
             "'(quote . 1)"
+        );
+    }
+
+    #[test]
+    fn display_quote() {
+        assert_eq!(format!("{}", list!["quote", list![1, 2]]), "'(1 2)");
+        assert_eq!(
+            format!("{}", list!["quote", cons!["quote", 1]]),
+            "'(quote . 1)"
+        );
+        assert_eq!(format!("{}", list!["quote"]), "(quote)");
+        assert_eq!(
+            format!("{}", list!["quote", list!["quote", "quote", "quote"]]),
+            "(quote quote quote)"
         );
     }
 
