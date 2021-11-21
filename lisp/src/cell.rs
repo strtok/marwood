@@ -393,8 +393,9 @@ mod tests {
             "'(quote . 1)"
         );
         assert_eq!(format!("{}", list!["quote"]), "(quote)");
+        assert_eq!(format!("{}", list!["quote", "quote"]), "'quote");
         assert_eq!(
-            format!("{}", list!["quote", list!["quote", "quote", "quote"]]),
+            format!("{}", list!["quote", "quote", "quote"]),
             "(quote quote quote)"
         );
     }
