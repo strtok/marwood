@@ -16,10 +16,10 @@ pub fn eval(cell: Cell) -> Result<Cell, String> {
 pub fn eval_quote(cdr: Cell) -> Result<Cell, String> {
     match cdr {
         Cell::Cons(car, cdr) => {
-            return if cdr.is_nil() {
+            if cdr.is_nil() {
                 Ok(*car)
             } else {
-                Err(format!("invalid syntax for quote"))
+                Err("invalid syntax for quote".into())
             }
         }
         _ => Err("invalid syntax for quote".into()),
@@ -47,4 +47,26 @@ pub fn eval_mul(cdr: Cell) -> Result<Cell, String> {
             .ok_or_else(|| format!("{} is not a number", cell))?;
     }
     Ok(Cell::Number(val))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lex;
+    use crate::parse;
+
+    macro_rules! evals {
+        ($($lhs:expr => $rhs:expr),+) => {{
+             $(
+                assert_eq!(eval(parse!($lhs)), Ok(parse!($rhs)));
+             )+
+        }};
+    }
+
+    #[test]
+    fn quote() {
+        evals! {
+            "(quote (1 2 3))" => "(1 2 3)"
+        };
+    }
 }

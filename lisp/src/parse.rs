@@ -86,9 +86,20 @@ pub fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, ParseErro
         Ok(n) => Ok(Some(Cell::Number(n))),
         Err(_) => match lexeme.parse::<f64>() {
             Ok(n) => Ok(Some(Cell::Number(n as i64))),
-            Err(_) => Ok(Some(Cell::Symbol(lexeme.to_string()))),
+            Err(_) => Ok(Some(Cell::Symbol(lexeme.into()))),
         },
     }
+}
+
+#[macro_export]
+macro_rules! parse {
+    ($lhs:expr) => {{
+        let tokens = lex::scan($lhs).expect("lex failed");
+        let mut cur = tokens.iter().peekable();
+        parse::parse($lhs, &mut cur)
+            .expect("parse failed")
+            .expect("parse failed")
+    }};
 }
 
 #[cfg(test)]

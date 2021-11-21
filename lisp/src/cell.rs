@@ -13,7 +13,7 @@ pub enum Cell {
 
 impl Cell {
     pub fn new_symbol(val: &str) -> Cell {
-        Cell::Symbol(val.to_string())
+        Cell::Symbol(val.into())
     }
 
     pub fn new_list<T: IntoIterator<Item = Cell>>(iter: T) -> Cell {
@@ -122,7 +122,7 @@ impl From<bool> for Cell {
 
 impl From<&str> for Cell {
     fn from(val: &str) -> Self {
-        Cell::Symbol(val.to_string())
+        Cell::Symbol(val.into())
     }
 }
 
@@ -291,7 +291,7 @@ mod tests {
     #[test]
     fn cell_macro() {
         assert_eq!(cell![], Cell::Nil);
-        assert_eq!(cell!["foo"], Cell::Symbol("foo".to_string()));
+        assert_eq!(cell!["foo"], Cell::Symbol("foo".into()));
         assert_eq!(cell![42], Cell::Number(42));
         assert_eq!(cell![-42], Cell::Number(-42));
         assert_eq!(
