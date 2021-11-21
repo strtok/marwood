@@ -28,11 +28,21 @@ impl Cell {
     ///
     /// This constructs a list composed of cons cells, where each value of the list
     /// is stored in car, and the remainder of the list is stored in cdr. The very
-    /// last cons cell's cdr is set to the empty list (Cell::Nil).
+    /// last cons cell's cdr is set to '() (i.e. Cell::Nil).
     ///
-    /// If `last_cdr` is set, the very last cell's cdr is set to the value in `last_cdr`,
-    /// making this an improper list.
+    ///```text
+    /// [car][cdr]
+    ///        `--[car][cdr]
+    ///                  `---[car][nil]
+    /// ```
+    /// If `last_cdr` is Some, then the very last cell is set to the value of last_cdr
+    /// instead of '():
     ///
+    ///```text
+    /// [car][cdr]
+    ///        `--[car][cdr]
+    ///                  `---[car][last_cdr]
+    /// ```
     /// An improper list uses the dotted notation form, for example: `(1 2 3 . 4)`
     ///
     /// # Arguments
