@@ -6,9 +6,11 @@
 [Test]: https://github.com/strtok/lisp/actions/workflows/test.yml
 [Deploy Badge]: https://github.com/strtok/lisp/actions/workflows/deploy.yml/badge.svg
 [Deploy]: https://github.com/strtok/lisp/actions/workflows/deploy.yml
-This is a work in progress [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) implementation for rust, featuring:
+This is a work in progress [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) interpreter for rust, featuring:
 
-* A parser combinator based parser loosely following the [Parsec Paper](https://www.microsoft.com/en-us/research/publication/parsec-direct-style-monadic-parser-combinators-for-the-real-world/)
+* a hand written lexer and parser with the intenton of being an educational example of a scheme parser
+* a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
+* a Web Aseembly based repl using [xterm-js-rs](https://github.com/segeljakt/xterm-js-rs) auto deployed to [github pages](https://strtok.github.io/lisp/)
 
 # License
 Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
