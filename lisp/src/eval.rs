@@ -1,8 +1,12 @@
 use crate::cell::Cell;
+use crate::cons;
 
 pub fn eval(cell: Cell) -> Result<Cell, String> {
     match cell {
         Cell::Cons(car, cdr) => match *car {
+            Cell::Symbol(s) if s.eq("cons") => eval_cons(*cdr),
+            Cell::Symbol(s) if s.eq("car") => eval_car(*cdr),
+            Cell::Symbol(s) if s.eq("cdr") => eval_cdr(*cdr),
             Cell::Symbol(s) if s.eq("+") => eval_add(*cdr),
             Cell::Symbol(s) if s.eq("*") => eval_mul(*cdr),
             Cell::Symbol(s) if s.eq("quote") => eval_quote(*cdr),
@@ -24,6 +28,26 @@ pub fn eval_quote(cdr: Cell) -> Result<Cell, String> {
         }
         _ => Err("invalid syntax for quote".into()),
     }
+}
+
+pub fn eval_car(cdr: Cell) -> Result<Cell, String> {
+    let l = eval(cdr.car().ok_or_else(|| "invalid syntax for car")?.clone())?;
+    let elt = l.car().ok_or_else(|| "invalid syntax for car")?;
+    Ok(elt.clone())
+}
+
+pub fn eval_cdr(cdr: Cell) -> Result<Cell, String> {
+    let l = eval(cdr.car().ok_or_else(|| "invalid syntax for car")?.clone())?;
+    let elt = l.cdr().ok_or_else(|| "invalid syntax for car")?;
+    Ok(elt.clone())
+}
+
+pub fn eval_cons(cdr: Cell) -> Result<Cell, String> {
+    let arg1 = cdr.car().ok_or_else(|| "invalid syntax for cons")?;
+    let arg2 = cdr.cdr().ok_or_else(|| "invalid syntax for cons")?;
+    let arg2 = arg2.car().ok_or_else(|| "invalid syntax for cons")?;
+
+    Ok(cons![eval(arg1.clone())?, eval(arg2.clone())?])
 }
 
 pub fn eval_add(cdr: Cell) -> Result<Cell, String> {
