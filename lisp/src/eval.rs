@@ -5,10 +5,24 @@ pub fn eval(cell: Cell) -> Result<Cell, String> {
         Cell::Cons(car, cdr) => match *car {
             Cell::Symbol(s) if s.eq("+") => eval_add(*cdr),
             Cell::Symbol(s) if s.eq("*") => eval_mul(*cdr),
+            Cell::Symbol(s) if s.eq("quote") => eval_quote(*cdr),
             _ => Err(format!("{} is not a known procedure", car)),
         },
-        Cell::Nil => Err("invalid syntax ()".to_string()),
+        Cell::Nil => Err("invalid syntax ()".into()),
         _ => Ok(cell),
+    }
+}
+
+pub fn eval_quote(cdr: Cell) -> Result<Cell, String> {
+    match cdr {
+        Cell::Cons(car, cdr) => {
+            return if cdr.is_nil() {
+                Ok(*car)
+            } else {
+                Err(format!("invalid syntax for quote"))
+            }
+        }
+        _ => Err("invalid syntax for quote".into()),
     }
 }
 
