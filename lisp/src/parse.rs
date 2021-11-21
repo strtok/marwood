@@ -162,8 +162,9 @@ mod tests {
     #[test]
     fn dotted_form() {
         parses!(
-            "(0 . 2)" => cons![cell![0], cell![2]],
-            "(0 1 . 2)" => cons![cell![0], cons![cell![1], cell![2]]]
+            "(0 . 2)" => cons![0, 2],
+            "(0 1 . 2)" => cons![0, cons![1, 2]],
+            "(1 2 . (3 4))" => list![1, 2, 3, 4]
         );
         fails!("(.)", "(. 0)", "(0 .)", "(0 .)", "(0 1 .)");
     }

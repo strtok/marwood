@@ -254,10 +254,10 @@ macro_rules! cons {
         Cell::new_cons(Cell::Nil, Cell::Nil)
     };
     ($car:expr) => {
-        Cell::new_cons($car, Cell::Nil)
+        Cell::new_cons(Cell::from($car), Cell::Nil)
     };
     ($car:expr, $cdr:expr) => {
-        Cell::new_cons($car, $cdr)
+        Cell::new_cons(Cell::from($car), Cell::from($cdr))
     };
 }
 
@@ -361,16 +361,10 @@ mod tests {
             format!("{}", list![1, 2, 3, list![5, 6, 7]]),
             "(1 2 3 (5 6 7))"
         );
-        assert_eq!(format!("{}", cons!(cell!("foo"))), "(foo)");
-        assert_eq!(
-            format!("{}", cons!(cell!("foo"), cell!("bar"))),
-            "(foo . bar)"
-        );
-        assert_eq!(
-            format!("{}", cons!(cell!(1), cons!(cell!(2), cell!(3)))),
-            "(1 2 . 3)"
-        );
-        assert_eq!(format!("{}", cons!(cell!(), cell!(42))), "(() . 42)")
+        assert_eq!(format!("{}", cons!("foo")), "(foo)");
+        assert_eq!(format!("{}", cons!("foo", "bar")), "(foo . bar)");
+        assert_eq!(format!("{}", cons!(1, cons!(2, 3))), "(1 2 . 3)");
+        assert_eq!(format!("{}", cons!(cell!(), 42)), "(() . 42)")
     }
 
     #[test]
