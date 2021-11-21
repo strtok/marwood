@@ -1,3 +1,4 @@
+use ::lazy_static::lazy_static;
 use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Deref, DerefMut};
@@ -194,14 +195,16 @@ impl IntoIterator for Cell {
 
 impl Display for Cell {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        lazy_static! {
+            static ref QUOTE: Cell = Cell::Symbol("quote".into());
+        }
+
         match self {
             Cell::Cons(car, cdr) => {
                 // sugarize any quote procedure
-                if let Cell::Symbol(s) = car.deref() {
-                    if s == "quote" {
-                        write!(f, "'")?;
-                        return std::fmt::Display::fmt(&cdr.car().unwrap(), f);
-                    }
+                if car.deref() == &*QUOTE && matches!(cdr.deref(), Cell::Cons(_, _)) {
+                    write!(f, "'")?;
+                    return std::fmt::Display::fmt(&cdr.car().unwrap(), f);
                 }
                 write!(f, "(")?;
                 let mut car = car;
@@ -372,6 +375,10 @@ mod tests {
         assert_eq!(format!("{}", cons!(1, cons!(2, 3))), "(1 2 . 3)");
         assert_eq!(format!("{}", cons!(cell!(), 42)), "(() . 42)");
         assert_eq!(format!("{}", list!["quote", list![1, 2]]), "'(1 2)");
+        assert_eq!(
+            format!("{}", list!["quote", cons!["quote", 1]]),
+            "'(quote . 1)"
+        );
     }
 
     #[test]
