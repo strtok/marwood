@@ -3,8 +3,17 @@ use crate::lex::{Token, TokenType};
 use crate::list;
 use std::iter::Peekable;
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct ParseError {}
+#[derive(thiserror::Error, Debug, Eq, PartialEq)]
+pub enum Error {
+    #[error("unexpected EOF")]
+    Eof,
+    #[error("unexpected token '{0}'")]
+    UnexpectedToken(String),
+    #[error("unexpected one token after .")]
+    ExpectedOneTokenAfterDot,
+    #[error("expected at least one token before .")]
+    ExpectedTokenBeforeDot,
+}
 
 /// Parse one expression from the token stream.
 ///
@@ -15,30 +24,29 @@ pub struct ParseError {}
 pub fn parse<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
-) -> Result<Option<Cell>, ParseError> {
+) -> Result<Option<Cell>, Error> {
     let token = match cur.next() {
         Some(token) => token,
         None => return Ok(None),
     };
     match token.token_type {
-        TokenType::SingleQuote => Ok(Some(list![
-            "quote",
-            parse(text, cur)?.ok_or(ParseError {})?
-        ])),
-        TokenType::RightParen => Err(ParseError {}),
+        TokenType::SingleQuote => Ok(Some(list!["quote", parse(text, cur)?.ok_or(Error::Eof)?])),
+        TokenType::RightParen => Err(Error::UnexpectedToken(")".into())),
         TokenType::LeftParen => parse_list(text, cur),
         TokenType::True => Ok(Some(Cell::Bool(true))),
         TokenType::False => Ok(Some(Cell::Bool(false))),
         TokenType::Symbol => Ok(Some(Cell::new_symbol(token.lexeme(text)))),
         TokenType::Number => parse_number(text, token),
-        _ => Ok(None),
+        TokenType::Dot | TokenType::WhiteSpace => {
+            Err(Error::UnexpectedToken(token.lexeme(text).into()))
+        }
     }
 }
 
 fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
-) -> Result<Option<Cell>, ParseError> {
+) -> Result<Option<Cell>, Error> {
     // If the parser has encountered a dot, then
     // dotted_form is set Some(false). If it has
     // encountered one value after the dot then the
@@ -55,20 +63,20 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
                         let last_cdr = list.pop().unwrap();
                         Ok(Some(Cell::new_improper_list(list, last_cdr)))
                     }
-                    Some(false) => Err(ParseError {}),
+                    Some(false) => Err(Error::ExpectedOneTokenAfterDot),
                     None => Ok(Some(Cell::new_list(list))),
                 };
             }
             TokenType::Dot => {
                 if list.is_empty() {
-                    return Err(ParseError {});
+                    return Err(Error::ExpectedTokenBeforeDot);
                 }
                 cur.next();
                 dotted_form = Some(false);
             }
             _ => {
                 match dotted_form {
-                    Some(true) => return Err(ParseError {}),
+                    Some(true) => return Err(Error::ExpectedOneTokenAfterDot),
                     Some(ref mut val) => *val = true,
                     None => {}
                 };
@@ -82,10 +90,11 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
             }
         }
     }
-    Err(ParseError {})
+
+    Err(Error::Eof)
 }
 
-fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, ParseError> {
+fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, Error> {
     let lexeme = token.lexeme(text);
     match lexeme.parse::<i64>() {
         Ok(n) => Ok(Some(Cell::Number(n))),

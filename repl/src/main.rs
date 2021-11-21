@@ -27,7 +27,7 @@ fn parse_and_eval(text: &str) {
     let tokens = match scan(text) {
         Ok(tokens) => tokens,
         Err(e) => {
-            eprintln!("error: {}", e.error_type);
+            println!("error: {}", e.error_type);
             return;
         }
     };
@@ -42,15 +42,15 @@ fn parse_and_eval(text: &str) {
                 trace!("parser: {}", cell);
                 match eval(cell) {
                     Ok(cell) => println!("{}", cell),
-                    Err(e) => eprintln!("error: {}", e),
+                    Err(e) => println!("error: {}", e),
                 };
             }
             Ok(None) => {
                 trace!("parse() returned none");
                 break;
             }
-            Err(_) => {
-                eprintln!("error: ()");
+            Err(e) => {
+                println!("error: {}", e);
                 break;
             }
         }

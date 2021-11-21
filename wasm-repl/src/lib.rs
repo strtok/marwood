@@ -140,8 +140,8 @@ fn parse_and_eval(term: &Terminal, text: &str) {
             Ok(None) => {
                 break;
             }
-            Err(_) => {
-                term.writeln("error: parse failed");
+            Err(e) => {
+                term.writeln(&format!("error: {}", e));
             }
         }
     }
