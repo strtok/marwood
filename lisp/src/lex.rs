@@ -253,22 +253,22 @@ mod tests {
 
     #[test]
     fn parens() {
-        lexes!(
+        lexes! {
             "(" => TokenType::LeftParen,
             ")" => TokenType::RightParen
-        );
+        };
     }
 
     #[test]
     fn symbols() {
-        lexes!(
+        lexes! {
             "foo" => TokenType::Symbol
-        );
+        };
     }
 
     #[test]
     fn numbers() {
-        lexes!(
+        lexes! {
             "5" => TokenType::Number,
             "10" => TokenType::Number,
             "10.5" => TokenType::Number,
@@ -276,24 +276,24 @@ mod tests {
             "-42" => TokenType::Number,
             "+42" => TokenType::Number,
             "-10.5" => TokenType::Number
-        )
+        };
     }
 
     #[test]
     fn dot() {
-        lexes!(
+        lexes! {
             "(foo . bar)" =>
             ("(", TokenType::LeftParen),
             ("foo", TokenType::Symbol),
             (".", TokenType::Dot),
             ("bar", TokenType::Symbol),
             (")", TokenType::RightParen)
-        );
+        };
     }
 
     #[test]
     fn multiple_expressions() {
-        lexes!(
+        lexes! {
             "42.0 '((1024)('baz))" =>
             ("42.0", TokenType::Number),
             ("'", TokenType::SingleQuote),
@@ -306,19 +306,19 @@ mod tests {
             ("baz", TokenType::Symbol),
             (")", TokenType::RightParen),
             (")", TokenType::RightParen)
-        );
+        };
     }
 
     #[test]
     fn hash_prefixed_tokens() {
-        lexes!(
+        lexes! {
             "#t" => TokenType::True,
             "#f" => TokenType::False
-        );
+        };
 
-        fails!(
+        fails! {
             "#(vector)" => Error::new(0, ErrorType::VectorsNotSupported),
             "#b" => Error::new(0, ErrorType::UnexpectedToken('#'))
-        );
+        };
     }
 }

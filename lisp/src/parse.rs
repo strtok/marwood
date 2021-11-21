@@ -128,15 +128,15 @@ mod tests {
 
     #[test]
     fn paren_mismatch() {
-        fails!("(", ")");
+        fails!["(", ")"];
     }
 
     #[test]
     fn variables() {
-        parses!(
+        parses! {
             "foo" => cell!["foo"],
             "bar" => cell!["bar"]
-        );
+        };
     }
 
     #[test]
@@ -161,45 +161,45 @@ mod tests {
 
     #[test]
     fn procedures() {
-        parses!(
+        parses! {
             "(foo)" => list!["foo"],
             "( foo )" => list!["foo"],
             "(foo bar baz)" => list!["foo", "bar", "baz"],
             "()" => cell![],
             "( )" => cell![]
-        );
+        };
     }
 
     #[test]
     fn dotted_form() {
-        parses!(
+        parses! {
             "(0 . 2)" => cons![0, 2],
             "(0 1 . 2)" => cons![0, cons![1, 2]],
             "(1 2 . (3 4))" => list![1, 2, 3, 4],
             "((1 . 2) . 3)" => cons![cons![1, 2], 3],
             "((().()).())" => cons![cons![cell![], cell![]], cell![]]
-        );
-        fails!("(.)", "(. 0)", "(0 .)", "(0 .)", "(0 1 .)");
+        };
+        fails!["(.)", "(. 0)", "(0 .)", "(0 .)", "(0 1 .)"];
     }
 
     #[test]
     fn numbers() {
-        parses!(
+        parses! {
             "42" => cell![42],
             "+42" => cell![42],
             "-42" => cell![-42],
             "42..1" => cell!["42..1"]
-        );
+        };
     }
 
     #[test]
     fn expressions() {
-        parses!(
+        parses! {
             "foo" => cell!["foo"],
             "42" => cell![42],
             "-18" => cell![-18],
             "(foo)" => list!["foo"],
             "(foo (bar baz))" => list!["foo", list!["bar", "baz"]]
-        );
+        };
     }
 }
