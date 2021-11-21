@@ -24,18 +24,18 @@ pub enum Error {
 pub fn parse<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
-) -> Result<Option<Cell>, Error> {
+) -> Result<Cell, Error> {
     let token = match cur.next() {
         Some(token) => token,
-        None => return Ok(None),
+        None => return Err(Error::Eof),
     };
     match token.token_type {
-        TokenType::SingleQuote => Ok(Some(list!["quote", parse(text, cur)?.ok_or(Error::Eof)?])),
+        TokenType::SingleQuote => Ok(list!["quote", parse(text, cur)?]),
         TokenType::RightParen => Err(Error::UnexpectedToken(")".into())),
         TokenType::LeftParen => parse_list(text, cur),
-        TokenType::True => Ok(Some(Cell::Bool(true))),
-        TokenType::False => Ok(Some(Cell::Bool(false))),
-        TokenType::Symbol => Ok(Some(Cell::new_symbol(token.lexeme(text)))),
+        TokenType::True => Ok(Cell::Bool(true)),
+        TokenType::False => Ok(Cell::Bool(false)),
+        TokenType::Symbol => Ok(Cell::new_symbol(token.lexeme(text))),
         TokenType::Number => parse_number(text, token),
         TokenType::Dot | TokenType::WhiteSpace => {
             Err(Error::UnexpectedToken(token.lexeme(text).into()))
@@ -46,7 +46,7 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
 fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
-) -> Result<Option<Cell>, Error> {
+) -> Result<Cell, Error> {
     // If the parser has encountered a dot, then
     // dotted_form is set Some(false). If it has
     // encountered one value after the dot then the
@@ -61,10 +61,10 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
                 return match dotted_form {
                     Some(true) => {
                         let last_cdr = list.pop().unwrap();
-                        Ok(Some(Cell::new_improper_list(list, last_cdr)))
+                        Ok(Cell::new_improper_list(list, last_cdr))
                     }
                     Some(false) => Err(Error::ExpectedOneTokenAfterDot),
-                    None => Ok(Some(Cell::new_list(list))),
+                    None => Ok(Cell::new_list(list)),
                 };
             }
             TokenType::Dot => {
@@ -81,8 +81,7 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
                     None => {}
                 };
                 match parse(text, cur) {
-                    Ok(Some(cell)) => list.push(cell),
-                    Ok(None) => {}
+                    Ok(cell) => list.push(cell),
                     Err(e) => {
                         return Err(e);
                     }
@@ -94,13 +93,13 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     Err(Error::Eof)
 }
 
-fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, Error> {
+fn parse_number(text: &str, token: &Token) -> Result<Cell, Error> {
     let lexeme = token.lexeme(text);
     match lexeme.parse::<i64>() {
-        Ok(n) => Ok(Some(Cell::Number(n))),
+        Ok(n) => Ok(Cell::Number(n)),
         Err(_) => match lexeme.parse::<f64>() {
-            Ok(n) => Ok(Some(Cell::Number(n as i64))),
-            Err(_) => Ok(Some(Cell::Symbol(lexeme.into()))),
+            Ok(n) => Ok(Cell::Number(n as i64)),
+            Err(_) => Ok(Cell::Symbol(lexeme.into())),
         },
     }
 }
@@ -120,9 +119,7 @@ macro_rules! parse {
     ($lhs:expr) => {{
         let tokens = lex::scan($lhs).expect("lex failed");
         let mut cur = tokens.iter().peekable();
-        parse::parse($lhs, &mut cur)
-            .expect("parse failed")
-            .expect("parse failed")
+        parse::parse($lhs, &mut cur).expect("parse failed")
     }};
 }
 
@@ -137,7 +134,7 @@ mod tests {
     macro_rules! parses {
         ($($lhs:expr => $rhs:expr),+) => {{
              $(
-                assert_eq!(parse($lhs, &mut lex::scan($lhs).unwrap().iter().peekable()), Ok(Some($rhs)));
+                assert_eq!(parse($lhs, &mut lex::scan($lhs).unwrap().iter().peekable()), Ok($rhs));
              )+
         }};
     }
@@ -176,10 +173,10 @@ mod tests {
         let text = "foo bar baz";
         let tokens = lex::scan(text).unwrap();
         let mut cur = (&tokens).iter().peekable();
-        assert_eq!(parse(text, &mut cur), Ok(Some(cell!["foo"])));
-        assert_eq!(parse(text, &mut cur), Ok(Some(cell!["bar"])));
-        assert_eq!(parse(text, &mut cur), Ok(Some(cell!["baz"])));
-        assert_eq!(parse(text, &mut cur), Ok(None));
+        assert_eq!(parse(text, &mut cur), Ok(cell!["foo"]));
+        assert_eq!(parse(text, &mut cur), Ok(cell!["bar"]));
+        assert_eq!(parse(text, &mut cur), Ok(cell!["baz"]));
+        assert_eq!(parse(text, &mut cur), Err(Error::Eof));
     }
 
     #[test]
@@ -187,8 +184,8 @@ mod tests {
         let text = "(foo bar)";
         let tokens = lex::scan(text).unwrap();
         let mut cur = (&tokens).iter().peekable();
-        assert_eq!(parse(text, &mut cur), Ok(Some(list!["foo", "bar"])));
-        assert_eq!(parse(text, &mut cur), Ok(None));
+        assert_eq!(parse(text, &mut cur), Ok(list!["foo", "bar"]));
+        assert_eq!(parse(text, &mut cur), Err(Error::Eof));
     }
 
     #[test]

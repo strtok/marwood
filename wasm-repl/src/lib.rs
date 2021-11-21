@@ -131,14 +131,11 @@ fn parse_and_eval(term: &Terminal, text: &str) {
 
     while cur.peek().is_some() {
         match parse(text, &mut cur) {
-            Ok(Some(cell)) => {
+            Ok(cell) => {
                 match eval(cell) {
                     Ok(cell) => term.writeln(&format!("{}", cell)),
                     Err(e) => term.writeln(&format!("error: {}", e)),
                 };
-            }
-            Ok(None) => {
-                break;
             }
             Err(e) => {
                 term.writeln(&format!("error: {}", e));
