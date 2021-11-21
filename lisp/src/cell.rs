@@ -267,8 +267,7 @@ macro_rules! list {
         Cell::new_list(vec!())
     };
     ($($elt:expr),+) => {{
-        let mut v = vec![];
-        $(v.push(Cell::from($elt));)+
+        let v = vec![$(Cell::from($elt),)+];
         Cell::from(v)
     }};
 }

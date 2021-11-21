@@ -1,5 +1,6 @@
 use crate::cell::Cell;
 use crate::lex::{Token, TokenType};
+use crate::list;
 use std::iter::Peekable;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -20,6 +21,10 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
         None => return Ok(None),
     };
     match token.token_type {
+        TokenType::SingleQuote => Ok(Some(list![
+            "quote",
+            parse(text, cur)?.ok_or(ParseError {})?
+        ])),
         TokenType::RightParen => Err(ParseError {}),
         TokenType::LeftParen => parse_list(text, cur),
         TokenType::True => Ok(Some(Cell::Bool(true))),
@@ -139,6 +144,14 @@ mod tests {
     #[test]
     fn paren_mismatch() {
         fails!["(", ")"];
+    }
+
+    #[test]
+    fn quote_sugar() {
+        parses! {
+            "'1" => list!["quote", 1],
+            "'(1 2)" => list!["quote", list![1, 2]]
+        };
     }
 
     #[test]
