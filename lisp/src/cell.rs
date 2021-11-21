@@ -65,7 +65,7 @@ impl Cell {
         }
 
         if last_cdr.is_some() {
-            if let &mut Cell::Cons(_, ref mut cdr) = tail.deref_mut() {
+            if let Cell::Cons(_, ref mut cdr) = *tail.deref_mut() {
                 *cdr = Box::new(last_cdr.take().unwrap());
             }
         }

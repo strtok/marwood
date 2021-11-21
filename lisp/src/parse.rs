@@ -1,5 +1,4 @@
 use crate::cell::Cell;
-use crate::cons;
 use crate::lex::{Token, TokenType};
 use std::iter::Peekable;
 
@@ -96,6 +95,7 @@ pub fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, ParseErro
 mod tests {
     use super::*;
     use crate::cell;
+    use crate::cons;
     use crate::lex;
     use crate::list;
 
