@@ -30,7 +30,7 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
     }
 }
 
-pub fn parse_list<'a, T: Iterator<Item = &'a Token>>(
+fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
 ) -> Result<Option<Cell>, ParseError> {
@@ -80,7 +80,7 @@ pub fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     Err(ParseError {})
 }
 
-pub fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, ParseError> {
+fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, ParseError> {
     let lexeme = token.lexeme(text);
     match lexeme.parse::<i64>() {
         Ok(n) => Ok(Some(Cell::Number(n))),
@@ -91,6 +91,16 @@ pub fn parse_number(text: &str, token: &Token) -> Result<Option<Cell>, ParseErro
     }
 }
 
+/// Parse Macro
+///
+/// Given a single expression, tokenize and parse the
+/// expression into a Cell.
+///
+/// This macro assumes the input is a single valid expression and
+/// will panic!() if it encounters lex or parse errors.
+///
+/// # Arguments
+/// `lhs` - The expression to parse
 #[macro_export]
 macro_rules! parse {
     ($lhs:expr) => {{
