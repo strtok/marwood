@@ -39,7 +39,7 @@ fn parse_and_eval(text: &str) {
     while cur.peek().is_some() {
         match parse(text, &mut cur) {
             Ok(Some(cell)) => {
-                trace!("parser: {:?}", cell);
+                trace!("parser: {}", cell);
                 match eval(cell) {
                     Ok(cell) => println!("{}", cell),
                     Err(e) => eprintln!("error: {}", e),
@@ -51,6 +51,7 @@ fn parse_and_eval(text: &str) {
             }
             Err(_) => {
                 eprintln!("error: ()");
+                break;
             }
         }
     }

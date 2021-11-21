@@ -1,4 +1,5 @@
 use crate::cell::Cell;
+use crate::cons;
 use crate::lex::{Token, TokenType};
 use std::iter::Peekable;
 
@@ -34,24 +35,47 @@ pub fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
 ) -> Result<Option<Cell>, ParseError> {
+    // If the parser has encountered a dot, then
+    // dotted_form is set Some(false). If it has
+    // encountered one value after the dot then the
+    // value is set to Some(trueO
+    let mut dotted_form: Option<bool> = None;
+
     let mut list = vec![];
     while let Some(&token) = cur.peek() {
         match token.token_type {
             TokenType::RightParen => {
                 cur.next();
-                return Ok(Some(Cell::new_list(list)));
+                return match dotted_form {
+                    Some(true) => {
+                        let last_cdr = list.pop().unwrap();
+                        Ok(Some(Cell::new_improper_list(list, last_cdr)))
+                    }
+                    Some(false) => Err(ParseError {}),
+                    None => Ok(Some(Cell::new_list(list))),
+                };
             }
             TokenType::Dot => {
-                cur.next();
-                return Ok(Some(Cell::Nil));
-            }
-            _ => match parse(text, cur) {
-                Ok(Some(cell)) => list.push(cell),
-                Ok(None) => {}
-                Err(e) => {
-                    return Err(e);
+                if list.is_empty() {
+                    return Err(ParseError {});
                 }
-            },
+                cur.next();
+                dotted_form = Some(false);
+            }
+            _ => {
+                match dotted_form {
+                    Some(true) => return Err(ParseError {}),
+                    Some(ref mut val) => *val = true,
+                    None => {}
+                };
+                match parse(text, cur) {
+                    Ok(Some(cell)) => list.push(cell),
+                    Ok(None) => {}
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            }
         }
     }
     Err(ParseError {})
@@ -133,6 +157,15 @@ mod tests {
             "()" => cell![],
             "( )" => cell![]
         );
+    }
+
+    #[test]
+    fn dotted_form() {
+        parses!(
+            "(0 . 2)" => cons![cell![0], cell![2]],
+            "(0 1 . 2)" => cons![cell![0], cons![cell![1], cell![2]]]
+        );
+        fails!("(0 .)", "(0 1 .)");
     }
 
     #[test]
