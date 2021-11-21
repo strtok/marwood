@@ -202,9 +202,9 @@ impl Display for Cell {
         match self {
             Cell::Cons(car, cdr) => {
                 // sugarize any quote procedure
-                if car.deref() == &*QUOTE && matches!(cdr.deref(), Cell::Cons(_, _)) {
+                if **car == *QUOTE && matches!(cdr.deref(), Cell::Cons(_, _)) {
                     write!(f, "'")?;
-                    return std::fmt::Display::fmt(&cdr.car().unwrap(), f);
+                    return std::fmt::Display::fmt(cdr.car().unwrap(), f);
                 }
                 write!(f, "(")?;
                 let mut car = car;
