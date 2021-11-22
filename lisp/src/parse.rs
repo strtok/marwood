@@ -18,9 +18,9 @@ pub enum Error {
 /// Parse one expression from the token stream.
 ///
 /// # Arguments
-/// *`cur` - An iterator over the token stream. The parser will only
+/// *`cur` - an iterator over the token stream. The parser will only
 ///          advance the iterator enough to satisfy one expression.
-/// *`text` - The text backed by the token spans.
+/// *`text` - the text backed by the token spans.
 pub fn parse<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
@@ -43,56 +43,100 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
     }
 }
 
+/// Parse List
+///
+/// This function is called by a parser that's encountered a '('.
+/// It will recursively parse every value in the list until
+/// it encounters a ')' or a '.', the later of which calls
+/// parse_improper_list_tail() to finish parsing the dotted
+/// form of a list.
+///
+/// # Arguments
+/// *`cur` - an iterator over the token stream. The parser will only
+///          advance the iterator enough to satisfy one expression.
+/// *`text` - the text backed by the token spans.
 fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
 ) -> Result<Cell, Error> {
-    // If the parser has encountered a dot, then
-    // dotted_form is set Some(false). If it has
-    // encountered one value after the dot then the
-    // value is set to Some(trueO
-    let mut dotted_form: Option<bool> = None;
-
     let mut list = vec![];
     while let Some(&token) = cur.peek() {
         match token.token_type {
             TokenType::RightParen => {
                 cur.next();
-                return match dotted_form {
-                    Some(true) => {
-                        let last_cdr = list.pop().unwrap();
-                        Ok(Cell::new_improper_list(list, last_cdr))
-                    }
-                    Some(false) => Err(Error::ExpectedOneTokenAfterDot),
-                    None => Ok(Cell::new_list(list)),
-                };
+                return Ok(Cell::new_list(list));
             }
             TokenType::Dot => {
-                if list.is_empty() {
-                    return Err(Error::ExpectedTokenBeforeDot);
-                }
                 cur.next();
-                dotted_form = Some(false);
+                return parse_improper_list_tail(list, text, cur);
             }
-            _ => {
-                match dotted_form {
-                    Some(true) => return Err(Error::ExpectedOneTokenAfterDot),
-                    Some(ref mut val) => *val = true,
-                    None => {}
-                };
-                match parse(text, cur) {
-                    Ok(cell) => list.push(cell),
-                    Err(e) => {
-                        return Err(e);
-                    }
+            _ => match parse(text, cur) {
+                Ok(cell) => list.push(cell),
+                Err(e) => {
+                    return Err(e);
                 }
-            }
+            },
         }
     }
 
     Err(Error::Eof)
 }
 
+/// Parse Improper List Tail
+///
+/// This function is called by a parser that has encounted a '.'
+/// when parsing a list.
+///
+/// # Arguments
+/// `list` - the constructed list up to the .
+/// `text` - the text backed by the token spans.
+/// `cur` - a cursor pointing to the position in the token stream
+///         immediately after the encountered '.'
+fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
+    mut list: Vec<Cell>,
+    text: &str,
+    cur: &mut Peekable<T>,
+) -> Result<Cell, Error> {
+    if list.is_empty() {
+        return Err(Error::ExpectedTokenBeforeDot);
+    }
+
+    match cur.peek() {
+        Some(&token) => match token.token_type {
+            TokenType::Dot | TokenType::RightParen => {
+                return Err(Error::ExpectedOneTokenAfterDot);
+            }
+            _ => {
+                list.push(parse(text, cur)?);
+            }
+        },
+        None => {
+            return Err(Error::Eof);
+        }
+    }
+
+    match cur.next() {
+        Some(token) if token.token_type == TokenType::RightParen => {
+            let last_cdr = list.pop().unwrap();
+            Ok(Cell::new_improper_list(list, last_cdr))
+        }
+        Some(_) => Err(Error::ExpectedOneTokenAfterDot),
+        None => Err(Error::Eof),
+    }
+}
+
+/// Parse Number
+///
+/// This function is called by a parser that has encountered a number
+/// token.
+///
+/// If this function is unable to parse the number it is treated as
+/// as symbol.
+///
+/// # Arguments
+/// *`cur` - an iterator over the token stream. The parser will only
+///          advance the iterator enough to satisfy one expression.
+/// *`text` - the text backed by the token spans.
 fn parse_number(text: &str, token: &Token) -> Result<Cell, Error> {
     let lexeme = token.lexeme(text);
     match lexeme.parse::<i64>() {
@@ -134,7 +178,7 @@ mod tests {
     macro_rules! parses {
         ($($lhs:expr => $rhs:expr),+) => {{
              $(
-                assert_eq!(parse($lhs, &mut lex::scan($lhs).unwrap().iter().peekable()), Ok($rhs));
+                assert_eq!(Ok($rhs), parse($lhs, &mut lex::scan($lhs).unwrap().iter().peekable()));
              )+
         }};
     }
@@ -208,7 +252,7 @@ mod tests {
             "((1 . 2) . 3)" => cons![cons![1, 2], 3],
             "((().()).())" => cons![cons![cell![], cell![]], cell![]]
         };
-        fails!["(.)", "(. 0)", "(0 .)", "(0 .)", "(0 1 .)"];
+        fails!["(.)", "(. 0)", "(0 .)", "(0 .)", "(0 1 .)", "(1 . 2 . 3)"];
     }
 
     #[test]
