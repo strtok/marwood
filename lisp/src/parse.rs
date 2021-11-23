@@ -90,7 +90,7 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
 /// `cur` - a cursor pointing to the position in the token stream
 ///         immediately after the encountered '.'
 fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
-    mut list: Vec<Cell>,
+    list: Vec<Cell>,
     text: &str,
     cur: &mut Peekable<T>,
 ) -> Result<Cell, Error> {
@@ -100,24 +100,16 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
     }
 
     // Read the next value and add it to the list
-    match cur.peek().ok_or(Error::Eof)?.token_type {
+    let last_cdr = match cur.peek().ok_or(Error::Eof)?.token_type {
         TokenType::Dot | TokenType::RightParen => {
             return Err(Error::ExpectedOneTokenAfterDot);
         }
-        _ => {
-            list.push(parse(text, cur)?);
-        }
-    }
+        _ => parse(text, cur)?,
+    };
 
     // The next token must be a )
-    match cur.next().ok_or(Error::Eof)? {
-        Token {
-            token_type: TokenType::RightParen,
-            ..
-        } => {
-            let last_cdr = list.pop().unwrap();
-            Ok(Cell::new_improper_list(list, last_cdr))
-        }
+    match cur.next().ok_or(Error::Eof)?.token_type {
+        TokenType::RightParen => Ok(Cell::new_improper_list(list, last_cdr)),
         _ => Err(Error::ExpectedOneTokenAfterDot),
     }
 }
