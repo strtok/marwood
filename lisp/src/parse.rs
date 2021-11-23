@@ -35,10 +35,10 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
         TokenType::LeftParen => parse_list(text, cur),
         TokenType::True => Ok(Cell::Bool(true)),
         TokenType::False => Ok(Cell::Bool(false)),
-        TokenType::Symbol => Ok(Cell::new_symbol(token.lexeme(text))),
+        TokenType::Symbol => Ok(Cell::new_symbol(token.span(text))),
         TokenType::Number => parse_number(text, token),
         TokenType::Dot | TokenType::WhiteSpace => {
-            Err(Error::UnexpectedToken(token.lexeme(text).into()))
+            Err(Error::UnexpectedToken(token.span(text).into()))
         }
     }
 }
@@ -125,12 +125,12 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
 ///          advance the iterator enough to satisfy one expression.
 /// *`text` - the text backed by the token spans.
 fn parse_number(text: &str, token: &Token) -> Result<Cell, Error> {
-    let lexeme = token.lexeme(text);
-    match lexeme.parse::<i64>() {
+    let span = token.span(text);
+    match span.parse::<i64>() {
         Ok(n) => Ok(Cell::Number(n)),
-        Err(_) => match lexeme.parse::<f64>() {
+        Err(_) => match span.parse::<f64>() {
             Ok(n) => Ok(Cell::Number(n as i64)),
-            Err(_) => Ok(Cell::Symbol(lexeme.into())),
+            Err(_) => Ok(Cell::Symbol(span.into())),
         },
     }
 }

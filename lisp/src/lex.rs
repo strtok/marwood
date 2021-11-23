@@ -3,7 +3,7 @@ use std::str::CharIndices;
 
 /// Token Type
 ///
-/// [`TokenType`] represents the type of a lexeme as recognized
+/// [`TokenType`] represents the type of a span as recognized
 /// by the scanner.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TokenType {
@@ -19,31 +19,29 @@ pub enum TokenType {
 }
 
 /// Token
+///
 /// [`Token`] is the main unit of output of the scanner, and is
-/// the pairing of a lexeme with its scanned type. The `lexeme`
+/// the pairing of a span with its scanned type. The `span`
 /// field contains a start and end index from the original scanned
-/// &str and may be used to extract the lexeme from the original
-/// text (e.g. `text[token.lexeme.0..token.lexeme.1]`).
+/// &str and may be used to extract the span from the original
+/// text (e.g. `text[token.span.0..token.span.1]`).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Token {
-    /// (start, end) index of original lexeme in the source &str
-    pub lexeme: (usize, usize),
+    /// (start, end) index of original span in the source &str
+    pub span: (usize, usize),
     /// The type output by the scanner
     pub token_type: TokenType,
 }
 
 impl Token {
     pub fn new(span: (usize, usize), token_type: TokenType) -> Token {
-        Token {
-            lexeme: span,
-            token_type,
-        }
+        Token { span, token_type }
     }
 
-    /// Lexeme
+    /// span
     ///
-    /// Given the originally scanned &str, extract the lexeme from the
-    /// &str given the (start, end) indexes stored in self.lexeme.
+    /// Given the originally scanned &str, extract the span from the
+    /// &str given the (start, end) indexes stored in self.span.
     ///
     /// # Arguments
     /// `text` - The originally scanned &str
@@ -51,8 +49,8 @@ impl Token {
     /// # Safety
     /// This method assumes the originally scanned &str be used, and
     /// may panic otherwise.
-    pub fn lexeme<'a, 'b>(&'a self, text: &'b str) -> &'b str {
-        &text[self.lexeme.0..self.lexeme.1]
+    pub fn span<'a, 'b>(&'a self, text: &'b str) -> &'b str {
+        &text[self.span.0..self.span.1]
     }
 }
 
@@ -222,11 +220,11 @@ fn is_subsequent_identifier(c: char) -> bool {
 mod tests {
     use super::*;
 
-    // Map tokens to a vector of (lexeme, type) pairs.
+    // Map tokens to a vector of (span, type) pairs.
     fn expand<T: IntoIterator<Item = Token>>(tokens: T, text: &str) -> Vec<(&str, TokenType)> {
         tokens
             .into_iter()
-            .map(|token| (token.lexeme(text), token.token_type.clone()))
+            .map(|token| (token.span(text), token.token_type.clone()))
             .collect()
     }
 
