@@ -60,8 +60,8 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     cur: &mut Peekable<T>,
 ) -> Result<Cell, Error> {
     let mut list = vec![];
-    while let Ok(&token) = cur.peek().ok_or(Error::Eof) {
-        match token.token_type {
+    loop {
+        match cur.peek().ok_or(Error::Eof)?.token_type {
             TokenType::RightParen => {
                 cur.next();
                 return Ok(Cell::new_list(list));
@@ -75,8 +75,6 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
             }
         }
     }
-
-    Err(Error::Eof)
 }
 
 /// Parse Improper List Tail
