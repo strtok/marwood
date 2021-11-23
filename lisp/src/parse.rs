@@ -60,7 +60,7 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     cur: &mut Peekable<T>,
 ) -> Result<Cell, Error> {
     let mut list = vec![];
-    while let Some(&token) = cur.peek() {
+    while let Ok(&token) = cur.peek().ok_or(Error::Eof) {
         match token.token_type {
             TokenType::RightParen => {
                 cur.next();
@@ -70,12 +70,9 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
                 cur.next();
                 return parse_improper_list_tail(list, text, cur);
             }
-            _ => match parse(text, cur) {
-                Ok(cell) => list.push(cell),
-                Err(e) => {
-                    return Err(e);
-                }
-            },
+            _ => {
+                list.push(parse(text, cur)?);
+            }
         }
     }
 
@@ -97,31 +94,31 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
 ) -> Result<Cell, Error> {
+    // At least one value must be read before the dot
     if list.is_empty() {
         return Err(Error::ExpectedTokenBeforeDot);
     }
 
-    match cur.peek() {
-        Some(&token) => match token.token_type {
-            TokenType::Dot | TokenType::RightParen => {
-                return Err(Error::ExpectedOneTokenAfterDot);
-            }
-            _ => {
-                list.push(parse(text, cur)?);
-            }
-        },
-        None => {
-            return Err(Error::Eof);
+    // Read the next value and add it to the list
+    match cur.peek().ok_or(Error::Eof)?.token_type {
+        TokenType::Dot | TokenType::RightParen => {
+            return Err(Error::ExpectedOneTokenAfterDot);
+        }
+        _ => {
+            list.push(parse(text, cur)?);
         }
     }
 
-    match cur.next() {
-        Some(token) if token.token_type == TokenType::RightParen => {
+    // The next token must be a )
+    match cur.next().ok_or(Error::Eof)? {
+        Token {
+            token_type: TokenType::RightParen,
+            ..
+        } => {
             let last_cdr = list.pop().unwrap();
             Ok(Cell::new_improper_list(list, last_cdr))
         }
-        Some(_) => Err(Error::ExpectedOneTokenAfterDot),
-        None => Err(Error::Eof),
+        _ => Err(Error::ExpectedOneTokenAfterDot),
     }
 }
 
