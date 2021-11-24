@@ -99,11 +99,9 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
 
     // Exactly one value must be parsed after the dot
     let last_cdr = match cur.peek().ok_or(Error::Eof)?.token_type {
-        TokenType::Dot | TokenType::RightParen => {
-            return Err(Error::ExpectedOneTokenAfterDot);
-        }
-        _ => parse(text, cur)?,
-    };
+        TokenType::Dot | TokenType::RightParen => Err(Error::ExpectedOneTokenAfterDot),
+        _ => Ok(parse(text, cur)?),
+    }?;
 
     // The next token must be a ')'
     match cur.next().ok_or(Error::Eof)?.token_type {
