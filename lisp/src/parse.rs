@@ -97,7 +97,7 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
         return Err(Error::ExpectedTokenBeforeDot);
     }
 
-    // Read the next value and add it to the list
+    // Exactly one value must be parsed after the dot
     let last_cdr = match cur.peek().ok_or(Error::Eof)?.token_type {
         TokenType::Dot | TokenType::RightParen => {
             return Err(Error::ExpectedOneTokenAfterDot);
@@ -105,7 +105,7 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
         _ => parse(text, cur)?,
     };
 
-    // The next token must be a )
+    // The next token must be a ')'
     match cur.next().ok_or(Error::Eof)?.token_type {
         TokenType::RightParen => Ok(Cell::new_improper_list(list, last_cdr)),
         _ => Err(Error::ExpectedOneTokenAfterDot),
