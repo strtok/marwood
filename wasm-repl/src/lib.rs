@@ -12,6 +12,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 const KEY_ENTER: u32 = 13;
 const KEY_BACKSPACE: u32 = 8;
+const KEY_UP_ARROW: u32 = 38;
+const KEY_DOWN_ARROW: u32 = 40;
 const KEY_LEFT_ARROW: u32 = 37;
 const KEY_RIGHT_ARROW: u32 = 39;
 const KEY_C: u32 = 67;
@@ -86,6 +88,7 @@ pub fn main() -> Result<(), JsValue> {
                     cursor_col += 1;
                 }
             }
+            KEY_UP_ARROW | KEY_DOWN_ARROW => {}
             KEY_L if event.ctrl_key() => term.clear(),
             KEY_C if event.ctrl_key() => {
                 write_prompt(&term);
