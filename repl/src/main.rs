@@ -3,11 +3,30 @@ use lisp::lex::{scan, Token};
 use lisp::parse::parse;
 use log::trace;
 use rustyline::error::ReadlineError;
-use rustyline::Editor;
+use rustyline::validate::{
+    MatchingBracketValidator, ValidationContext, ValidationResult, Validator,
+};
+use rustyline::{Editor, Result};
+use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
+
+#[derive(Completer, Helper, Highlighter, Hinter)]
+struct InputValidator {
+    brackets: MatchingBracketValidator,
+}
+
+impl Validator for InputValidator {
+    fn validate(&self, ctx: &mut ValidationContext) -> Result<ValidationResult> {
+        self.brackets.validate(ctx)
+    }
+}
 
 fn main() {
     pretty_env_logger::init();
-    let mut rl = Editor::<()>::new();
+    let validator = InputValidator {
+        brackets: MatchingBracketValidator::new(),
+    };
+    let mut rl = Editor::new();
+    rl.set_helper(Some(validator));
     let mut remaining = "".to_string();
 
     loop {

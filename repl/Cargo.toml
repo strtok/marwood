@@ -11,3 +11,4 @@ lisp = { path = "../lisp" }
 log = "*"
 pretty_env_logger = "0.4.0"
 rustyline = "9.0.0"
+rustyline-derive = "0.5.0"
