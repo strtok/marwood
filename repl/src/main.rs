@@ -44,7 +44,10 @@ fn main() {
     }
 }
 
+/// Evaluate one expression from the input text and return
+/// any text that was not evaluated.
 fn parse_and_eval(text: &str) -> &str {
+    // Tokenize the entire input
     let tokens = match scan(text) {
         Ok(tokens) => tokens,
         Err(e) => {
@@ -53,9 +56,9 @@ fn parse_and_eval(text: &str) -> &str {
         }
     };
 
+    // Parse one expression from the token stream
     let mut cur = tokens.iter().peekable();
     trace!("lexer: {:?}", tokens);
-
     match parse(text, &mut cur) {
         Ok(cell) => {
             trace!("parser: {}", cell);
@@ -69,6 +72,8 @@ fn parse_and_eval(text: &str) -> &str {
         }
     }
 
+    // Given the position of the next token in the stream, determine
+    // how far the parser consumed and return the remaining text
     match cur.peek() {
         Some(Token { span, .. }) => &text[span.0..],
         None => "",
