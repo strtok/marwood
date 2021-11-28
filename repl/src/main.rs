@@ -4,12 +4,15 @@ use lisp::parse;
 use lisp::parse::parse;
 use log::trace;
 use rustyline::error::ReadlineError;
+use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Editor, Result};
-use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
+use rustyline_derive::{Completer, Helper, Hinter};
 
-#[derive(Completer, Helper, Highlighter, Hinter)]
-struct InputValidator {}
+#[derive(Completer, Helper, Hinter)]
+struct InputValidator {
+    highlighter: MatchingBracketHighlighter,
+}
 
 impl Validator for InputValidator {
     fn validate(&self, ctx: &mut ValidationContext) -> Result<ValidationResult> {
@@ -24,9 +27,21 @@ impl Validator for InputValidator {
     }
 }
 
+impl Highlighter for InputValidator {
+    fn highlight<'l>(&self, line: &'l str, pos: usize) -> std::borrow::Cow<'l, str> {
+        self.highlighter.highlight(line, pos)
+    }
+
+    fn highlight_char(&self, line: &str, pos: usize) -> bool {
+        self.highlighter.highlight_char(line, pos)
+    }
+}
+
 fn main() {
     pretty_env_logger::init();
-    let validator = InputValidator {};
+    let validator = InputValidator {
+        highlighter: MatchingBracketHighlighter::new(),
+    };
     let mut rl = Editor::new();
     rl.set_helper(Some(validator));
     let mut remaining = "".to_string();
