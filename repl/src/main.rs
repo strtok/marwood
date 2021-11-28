@@ -1,30 +1,32 @@
 use lisp::eval::eval;
 use lisp::lex::{scan, Token};
+use lisp::parse;
 use lisp::parse::parse;
 use log::trace;
 use rustyline::error::ReadlineError;
-use rustyline::validate::{
-    MatchingBracketValidator, ValidationContext, ValidationResult, Validator,
-};
+use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Editor, Result};
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 
 #[derive(Completer, Helper, Highlighter, Hinter)]
-struct InputValidator {
-    brackets: MatchingBracketValidator,
-}
+struct InputValidator {}
 
 impl Validator for InputValidator {
     fn validate(&self, ctx: &mut ValidationContext) -> Result<ValidationResult> {
-        self.brackets.validate(ctx)
+        match scan(ctx.input()) {
+            Ok(tokens) => match parse(ctx.input(), &mut tokens.iter().peekable()) {
+                Ok(_) => Ok(ValidationResult::Valid(None)),
+                Err(parse::Error::Eof) => Ok(ValidationResult::Incomplete),
+                Err(_) => Ok(ValidationResult::Valid(None)),
+            },
+            Err(_) => Ok(ValidationResult::Valid(None)),
+        }
     }
 }
 
 fn main() {
     pretty_env_logger::init();
-    let validator = InputValidator {
-        brackets: MatchingBracketValidator::new(),
-    };
+    let validator = InputValidator {};
     let mut rl = Editor::new();
     rl.set_helper(Some(validator));
     let mut remaining = "".to_string();
