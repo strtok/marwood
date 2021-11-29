@@ -125,7 +125,7 @@ fn parse_and_eval(term: &Terminal, text: &str) {
     let tokens = match scan(text) {
         Ok(tokens) => tokens,
         Err(e) => {
-            term.writeln(&format!("error: {}", e.error_type));
+            term.writeln(&format!("error: {}", e));
             return;
         }
     };

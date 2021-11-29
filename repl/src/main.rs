@@ -68,7 +68,7 @@ fn parse_and_eval(text: &str) -> &str {
     let tokens = match scan(text) {
         Ok(tokens) => tokens,
         Err(e) => {
-            println!("error: {}", e.error_type);
+            println!("error: {}", e);
             return "";
         }
     };

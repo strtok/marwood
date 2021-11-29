@@ -54,29 +54,11 @@ impl Token {
     }
 }
 
-/// Error
-///
-/// An error returned by the scanner if the input text contains invalid
-/// grammar.
-#[derive(Debug, Eq, PartialEq)]
-pub struct Error {
-    /// The position of the start of the invalid grammar
-    pub pos: usize,
-    /// The type of error encountered
-    pub error_type: ErrorType,
-}
-
-impl Error {
-    fn new(pos: usize, error_type: ErrorType) -> Error {
-        Error { pos, error_type }
-    }
-}
-
 /// Error Type
 ///
 /// The type of error encountered by the scanner.
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
-pub enum ErrorType {
+pub enum Error {
     #[error("vectors are not supported")]
     VectorsNotSupported,
     #[error("unexpected token '{0}'")]
@@ -109,7 +91,7 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
     let mut tokens = vec![];
     let mut cur = text.char_indices().peekable();
 
-    while let Some(&(start, c)) = cur.peek() {
+    while let Some(&(_, c)) = cur.peek() {
         tokens.push(match c {
             '(' | ')' | '\'' | '.' => scan_simple_token(&mut cur)?,
             '#' => scan_hash_token(&mut cur)?,
@@ -119,7 +101,7 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
                 cur.next();
                 continue;
             }
-            _ => return Err(Error::new(start, ErrorType::UnexpectedToken(c))),
+            _ => return Err(Error::UnexpectedToken(c)),
         });
     }
 
@@ -144,15 +126,13 @@ fn scan_simple_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
 
 fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     let (start, _) = cur.next().unwrap();
-    let (_, c) = cur
-        .next()
-        .ok_or_else(|| Error::new(start, ErrorType::UnexpectedToken('#')))?;
+    let (_, c) = cur.next().ok_or(Error::UnexpectedToken('#'))?;
 
     match c {
         't' => Ok(Token::new((start, start + 2), TokenType::True)),
         'f' => Ok(Token::new((start, start + 2), TokenType::False)),
-        '(' => Err(Error::new(start, ErrorType::VectorsNotSupported)),
-        _ => Err(Error::new(start, ErrorType::UnexpectedToken('#'))),
+        '(' => Err(Error::VectorsNotSupported),
+        _ => Err(Error::UnexpectedToken('#')),
     }
 }
 
@@ -315,8 +295,8 @@ mod tests {
         };
 
         fails! {
-            "#(vector)" => Error::new(0, ErrorType::VectorsNotSupported),
-            "#b" => Error::new(0, ErrorType::UnexpectedToken('#'))
+            "#(vector)" => Error::VectorsNotSupported,
+            "#b" => Error::UnexpectedToken('#')
         };
     }
 }
