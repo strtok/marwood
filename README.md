@@ -12,6 +12,23 @@ This is a work in progress [Scheme R5RS](https://schemers.org/Documents/Standard
 * a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
 * a Web Aseembly based repl using [xterm-js-rs](https://github.com/segeljakt/xterm-js-rs) auto deployed to [github pages](https://strtok.github.io/lisp/)
 
+# Virtual Machine
+
+## Registers
+
+Register | Description
+---------|------------
+ACC      | Accumulator
+IP       | Instruction Pointer
+
+## OpCodes
+
+Opcode | Description
+-------|------------
+CAR    | Move the car of the pair in ACC into ACC. Errors if ACC Is not a pair.
+CDR    | Move the cdr of the pair in ACC into ACC. Errors if ACC is not a pair.
+HALT   | Halt program, returning the result contained within ACC
+QUOTE &lt;VAL&gt; | Move VAL into ACC
 # License
 Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
 2.0</a> or <a href="LICENSE-MIT">MIT license</a>.
