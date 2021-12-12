@@ -1,7 +1,7 @@
-use lisp::eval::eval;
 use lisp::lex::{scan, Token};
 use lisp::parse;
 use lisp::parse::parse;
+use lisp::vm::Vm;
 use log::trace;
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
@@ -46,11 +46,12 @@ fn main() {
     rl.set_helper(Some(validator));
     let mut remaining = "".to_string();
 
+    let mut vm = Vm::new();
     loop {
         let readline = rl.readline_with_initial("> ", (&remaining, ""));
         match readline {
             Ok(line) => {
-                remaining = parse_and_eval(&line).trim().to_string();
+                remaining = parse_and_eval(&mut vm, &line).trim().to_string();
             }
             Err(ReadlineError::Interrupted | ReadlineError::Eof) => break,
             Err(err) => {
@@ -63,7 +64,7 @@ fn main() {
 
 /// Evaluate one expression from the input text and return
 /// any text that was not evaluated.
-fn parse_and_eval(text: &str) -> &str {
+fn parse_and_eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
     // Tokenize the entire input
     let tokens = match scan(text) {
         Ok(tokens) => tokens,
@@ -79,7 +80,7 @@ fn parse_and_eval(text: &str) -> &str {
     match parse(text, &mut cur) {
         Ok(cell) => {
             trace!("parser: {}", cell);
-            match eval(cell) {
+            match vm.eval(&cell) {
                 Ok(cell) => println!("{}", cell),
                 Err(e) => println!("error: {}", e),
             };

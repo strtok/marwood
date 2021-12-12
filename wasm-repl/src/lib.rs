@@ -1,6 +1,6 @@
-use lisp::eval::eval;
 use lisp::lex::scan;
 use lisp::parse::parse;
+use lisp::vm::Vm;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use xterm_js_rs::addons::fit::FitAddon;
@@ -57,13 +57,14 @@ pub fn main() -> Result<(), JsValue> {
     let term: Terminal = terminal.clone().dyn_into()?;
 
     let mut line = String::new();
+    let mut vm = Vm::new();
     let callback = Closure::wrap(Box::new(move |e: OnKeyEvent| {
         let event = e.dom_event();
         match event.key_code() {
             KEY_ENTER => {
                 if !line.is_empty() {
                     term.writeln("");
-                    parse_and_eval(&term, &line);
+                    parse_and_eval(&mut vm, &term, &line);
                     line.clear();
                     cursor_col = 0;
                 }
@@ -121,7 +122,7 @@ fn write_prompt(term: &Terminal) {
     term.write("> ");
 }
 
-fn parse_and_eval(term: &Terminal, text: &str) {
+fn parse_and_eval(vm: &mut Vm, term: &Terminal, text: &str) {
     let tokens = match scan(text) {
         Ok(tokens) => tokens,
         Err(e) => {
@@ -135,7 +136,7 @@ fn parse_and_eval(term: &Terminal, text: &str) {
     while cur.peek().is_some() {
         match parse(text, &mut cur) {
             Ok(cell) => {
-                match eval(cell) {
+                match vm.eval(&cell) {
                     Ok(cell) => term.writeln(&format!("{}", cell)),
                     Err(e) => term.writeln(&format!("error: {}", e)),
                 };

@@ -8,7 +8,7 @@ pub enum Cell {
     Bool(bool),
     Number(i64),
     Symbol(String),
-    Cons(Box<Cell>, Box<Cell>),
+    Pair(Box<Cell>, Box<Cell>),
     Nil,
 }
 
@@ -55,18 +55,18 @@ impl Cell {
         let mut tail = &mut head;
         for cell in iter {
             match tail {
-                Cell::Cons(_, next) => {
-                    *next = Box::new(Cell::Cons(Box::new(cell), Box::new(Cell::Nil)));
+                Cell::Pair(_, next) => {
+                    *next = Box::new(Cell::Pair(Box::new(cell), Box::new(Cell::Nil)));
                     tail = &mut (**next);
                 }
                 _ => {
-                    *tail = Cell::Cons(Box::new(cell), Box::new(Cell::Nil));
+                    *tail = Cell::Pair(Box::new(cell), Box::new(Cell::Nil));
                 }
             }
         }
 
         if last_cdr.is_some() {
-            if let Cell::Cons(_, ref mut cdr) = *tail.deref_mut() {
+            if let Cell::Pair(_, ref mut cdr) = *tail.deref_mut() {
                 *cdr = Box::new(last_cdr.take().unwrap());
             }
         }
@@ -74,8 +74,8 @@ impl Cell {
         head
     }
 
-    pub fn new_cons(car: Cell, cdr: Cell) -> Cell {
-        Cell::Cons(Box::new(car), Box::new(cdr))
+    pub fn new_pair(car: Cell, cdr: Cell) -> Cell {
+        Cell::Pair(Box::new(car), Box::new(cdr))
     }
 
     pub fn iter(&self) -> IntoIter {
@@ -86,20 +86,20 @@ impl Cell {
         matches!(self, Cell::Nil)
     }
 
-    pub fn is_cons(&self) -> bool {
-        matches!(self, Cell::Cons(_, _))
+    pub fn is_pair(&self) -> bool {
+        matches!(self, Cell::Pair(_, _))
     }
 
     pub fn car(&self) -> Option<&Cell> {
         match self {
-            Cell::Cons(car, _) => Some(car),
+            Cell::Pair(car, _) => Some(car),
             _ => None,
         }
     }
 
     pub fn cdr(&self) -> Option<&Cell> {
         match self {
-            Cell::Cons(_, cdr) => Some(cdr),
+            Cell::Pair(_, cdr) => Some(cdr),
             _ => None,
         }
     }
@@ -152,7 +152,7 @@ impl<'a> Iterator for IntoIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.next {
-            Cell::Cons(car, cdr) => {
+            Cell::Pair(car, cdr) => {
                 self.next = cdr.borrow();
                 Some(car.borrow())
             }
@@ -179,7 +179,7 @@ impl Iterator for Iter {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.next.take() {
-            Some(Cell::Cons(car, cdr)) => {
+            Some(Cell::Pair(car, cdr)) => {
                 self.next = Some(*cdr);
                 Some(*car)
             }
@@ -204,9 +204,9 @@ impl Display for Cell {
         }
 
         match self {
-            Cell::Cons(car, cdr) => {
+            Cell::Pair(car, cdr) => {
                 // sugar quote any list in the exact form (quote x)
-                if **car == *QUOTE && (*cdr).is_cons() && (*cdr).cdr().unwrap().is_nil() {
+                if **car == *QUOTE && (*cdr).is_pair() && (*cdr).cdr().unwrap().is_nil() {
                     write!(f, "'")?;
                     return std::fmt::Display::fmt(cdr.car().unwrap(), f);
                 }
@@ -219,7 +219,7 @@ impl Display for Cell {
                             write!(f, "{})", car)?;
                             return Ok(());
                         }
-                        Cell::Cons(ncar, ncdr) => {
+                        Cell::Pair(ncar, ncdr) => {
                             write!(f, "{} ", car)?;
                             car = ncar;
                             cdr = ncdr;
@@ -265,13 +265,13 @@ macro_rules! cell {
 #[macro_export]
 macro_rules! cons {
     () => {
-        Cell::new_cons(Cell::Nil, Cell::Nil)
+        Cell::new_pair(Cell::Nil, Cell::Nil)
     };
     ($car:expr) => {
-        Cell::new_cons(Cell::from($car), Cell::Nil)
+        Cell::new_pair(Cell::from($car), Cell::Nil)
     };
     ($car:expr, $cdr:expr) => {
-        Cell::new_cons(Cell::from($car), Cell::from($cdr))
+        Cell::new_pair(Cell::from($car), Cell::from($cdr))
     };
 }
 
