@@ -60,14 +60,17 @@ impl Vm {
     pub fn compile_plus(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
         let mut lat = lat;
 
+        // Special zero arg form. Evaluate to 0.
+        if lat.is_nil() {
+            self.compile_quote(bc, &Cell::Number(0))?;
+            return Ok(());
+        }
+
         self.compile_expression(bc, car!(lat))?;
         lat = cdr!(lat);
 
-        // Special one arg form. Add the single arg to 0
+        // Special one arg form. The result is already in ACC
         if lat.is_nil() {
-            bc.push(OpCode::Push.into());
-            self.compile_quote(bc, &Cell::Number(0))?;
-            bc.push(OpCode::Add.into());
             return Ok(());
         }
 
