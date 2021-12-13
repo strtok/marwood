@@ -84,31 +84,47 @@ impl Vm {
 
         Ok(())
     }
-}
 
-pub fn decompile_text(program: &[Node]) -> String {
-    let mut text = String::new();
-    for it in decompile(program) {
-        text.push_str(&format!("{} {}\n", it.0, it.1.join(",")));
+    pub fn decompile_text(&self, program: &[Node]) -> String {
+        let mut text = String::new();
+        for it in self.decompile(program) {
+            if it.1.len() > 0 {
+                text.push_str(&format!(
+                    "{} {} #{}\n",
+                    it.0,
+                    it.1.join(","),
+                    it.2.join(",")
+                ));
+            } else {
+                text.push_str(&format!("{}\n", it.0));
+            }
+        }
+        text
     }
-    text
-}
 
-pub fn decompile(program: &[Node]) -> Vec<(String, Vec<String>)> {
-    let mut cur = program.iter();
-    let mut result: Vec<(String, Vec<String>)> = vec![];
-    while let Some(node) = cur.next() {
-        result.push(match node.val {
-            Value::OpCode(ref op) => match op {
-                OpCode::Add => ("ADD".into(), vec![]),
-                OpCode::Car => ("CAR".into(), vec![]),
-                OpCode::Cdr => ("CDR".into(), vec![]),
-                OpCode::Halt => ("HALT".into(), vec![]),
-                OpCode::Push => ("PUSH".into(), vec![]),
-                OpCode::Quote => ("QUOTE".into(), vec![cur.next().unwrap().to_string()]),
-            },
-            _ => ("UNKNOWN".into(), vec![]),
-        });
+    pub fn decompile(&self, program: &[Node]) -> Vec<(String, Vec<String>, Vec<String>)> {
+        let mut cur = program.iter();
+        let mut result: Vec<(String, Vec<String>, Vec<String>)> = vec![];
+        while let Some(node) = cur.next() {
+            result.push(match node.val {
+                Value::OpCode(ref op) => match op {
+                    OpCode::Add => ("ADD".into(), vec![], vec![]),
+                    OpCode::Car => ("CAR".into(), vec![], vec![]),
+                    OpCode::Cdr => ("CDR".into(), vec![], vec![]),
+                    OpCode::Halt => ("HALT".into(), vec![], vec![]),
+                    OpCode::Push => ("PUSH".into(), vec![], vec![]),
+                    OpCode::Quote => {
+                        let arg = cur.next().unwrap();
+                        (
+                            "QUOTE".into(),
+                            vec![arg.to_string()],
+                            vec![self.heap.get_as_cell(arg).to_string()],
+                        )
+                    }
+                },
+                _ => ("UNKNOWN".into(), vec![], vec![]),
+            });
+        }
+        result
     }
-    result
 }

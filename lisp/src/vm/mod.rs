@@ -1,5 +1,4 @@
 use crate::cell::Cell;
-use crate::vm::compile::decompile_text;
 use crate::vm::heap::Heap;
 use crate::vm::node::Node;
 use log::trace;
@@ -43,7 +42,7 @@ impl Vm {
     /// `cell` - An expression to evaluate
     pub fn eval(&mut self, cell: &Cell) -> Result<Cell, Error> {
         self.bc = self.compile(cell)?;
-        trace!("emit: \n{}", decompile_text(&self.bc));
+        trace!("emit: \n{}", self.decompile_text(&self.bc));
         self.ip = 0;
         self.run()
     }
