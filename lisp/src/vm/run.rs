@@ -1,6 +1,7 @@
 use crate::cell::Cell;
-use crate::vm::node::Node;
+use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
+use crate::vm::Error::{InvalidArgs, InvalidBytecode};
 use crate::vm::{Error, Vm};
 
 impl Vm {
@@ -11,6 +12,27 @@ impl Vm {
     pub fn run(&mut self) -> Result<Cell, Error> {
         loop {
             match self.read_op()? {
+                OpCode::Add => {
+                    let x = self.heap.get(&self.acc);
+                    let y = self.pop_stack()?;
+                    let y = self.heap.get(&y);
+                    let x = x.fixed_num().ok_or_else(|| {
+                        InvalidArgs(
+                            "+".to_string(),
+                            "number".to_string(),
+                            "not a number".to_string(),
+                        )
+                    })?;
+                    let y = y.fixed_num().ok_or_else(|| {
+                        InvalidArgs(
+                            "+".to_string(),
+                            "number".to_string(),
+                            "not a number".to_string(),
+                        )
+                    })?;
+
+                    self.acc = self.heap.put(Value::fixed_num(x + y));
+                }
                 OpCode::Car => {
                     let arg = self.heap.get(&self.acc);
                     self.acc = car(arg)?;
@@ -18,6 +40,9 @@ impl Vm {
                 OpCode::Cdr => {
                     let arg = self.heap.get(&self.acc);
                     self.acc = cdr(arg)?;
+                }
+                OpCode::Push => {
+                    self.stack.push(self.acc.clone());
                 }
                 OpCode::Quote => {
                     self.acc = self.read_arg()?;
@@ -34,7 +59,7 @@ impl Vm {
     /// return the value.
     fn read_arg(&mut self) -> Result<Node, Error> {
         let arg = self
-            .program
+            .bc
             .get(self.ip)
             .cloned()
             .filter(|it| !it.is_opcode())
@@ -43,13 +68,20 @@ impl Vm {
         arg
     }
 
+    /// Read Arg
+    ///
+    /// Pop a value off the stack or error
+    fn pop_stack(&mut self) -> Result<Node, Error> {
+        self.stack.pop().ok_or(Error::ExpectedStackValue)
+    }
+
     /// Read Op
     ///
     /// Read an op code from program[ip], increment ip and
     /// return the opcode.
     fn read_op(&mut self) -> Result<OpCode, Error> {
         let op = self
-            .program
+            .bc
             .get(self.ip)
             .cloned()
             .filter(|it| it.is_opcode())

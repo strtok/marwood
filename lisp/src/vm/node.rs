@@ -18,6 +18,12 @@ pub enum Value {
     Undefined,
 }
 
+impl Value {
+    pub fn fixed_num(val: i64) -> Value {
+        Value::FixedNum(FixedNum(val))
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(packed)]
 pub struct FixedNum(pub i64);
@@ -76,6 +82,13 @@ impl Node {
     pub fn cdr(&self) -> Option<Node> {
         match self.val {
             Value::Pair(_, Reference(cdr)) => Some(Node::reference(cdr)),
+            _ => None,
+        }
+    }
+
+    pub fn fixed_num(&self) -> Option<i64> {
+        match &self.val {
+            Value::FixedNum(FixedNum(val)) => Some(val.clone()),
             _ => None,
         }
     }

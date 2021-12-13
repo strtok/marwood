@@ -14,7 +14,8 @@ const HEAP_SIZE: usize = 1024;
 
 pub struct Vm {
     heap: Heap,
-    program: Vec<Node>,
+    bc: Vec<Node>,
+    stack: Vec<Node>,
     acc: Node,
     ip: usize,
 }
@@ -26,9 +27,10 @@ impl Vm {
     pub fn new() -> Vm {
         Vm {
             heap: Heap::new(HEAP_SIZE),
+            bc: vec![],
+            stack: vec![],
             acc: Node::undefined(),
             ip: 0,
-            program: vec![],
         }
     }
 
@@ -40,8 +42,8 @@ impl Vm {
     /// # Arguments
     /// `cell` - An expression to evaluate
     pub fn eval(&mut self, cell: &Cell) -> Result<Cell, Error> {
-        self.program = self.compile(cell)?;
-        trace!("emit: \n{}", decompile_text(&self.program));
+        self.bc = self.compile(cell)?;
+        trace!("emit: \n{}", decompile_text(&self.bc));
         self.ip = 0;
         self.run()
     }
@@ -66,6 +68,9 @@ pub enum Error {
 
     #[error("invalid bytecode")]
     InvalidBytecode,
+
+    #[error("expected stack value")]
+    ExpectedStackValue,
 
     #[error("unknown procedure {0}")]
     UnknownProcedure(String),
