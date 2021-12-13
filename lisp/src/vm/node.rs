@@ -72,23 +72,23 @@ impl Node {
         }
     }
 
-    pub fn car(&self) -> Option<Node> {
+    pub fn as_car(&self) -> Option<Node> {
         match self.val {
             Value::Pair(Reference(car), _) => Some(Node::reference(car)),
             _ => None,
         }
     }
 
-    pub fn cdr(&self) -> Option<Node> {
+    pub fn as_cdr(&self) -> Option<Node> {
         match self.val {
             Value::Pair(_, Reference(cdr)) => Some(Node::reference(cdr)),
             _ => None,
         }
     }
 
-    pub fn fixed_num(&self) -> Option<i64> {
-        match &self.val {
-            Value::FixedNum(FixedNum(val)) => Some(val.clone()),
+    pub fn as_fixed_num(&self) -> Option<i64> {
+        match self.val {
+            Value::FixedNum(FixedNum(val)) => Some(val),
             _ => None,
         }
     }

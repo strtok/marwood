@@ -1,7 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
-use crate::vm::Error::{InvalidArgs, InvalidBytecode};
+use crate::vm::Error::InvalidArgs;
 use crate::vm::{Error, Vm};
 
 impl Vm {
@@ -16,18 +16,18 @@ impl Vm {
                     let x = self.heap.get(&self.acc);
                     let y = self.pop_stack()?;
                     let y = self.heap.get(&y);
-                    let x = x.fixed_num().ok_or_else(|| {
+                    let x = x.as_fixed_num().ok_or_else(|| {
                         InvalidArgs(
                             "+".to_string(),
                             "number".to_string(),
-                            "not a number".to_string(),
+                            self.heap.get_as_cell(&x).to_string(),
                         )
                     })?;
-                    let y = y.fixed_num().ok_or_else(|| {
+                    let y = y.as_fixed_num().ok_or_else(|| {
                         InvalidArgs(
                             "+".to_string(),
                             "number".to_string(),
-                            "not a number".to_string(),
+                            self.heap.get_as_cell(&y).to_string(),
                         )
                     })?;
 
@@ -94,12 +94,12 @@ impl Vm {
 
 fn car<T: AsRef<Node>>(node: T) -> Result<Node, Error> {
     node.as_ref()
-        .car()
+        .as_car()
         .ok_or_else(|| Error::ExpectedPair(node.as_ref().to_string()))
 }
 
 fn cdr<T: AsRef<Node>>(node: T) -> Result<Node, Error> {
     node.as_ref()
-        .cdr()
+        .as_cdr()
         .ok_or_else(|| Error::ExpectedPair(node.as_ref().to_string()))
 }

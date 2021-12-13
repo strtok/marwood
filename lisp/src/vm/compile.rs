@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::vm::node::{FixedNum, Node, Value};
+use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
 use crate::vm::{Error, Vm};
 use std::ops::Deref;
