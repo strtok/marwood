@@ -122,6 +122,16 @@ mod tests {
     }
 
     #[test]
+    fn cons() {
+        evals![
+            "(cons 1 2)" => "(1 . 2)",
+            "(cons '(1 2) '(3 4))" => "((1 2) . (3 4))",
+            "(cons 1 (cons 2 (cons 3 '())))" => "(1 2 3)"
+        ];
+        fails!["(cons 1)", "(cons 1 2 3)"];
+    }
+
+    #[test]
     fn arithmetic() {
         evals![
             "(+)" => "0",

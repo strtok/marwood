@@ -101,7 +101,7 @@ impl Vm {
     pub fn decompile_text(&self, program: &[Node]) -> String {
         let mut text = String::new();
         for it in self.decompile(program) {
-            if it.1.len() > 0 {
+            if it.1.is_empty() {
                 text.push_str(&format!(
                     "{} {} #{}\n",
                     it.0,
