@@ -92,6 +92,13 @@ impl Node {
             _ => None,
         }
     }
+
+    pub fn as_reference(&self) -> Option<Reference> {
+        match self.val {
+            Value::Reference(val) => Some(val),
+            _ => None,
+        }
+    }
 }
 
 impl From<OpCode> for Node {

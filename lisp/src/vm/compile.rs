@@ -1,6 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
+use crate::vm::Error::InvalidNumArgs;
 use crate::vm::{Error, Vm};
 use std::ops::Deref;
 
@@ -30,12 +31,24 @@ impl Vm {
                 Cell::Symbol(s) if s.eq("quote") => self.compile_quote(bc, car!(cdr))?,
                 Cell::Symbol(s) if s.eq("car") => self.compile_car(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("cdr") => self.compile_cdr(bc, cdr)?,
+                Cell::Symbol(s) if s.eq("cons") => self.compile_cons(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("+") => self.compile_plus(bc, cdr)?,
                 _ => return Err(Error::UnknownProcedure(car.to_string())),
             },
             Cell::Number(_) => self.compile_quote(bc, cell)?,
             _ => return Err(Error::UnknownProcedure(cell.to_string())),
         };
+        Ok(())
+    }
+
+    pub fn compile_cons(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
+        if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
+            return Err(InvalidNumArgs("cons".into()));
+        }
+        self.compile_expression(bc, car!(cdr!(lat)))?;
+        bc.push(OpCode::Push.into());
+        self.compile_expression(bc, car!(lat))?;
+        bc.push(OpCode::Cons.into());
         Ok(())
     }
 
@@ -111,6 +124,7 @@ impl Vm {
                     OpCode::Add => ("ADD".into(), vec![], vec![]),
                     OpCode::Car => ("CAR".into(), vec![], vec![]),
                     OpCode::Cdr => ("CDR".into(), vec![], vec![]),
+                    OpCode::Cons => ("CONS".into(), vec![], vec![]),
                     OpCode::Halt => ("HALT".into(), vec![], vec![]),
                     OpCode::Push => ("PUSH".into(), vec![], vec![]),
                     OpCode::Quote => {

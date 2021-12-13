@@ -31,9 +31,13 @@ impl Heap {
     /// Put the given cell value on the next available free node in the
     /// heap and return the position of the node.
     pub fn put(&mut self, val: Value) -> Node {
-        let idx = self.alloc();
-        *self.heap.get_mut(idx).expect("heap index is out of bounds") = Node::new(val);
-        Node::from(Reference(idx))
+        if let Value::Reference(val) = val {
+            Node::from(val)
+        } else {
+            let idx = self.alloc();
+            *self.heap.get_mut(idx).expect("heap index is out of bounds") = Node::new(val);
+            Node::from(Reference(idx))
+        }
     }
 
     /// Put Cell
