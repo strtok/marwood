@@ -25,9 +25,11 @@ IP       | Instruction Pointer
 
 Opcode | Description
 -------|------------
+ADD    | Perform addition on the values in ACC and the the top of the stack and store the result in ACC
 CAR    | Move the car of the pair in ACC into ACC. Errors if ACC Is not a pair.
 CDR    | Move the cdr of the pair in ACC into ACC. Errors if ACC is not a pair.
 HALT   | Halt program, returning the result contained within ACC
+PUSH   | Push the value in ACC on to the stack
 QUOTE &lt;VAL&gt; | Move VAL into ACC
 
 # License
