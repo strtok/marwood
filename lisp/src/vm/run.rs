@@ -42,9 +42,9 @@ impl Vm {
                     self.acc = cdr(arg)?;
                 }
                 OpCode::Cons => {
-                    let car = self.heap.put(self.acc.clone().val);
+                    let car = self.heap.put(self.acc.clone());
                     let cdr = self.pop_stack()?;
-                    let cdr = self.heap.put(cdr.val);
+                    let cdr = self.heap.put(cdr);
                     self.acc = self.heap.put(Value::Pair(
                         car.as_reference().unwrap(),
                         cdr.as_reference().unwrap(),

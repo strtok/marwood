@@ -101,6 +101,18 @@ impl Node {
     }
 }
 
+impl From<Value> for Node {
+    fn from(val: Value) -> Self {
+        Node::new(val)
+    }
+}
+
+impl From<Node> for Value {
+    fn from(node: Node) -> Self {
+        node.val.clone()
+    }
+}
+
 impl From<OpCode> for Node {
     fn from(val: OpCode) -> Self {
         Node::new(Value::OpCode(val))
