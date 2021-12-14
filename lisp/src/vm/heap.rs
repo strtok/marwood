@@ -51,7 +51,7 @@ impl Heap {
     pub fn put_cell(&mut self, ast: &cell::Cell) -> Node {
         match *ast {
             cell::Cell::Nil => self.put(Value::Nil),
-            cell::Cell::Number(val) => self.put(Value::FixedNum(FixedNum(val))),
+            cell::Cell::Number(val) => self.put(Value::FixedNum(val.into())),
             cell::Cell::Bool(val) => self.put(Value::Bool(val)),
             cell::Cell::Pair(ref car, ref cdr) => {
                 match (
@@ -129,7 +129,7 @@ impl Heap {
 mod tests {
     use super::*;
     use crate::cell::Cell;
-    use crate::vm::node::{FixedNum, Value};
+    use crate::vm::node::Value;
     use crate::{cell, cons};
     const CHUNK_SIZE: usize = 1024;
 
@@ -138,9 +138,9 @@ mod tests {
         let mut heap = Heap::new(CHUNK_SIZE);
         assert_eq!(heap.alloc(), 0);
         assert_eq!(heap.alloc(), 1);
-        heap.get_at_index_mut(0).val = Value::FixedNum(FixedNum(42));
-        heap.get_at_index_mut(1).val = Value::FixedNum(FixedNum(43));
-        assert_eq!(heap.get_at_index(0).val, Value::FixedNum(FixedNum(42)));
+        heap.get_at_index_mut(0).val = Value::FixedNum(42.into());
+        heap.get_at_index_mut(1).val = Value::FixedNum(43.into());
+        assert_eq!(heap.get_at_index(0).val, Value::FixedNum(42.into()));
     }
 
     #[test]

@@ -28,9 +28,21 @@ impl Value {
 #[repr(packed)]
 pub struct FixedNum(pub i64);
 
+impl From<i64> for FixedNum {
+    fn from(val: i64) -> Self {
+        FixedNum(val)
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(packed)]
 pub struct Reference(pub usize);
+
+impl From<usize> for Reference {
+    fn from(idx: usize) -> Self {
+        Reference(idx)
+    }
+}
 
 impl Node {
     pub fn new(val: Value) -> Node {
@@ -41,8 +53,12 @@ impl Node {
         Node::new(Value::Undefined)
     }
 
-    pub fn reference(idx: usize) -> Node {
-        Node::new(Value::Reference(Reference(idx)))
+    pub fn fixed_num<T: Into<FixedNum>>(val: T) -> Node {
+        Node::new(Value::FixedNum(val.into()))
+    }
+
+    pub fn reference<T: Into<Reference>>(reference: T) -> Node {
+        Node::new(Value::Reference(reference.into()))
     }
 
     pub fn nil() -> Node {
@@ -101,15 +117,21 @@ impl Node {
     }
 }
 
-impl From<Value> for Node {
-    fn from(val: Value) -> Self {
-        Node::new(val)
+impl<T> From<T> for Node
+where
+    T: AsRef<Value>,
+{
+    fn from(val: T) -> Self {
+        Node::new(val.as_ref().clone())
     }
 }
 
-impl From<Node> for Value {
-    fn from(node: Node) -> Self {
-        node.val.clone()
+impl<T> From<T> for Value
+where
+    T: AsRef<Node>,
+{
+    fn from(node: T) -> Self {
+        node.as_ref().clone().val
     }
 }
 
