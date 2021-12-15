@@ -32,7 +32,9 @@ impl Vm {
                 Cell::Symbol(s) if s.eq("car") => self.compile_car(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("cdr") => self.compile_cdr(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("cons") => self.compile_cons(bc, cdr)?,
-                Cell::Symbol(s) if s.eq("+") => self.compile_plus(bc, cdr)?,
+                Cell::Symbol(s) if s.eq("+") => self.compile_operator(bc, cdr, OpCode::Add)?,
+                Cell::Symbol(s) if s.eq("-") => self.compile_operator(bc, cdr, OpCode::Sub)?,
+                Cell::Symbol(s) if s.eq("*") => self.compile_operator(bc, cdr, OpCode::Mul)?,
                 _ => return Err(Error::UnknownProcedure(car.to_string())),
             },
             Cell::Number(_) => self.compile_quote(bc, cell)?,
@@ -70,32 +72,47 @@ impl Vm {
         Ok(())
     }
 
-    pub fn compile_plus(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
+    pub fn compile_operator(
+        &mut self,
+        bc: &mut Vec<Node>,
+        lat: &Cell,
+        op: OpCode,
+    ) -> Result<(), Error> {
         let mut lat = lat;
 
-        // Special zero arg form. Evaluate to 0.
+        let base_value = match op {
+            OpCode::Mul => &Cell::Number(1),
+            _ => &Cell::Number(0),
+        };
+
+        // Special zero arg form. Evaluate to the base value.
         if lat.is_nil() {
-            self.compile_quote(bc, &Cell::Number(0))?;
+            if op == OpCode::Sub {
+                return Err(InvalidNumArgs("-".to_string()));
+            }
+            self.compile_quote(bc, base_value)?;
             return Ok(());
         }
 
-        self.compile_expression(bc, car!(lat))?;
+        let first_arg = car!(lat);
         lat = cdr!(lat);
 
         // Special one arg form. Add it to 0 so that type
         // checking from the ADD instruction still occurs.
         if lat.is_nil() {
+            self.compile_quote(bc, base_value)?;
             bc.push(OpCode::Push.into());
-            self.compile_quote(bc, &Cell::Number(0))?;
-            bc.push(OpCode::Add.into());
+            self.compile_expression(bc, first_arg)?;
+            bc.push(op.clone().into());
             return Ok(());
         }
 
         // Each additional arg is added to ACC
+        self.compile_expression(bc, first_arg)?;
         while !lat.is_nil() {
             bc.push(OpCode::Push.into());
             self.compile_expression(bc, car!(lat))?;
-            bc.push(OpCode::Add.into());
+            bc.push(op.clone().into());
             lat = cdr!(lat);
         }
 
@@ -130,6 +147,7 @@ impl Vm {
                     OpCode::Cdr => ("CDR".into(), vec![], vec![]),
                     OpCode::Cons => ("CONS".into(), vec![], vec![]),
                     OpCode::Halt => ("HALT".into(), vec![], vec![]),
+                    OpCode::Mul => ("MUL".into(), vec![], vec![]),
                     OpCode::Push => ("PUSH".into(), vec![], vec![]),
                     OpCode::Quote => {
                         let arg = cur.next().unwrap();
@@ -139,6 +157,7 @@ impl Vm {
                             vec![self.heap.get_as_cell(arg).to_string()],
                         )
                     }
+                    OpCode::Sub => ("SUB".into(), vec![], vec![]),
                 },
                 _ => ("UNKNOWN".into(), vec![], vec![]),
             });

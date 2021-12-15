@@ -4,7 +4,9 @@ pub enum OpCode {
     Car,
     Cdr,
     Cons,
+    Mul,
     Halt,
     Push,
     Quote,
+    Sub,
 }

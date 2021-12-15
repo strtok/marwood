@@ -1,7 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
-use crate::vm::Error::InvalidArgs;
+use crate::vm::Error::{InvalidArgs, InvalidBytecode};
 use crate::vm::{Error, Vm};
 
 impl Vm {
@@ -11,27 +11,38 @@ impl Vm {
     /// and return the value contained within the ACC register as a Cell
     pub fn run(&mut self) -> Result<Cell, Error> {
         loop {
-            match self.read_op()? {
-                OpCode::Add => {
+            let op_code = self.read_op()?;
+            match op_code {
+                OpCode::Add | OpCode::Sub | OpCode::Mul => {
+                    let proc_name = match op_code {
+                        OpCode::Add => "+",
+                        OpCode::Sub => "-",
+                        OpCode::Mul => "*",
+                        _ => return Err(InvalidBytecode),
+                    };
                     let x = self.heap.get(&self.acc);
                     let y = self.pop_stack()?;
                     let y = self.heap.get(&y);
                     let x = x.as_fixed_num().ok_or_else(|| {
                         InvalidArgs(
-                            "+".to_string(),
+                            proc_name.to_string(),
                             "number".to_string(),
                             self.heap.get_as_cell(&x).to_string(),
                         )
                     })?;
                     let y = y.as_fixed_num().ok_or_else(|| {
                         InvalidArgs(
-                            "+".to_string(),
+                            proc_name.to_string(),
                             "number".to_string(),
                             self.heap.get_as_cell(&y).to_string(),
                         )
                     })?;
-
-                    self.acc = self.heap.put(Value::fixed_num(x + y));
+                    match op_code {
+                        OpCode::Add => self.acc = self.heap.put(Value::fixed_num(x + y)),
+                        OpCode::Sub => self.acc = self.heap.put(Value::fixed_num(y - x)),
+                        OpCode::Mul => self.acc = self.heap.put(Value::fixed_num(x * y)),
+                        _ => return Err(InvalidBytecode),
+                    };
                 }
                 OpCode::Car => {
                     let arg = self.heap.get(&self.acc);
