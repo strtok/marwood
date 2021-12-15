@@ -82,8 +82,12 @@ impl Vm {
         self.compile_expression(bc, car!(lat))?;
         lat = cdr!(lat);
 
-        // Special one arg form. The result is already in ACC
+        // Special one arg form. Add it to 0 so that type
+        // checking from the ADD instruction still occurs.
         if lat.is_nil() {
+            bc.push(OpCode::Push.into());
+            self.compile_quote(bc, &Cell::Number(0))?;
+            bc.push(OpCode::Add.into());
             return Ok(());
         }
 
