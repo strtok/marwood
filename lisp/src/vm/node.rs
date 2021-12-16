@@ -15,6 +15,7 @@ pub enum Value {
     OpCode(OpCode),
     Pair(Reference, Reference),
     Reference(Reference),
+    Symbol(StringReference),
     Undefined,
 }
 
@@ -44,6 +45,16 @@ impl From<usize> for Reference {
     }
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[repr(packed)]
+pub struct StringReference(pub usize);
+
+impl From<usize> for StringReference {
+    fn from(idx: usize) -> Self {
+        StringReference(idx)
+    }
+}
+
 impl Node {
     pub fn new(val: Value) -> Node {
         Node { val, flags: 0 }
@@ -59,6 +70,10 @@ impl Node {
 
     pub fn reference<T: Into<Reference>>(reference: T) -> Node {
         Node::new(Value::Reference(reference.into()))
+    }
+
+    pub fn symbol<T: Into<StringReference>>(reference: T) -> Node {
+        Node::new(Value::Symbol(reference.into()))
     }
 
     pub fn nil() -> Node {
@@ -165,6 +180,7 @@ impl fmt::Display for Node {
             Value::Bool(true) => write!(f, "#t"),
             Value::Bool(false) => write!(f, "#f"),
             Value::Reference(Reference(val)) => write!(f, "[{}]", val),
+            Value::Symbol(StringReference(val)) => write!(f, "str[{}]", val),
             Value::OpCode(val) => write!(f, "{:?}", val),
             Value::Pair(Reference(car), Reference(cdr)) => write!(f, "({}, {})", car, cdr),
             Value::Undefined => write!(f, "undefined"),

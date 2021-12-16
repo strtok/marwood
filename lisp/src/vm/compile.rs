@@ -37,8 +37,9 @@ impl Vm {
                 Cell::Symbol(s) if s.eq("*") => self.compile_operator(bc, cdr, OpCode::Mul)?,
                 _ => return Err(Error::UnknownProcedure(car.to_string())),
             },
-            Cell::Number(_) => self.compile_quote(bc, cell)?,
-            _ => return Err(Error::UnknownProcedure(cell.to_string())),
+            Cell::Number(_) | Cell::Symbol(_) | Cell::Bool(_) | Cell::Nil => {
+                self.compile_quote(bc, cell)?
+            }
         };
         Ok(())
     }
@@ -103,7 +104,7 @@ impl Vm {
             self.compile_quote(bc, base_value)?;
             bc.push(OpCode::Push.into());
             self.compile_expression(bc, first_arg)?;
-            bc.push(op.clone().into());
+            bc.push(op.into());
             return Ok(());
         }
 

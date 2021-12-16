@@ -1,6 +1,7 @@
 use crate::cell;
 use crate::cell::Cell;
-use crate::vm::node::{FixedNum, Node, Reference, Value};
+use crate::vm::node::{FixedNum, Node, Reference, StringReference, Value};
+use std::collections::HashMap;
 use std::ops::Deref;
 
 #[derive(Debug)]
@@ -8,6 +9,7 @@ pub struct Heap {
     chunk_size: usize,
     heap: Vec<Node>,
     free_list: Vec<usize>,
+    string_heap: StringHeap,
 }
 
 impl Heap {
@@ -16,6 +18,7 @@ impl Heap {
             chunk_size,
             heap: vec![Node::undefined(); chunk_size],
             free_list: (0..chunk_size).rev().into_iter().collect(),
+            string_heap: StringHeap::new(chunk_size),
         }
     }
 
@@ -61,10 +64,13 @@ impl Heap {
                     (Value::Reference(car), Value::Reference(cdr)) => {
                         self.put(Value::Pair(car, cdr))
                     }
-                    _ => panic!("expected references"),
+                    _ => panic!("expected references, got {:?}", ast),
                 }
             }
-            cell::Cell::Symbol(_) => panic!("symbols not supported yet"),
+            cell::Cell::Symbol(ref sym) => {
+                let node = self.string_heap.put_symbol(sym);
+                self.put(node)
+            }
         }
     }
 
@@ -112,6 +118,9 @@ impl Heap {
     pub fn get_as_cell(&self, node: &Node) -> Cell {
         match node.val {
             Value::Reference(Reference(idx)) => self.get_as_cell(self.get_at_index(idx)),
+            Value::Symbol(StringReference(idx)) => {
+                Cell::Symbol(self.string_heap.get_at_index(idx).into())
+            }
             Value::FixedNum(FixedNum(val)) => Cell::Number(val),
             Value::Nil => Cell::Nil,
             Value::Bool(val) => Cell::Bool(val),
@@ -122,6 +131,57 @@ impl Heap {
             Value::OpCode(_) => panic!("unexpected opcode"),
             Value::Undefined => panic!("unexpected undefined"),
         }
+    }
+}
+
+/// String Heap
+///
+/// String heap is a heap that supports garbage collected string interning
+/// of strings. The heap is used as a storage for both user defined symbols,
+/// as well as immutable UTF-8 safe strings supporting scheme's string type.
+#[derive(Debug)]
+pub struct StringHeap {
+    chunk_size: usize,
+    heap: Vec<String>,
+    free_list: Vec<usize>,
+    map: HashMap<String, usize>,
+}
+
+impl StringHeap {
+    pub fn new(chunk_size: usize) -> StringHeap {
+        StringHeap {
+            chunk_size,
+            heap: vec![String::new(); chunk_size],
+            free_list: (0..chunk_size).rev().into_iter().collect(),
+            map: HashMap::new(),
+        }
+    }
+
+    /// Alloc
+    ///
+    /// Return the next free slot from the free list.
+    pub fn alloc(&mut self) -> usize {
+        self.free_list.pop().unwrap()
+    }
+
+    /// Put
+    ///
+    /// Put the given String on the next available free node in the
+    /// heap and return the position of the node.
+    pub fn put_symbol<T: Into<String> + Clone>(&mut self, val: T) -> Node {
+        let idx = self.alloc();
+        *self.heap.get_mut(idx).expect("heap index is out of bounds") = val.into();
+        Node::symbol(idx)
+    }
+
+    /// Get at Index
+    ///
+    /// Get the node at idx.
+    ///
+    /// # Arguments
+    /// `idx` - The index of the node to return.
+    pub fn get_at_index(&self, idx: usize) -> &str {
+        self.heap.get(idx).expect("heap index out of bounds")
     }
 }
 
@@ -170,6 +230,12 @@ mod tests {
             let mut heap = Heap::new(CHUNK_SIZE);
             let node = heap.put_cell(&cons![10, 20]);
             assert_eq!(heap.get_as_cell(&node), cons![10, 20]);
+        }
+        // Symbol
+        {
+            let mut heap = Heap::new(CHUNK_SIZE);
+            let node = heap.put_cell(&cell!["foo"]);
+            assert_eq!(heap.get_as_cell(&node), cell!["foo"]);
         }
     }
 }

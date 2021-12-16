@@ -102,6 +102,19 @@ mod tests {
     }
 
     #[test]
+    fn eval_literal() {
+        evals![
+           "1" => "1",
+           "-10" => "-10",
+           "foo" => "foo",
+           "#t" => "#t",
+           "#f" => "#f",
+           "'()" => "()",
+           "()" => "()"
+        ];
+    }
+
+    #[test]
     fn eval_quote() {
         evals![
             "'1" => "1",
