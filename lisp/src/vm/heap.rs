@@ -168,10 +168,16 @@ impl StringHeap {
     ///
     /// Put the given String on the next available free node in the
     /// heap and return the position of the node.
-    pub fn put_symbol<T: Into<String> + Clone>(&mut self, val: T) -> Node {
-        let idx = self.alloc();
-        *self.heap.get_mut(idx).expect("heap index is out of bounds") = val.into();
-        Node::symbol(idx)
+    pub fn put_symbol(&mut self, sym: &str) -> Node {
+        match self.map.get(sym) {
+            Some(idx) => Node::symbol(*idx),
+            None => {
+                let idx = self.alloc();
+                *self.heap.get_mut(idx).expect("heap index is out of bounds") = sym.into();
+                self.map.insert(sym.into(), idx);
+                Node::symbol(idx)
+            }
+        }
     }
 
     /// Get at Index
