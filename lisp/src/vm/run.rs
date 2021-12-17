@@ -24,7 +24,7 @@ impl Vm {
     /// and return the value contained within the ACC register as a Cell
     pub fn run(&mut self) -> Result<Cell, Error> {
         loop {
-            match self.execute_instruction() {
+            match self.run_one() {
                 Ok(true) => break,
                 Ok(false) => continue,
                 Err(e) => return Err(self.map_runtime_error(e)),
@@ -33,7 +33,10 @@ impl Vm {
         Ok(self.heap.get_as_cell(&self.acc))
     }
 
-    fn execute_instruction(&mut self) -> Result<bool, RuntimeError> {
+    /// Execute one instruction, returning either a bool or runtime error.
+    /// If the bool is set true, it indicates a HALT was encountered and
+    /// execution should cease.
+    fn run_one(&mut self) -> Result<bool, RuntimeError> {
         let op_code = self.read_op()?;
         match op_code {
             OpCode::Add | OpCode::Sub | OpCode::Mul => {
@@ -126,6 +129,10 @@ impl Vm {
         op
     }
 
+    /// Map Runtime Error
+    ///
+    /// Map a runtime error to a vm::Error, converting any runtime values
+    /// (e.g. references to heap values) to printable forms.
     fn map_runtime_error(&self, runtime_error: RuntimeError) -> Error {
         match runtime_error {
             ExpectedPair(node) => Error::ExpectedPair(self.heap.get_as_cell(&node).to_string()),
