@@ -91,6 +91,13 @@ impl Vm {
         Ok(false)
     }
 
+    /// Pop Stack
+    ///
+    /// Pop a value off the stack. Error if the stack is empty.
+    fn pop_stack(&mut self) -> Result<Node, RuntimeError> {
+        self.stack.pop().ok_or(ExpectedStackValue)
+    }
+
     /// Read Arg
     ///
     /// Read an argument node from program[ip], increment ip and
@@ -104,13 +111,6 @@ impl Vm {
             .ok_or(InvalidBytecode);
         self.ip += 1;
         arg
-    }
-
-    /// Read Arg
-    ///
-    /// Pop a value off the stack or error
-    fn pop_stack(&mut self) -> Result<Node, RuntimeError> {
-        self.stack.pop().ok_or(ExpectedStackValue)
     }
 
     /// Read Op
