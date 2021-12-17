@@ -2,8 +2,7 @@ use crate::cell::Cell;
 use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
-    ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, InvalidNumArgs,
-    UnknownProcedure,
+    ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode,
 };
 use crate::vm::{Error, Vm};
 
@@ -124,10 +123,8 @@ impl Vm {
 pub enum RuntimeError {
     ExpectedPair(Node),
     InvalidArgs(String, String, Node),
-    InvalidNumArgs(String),
     InvalidBytecode,
     ExpectedStackValue,
-    UnknownProcedure(String),
 }
 
 impl RuntimeError {
@@ -142,10 +139,8 @@ impl RuntimeError {
             InvalidArgs(proc, expected, got) => {
                 Error::InvalidArgs(proc, expected, vm.heap.get_as_cell(&got).to_string())
             }
-            InvalidNumArgs(proc) => Error::InvalidNumArgs(proc),
             InvalidBytecode => Error::InvalidBytecode,
             ExpectedStackValue => Error::ExpectedStackValue,
-            UnknownProcedure(proc) => Error::UnknownProcedure(proc),
         }
     }
 }
