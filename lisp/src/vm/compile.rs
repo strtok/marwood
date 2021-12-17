@@ -125,7 +125,7 @@ impl Vm {
         for it in self.decompile(program) {
             if !it.1.is_empty() {
                 text.push_str(&format!(
-                    "{} {} #{}\n",
+                    "{0: <5} {1: <10} //{2: <10}\n",
                     it.0,
                     it.1.join(","),
                     it.2.join(",")
