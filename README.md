@@ -30,8 +30,10 @@ CAR    | Move the car of the pair in ACC into ACC. Errors if ACC Is not a pair.
 CDR    | Move the cdr of the pair in ACC into ACC. Errors if ACC is not a pair.
 CONS   | Box a pair, storing a reference in ACC. The car of the pair is taken from ACC, and the cdr from the top of the stack.
 HALT   | Halt program, returning the result contained within ACC
+MUL    | Perform multiplication on the values in ACC and the the top of the stack and store the result in ACC
 PUSH   | Push the value in ACC on to the stack
 QUOTE &lt;VAL&gt; | Move VAL into ACC
+SUB    | Perform subtraction on the values in ACC and the the top of the stack and store the result in ACC
 
 # License
 Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
