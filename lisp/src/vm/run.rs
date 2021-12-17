@@ -7,16 +7,6 @@ use crate::vm::run::RuntimeError::{
 };
 use crate::vm::{Error, Vm};
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum RuntimeError {
-    ExpectedPair(Node),
-    InvalidArgs(String, String, Node),
-    InvalidNumArgs(String),
-    InvalidBytecode,
-    ExpectedStackValue,
-    UnknownProcedure(String),
-}
-
 impl Vm {
     /// Run
     ///
@@ -27,7 +17,7 @@ impl Vm {
             match self.run_one() {
                 Ok(true) => break,
                 Ok(false) => continue,
-                Err(e) => return Err(self.map_runtime_error(e)),
+                Err(e) => return Err(e.into_error(self)),
             }
         }
         Ok(self.heap.get_as_cell(&self.acc))
@@ -128,16 +118,29 @@ impl Vm {
         self.ip += 1;
         op
     }
+}
 
-    /// Map Runtime Error
+#[derive(Debug, Eq, PartialEq)]
+pub enum RuntimeError {
+    ExpectedPair(Node),
+    InvalidArgs(String, String, Node),
+    InvalidNumArgs(String),
+    InvalidBytecode,
+    ExpectedStackValue,
+    UnknownProcedure(String),
+}
+
+impl RuntimeError {
+    /// Into Error
     ///
-    /// Map a runtime error to a vm::Error, converting any runtime values
-    /// (e.g. references to heap values) to printable forms.
-    fn map_runtime_error(&self, runtime_error: RuntimeError) -> Error {
-        match runtime_error {
-            ExpectedPair(node) => Error::ExpectedPair(self.heap.get_as_cell(&node).to_string()),
+    /// Convert a runtime error into a vm::Error, converting any runtime values
+    /// (e.g. references to heap values) to printable forms -- This function requires
+    /// read only access to the Vm in order to access the heap.
+    fn into_error(self, vm: &Vm) -> Error {
+        match self {
+            ExpectedPair(node) => Error::ExpectedPair(vm.heap.get_as_cell(&node).to_string()),
             InvalidArgs(proc, expected, got) => {
-                Error::InvalidArgs(proc, expected, self.heap.get_as_cell(&got).to_string())
+                Error::InvalidArgs(proc, expected, vm.heap.get_as_cell(&got).to_string())
             }
             InvalidNumArgs(proc) => Error::InvalidNumArgs(proc),
             InvalidBytecode => Error::InvalidBytecode,
