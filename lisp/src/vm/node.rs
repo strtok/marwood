@@ -55,6 +55,12 @@ impl From<usize> for StringReference {
     }
 }
 
+impl Into<usize> for StringReference {
+    fn into(self) -> usize {
+        self.0
+    }
+}
+
 impl Node {
     pub fn new(val: Value) -> Node {
         Node { val, flags: 0 }

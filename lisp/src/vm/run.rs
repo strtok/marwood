@@ -5,6 +5,7 @@ use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode,
 };
 use crate::vm::{Error, Vm};
+use std::collections::HashMap;
 
 impl Vm {
     /// Run
@@ -119,6 +120,90 @@ impl Vm {
     }
 }
 
+/// Environment
+///
+/// Environment represents a binding of a symbol to a value in the heap.
+/// The environment tracks both deep bindings (sym -> slot), and also a
+/// vector of shallow bindings (slot -> Node).
+#[derive(Debug)]
+pub struct Environment {
+    /// Deep bindings is a map of symbol reference -> slot, and
+    /// is used by the compiler to aassociate a symbol at compilation
+    /// time with the environment slot.
+    bindings: HashMap<usize, usize>,
+
+    /// Environment slots. The compiler produces shallow bindings as
+    /// references into this vector at compile time.
+    slots: Vec<Node>,
+}
+
+impl Environment {
+    pub fn new() -> Environment {
+        Environment {
+            bindings: HashMap::new(),
+            slots: vec![],
+        }
+    }
+
+    /// Get binding
+    ///
+    /// Get binding provides a deep binding lookup of sym -> slot. If the
+    /// binding does not already exist, get_binding() will crates a new
+    /// binding and return the newly bound slot.
+    ///
+    /// # Arguments
+    /// `sym` - The symbol to provide a binding for
+    pub fn get_binding<T: Into<usize>>(&mut self, sym: T) -> usize {
+        let sym: usize = sym.into();
+        match self.bindings.get(&sym) {
+            Some(slot) => *slot,
+            None => {
+                self.slots.push(Node::undefined());
+                let slot = self.slots.len() - 1;
+                self.bindings.insert(sym, slot);
+                slot
+            }
+        }
+    }
+
+    /// Get slot
+    ///
+    /// Get slot provides a shallow binding interface. Given the environment
+    /// slot, return the bound value.
+    ///
+    /// Any slot accessed by the runtime must have been valid at compilation
+    /// time, so any reference to an unknown slot is considered a critical error
+    /// and will cause a panic of the runtime.
+    ///
+    /// # Arguments
+    /// `slot` - The slot to return a value for
+    pub fn get_slot(&self, slot: usize) -> Node {
+        self.slots
+            .get(slot)
+            .expect("invalid environment slot")
+            .clone()
+    }
+
+    /// Put slot
+    ///
+    /// Get slot provides a shallow binding interface. Given the environment
+    /// slot, return the bound value.
+    ///
+    /// Any slot accessed by the runtime must have been valid at compilation
+    /// time, so any reference to an unknown slot is considered a critical error
+    /// and will cause a panic of the runtime.
+    ///
+    /// Any value other than a reference or undefined is considered a runtime error
+    /// and will result in a panic.
+    ///
+    /// # Arguments
+    /// `slot` - The slot to return a value for
+    pub fn put_slot(&mut self, slot: usize, node: Node) {
+        assert!(matches!(node.val, Value::Reference(_) | Value::Undefined));
+        *self.slots.get_mut(slot).expect("invalid environment slot") = node;
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum RuntimeError {
     ExpectedPair(Node),
@@ -155,4 +240,30 @@ fn cdr<T: AsRef<Node>>(node: T) -> Result<Node, RuntimeError> {
     node.as_ref()
         .as_cdr()
         .ok_or_else(|| ExpectedPair(node.as_ref().clone()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::vm::node::StringReference;
+
+    #[test]
+    fn same_binding_same_slot() {
+        let mut env = Environment::new();
+        assert_eq!(env.get_binding(StringReference(50)), 0);
+        assert_eq!(env.get_binding(StringReference(100)), 1);
+        assert_eq!(env.get_binding(StringReference(50)), 0);
+        assert_eq!(env.get_slot(0), Node::undefined());
+        env.put_slot(0, Node::reference(42));
+        assert_eq!(env.get_slot(0), Node::reference(42));
+        env.put_slot(0, Node::undefined());
+    }
+
+    #[test]
+    #[should_panic]
+    fn put_slot_panics_if_non_reference() {
+        let mut env = Environment::new();
+        assert_eq!(env.get_binding(StringReference(50)), 0);
+        env.put_slot(0, Node::nil());
+    }
 }
