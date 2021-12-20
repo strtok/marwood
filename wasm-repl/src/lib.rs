@@ -1,3 +1,4 @@
+use lisp::cell::Cell;
 use lisp::lex::scan;
 use lisp::parse::parse;
 use lisp::vm::Vm;
@@ -137,6 +138,7 @@ fn parse_and_eval(vm: &mut Vm, term: &Terminal, text: &str) {
         match parse(text, &mut cur) {
             Ok(cell) => {
                 match vm.eval(&cell) {
+                    Ok(Cell::Void) => {}
                     Ok(cell) => term.writeln(&format!("{}", cell)),
                     Err(e) => term.writeln(&format!("error: {}", e)),
                 };
