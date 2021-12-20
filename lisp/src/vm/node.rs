@@ -17,7 +17,6 @@ pub enum Value {
     OpCode(OpCode),
     Pair(Reference, Reference),
     Reference(Reference),
-    Symbol(StringReference),
     Undefined,
     Void,
 }
@@ -132,8 +131,8 @@ impl Node {
         Node::new(Value::EnvSlot(slot.into()))
     }
 
-    pub fn symbol<T: Into<StringReference>>(reference: T) -> Node {
-        Node::new(Value::Symbol(reference.into()))
+    pub fn symbol<T: Into<usize>>(ptr: T) -> Node {
+        Reference::new_symbol_reference(ptr.into()).into()
     }
 
     pub fn nil() -> Node {
@@ -200,7 +199,10 @@ impl Node {
 
     pub fn as_symbol_reference(&self) -> Option<usize> {
         match self.val {
-            Value::Symbol(val) => Some(val.0),
+            Value::Reference(ptr) => match ptr.get() {
+                SymbolReference(ptr) => Some(ptr),
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -271,7 +273,6 @@ impl fmt::Display for Node {
                 NodeReference(ptr) => write!(f, "[{}]", ptr),
             },
             Value::EnvSlot(EnvSlot(val)) => write!(f, "env[{}]", val),
-            Value::Symbol(StringReference(val)) => write!(f, "str[{}]", val),
             Value::OpCode(val) => write!(f, "{:?}", val),
             Value::Pair(Reference(car), Reference(cdr)) => write!(f, "({}, {})", car, cdr),
             Value::Undefined => write!(f, "undefined"),

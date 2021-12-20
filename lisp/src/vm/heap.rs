@@ -1,7 +1,7 @@
 use crate::cell;
 use crate::cell::Cell;
 use crate::vm::node::TaggedReference::{NodeReference, SymbolReference};
-use crate::vm::node::{FixedNum, Node, Reference, StringReference, Value};
+use crate::vm::node::{FixedNum, Node, Reference, Value};
 use std::collections::HashMap;
 use std::ops::Deref;
 
@@ -37,7 +37,6 @@ impl Heap {
     pub fn put<T: Into<Value> + Clone>(&mut self, val: T) -> Node {
         match val.into() {
             Value::Reference(ptr) => ptr.into(),
-            Value::Symbol(ptr) => Reference::new_symbol_reference(ptr.0).into(),
             val => {
                 let idx = self.alloc();
                 *self.heap.get_mut(idx).expect("heap index is out of bounds") = Node::new(val);
@@ -128,12 +127,9 @@ impl Heap {
     pub fn get_as_cell(&self, node: &Node) -> Cell {
         match node.val {
             Value::Reference(ptr) => match ptr.get() {
-                SymbolReference(ptr) => self.get_as_cell(&Node::symbol(ptr)),
+                SymbolReference(ptr) => self.string_heap.get_at_index(ptr).into(),
                 NodeReference(ptr) => self.get_as_cell(self.get_at_index(ptr)),
             },
-            Value::Symbol(StringReference(idx)) => {
-                Cell::Symbol(self.string_heap.get_at_index(idx).into())
-            }
             Value::FixedNum(FixedNum(val)) => Cell::Number(val),
             Value::Nil => Cell::Nil,
             Value::Bool(val) => Cell::Bool(val),
@@ -279,15 +275,15 @@ mod tests {
         let mut heap = StringHeap::new(CHUNK_SIZE);
         assert_eq!(
             heap.put_symbol("foo").val,
-            Value::Symbol(StringReference(0))
+            Value::Reference(Reference::new_symbol_reference(0))
         );
         assert_eq!(
             heap.put_symbol("bar").val,
-            Value::Symbol(StringReference(1))
+            Value::Reference(Reference::new_symbol_reference(1))
         );
         assert_eq!(
             heap.put_symbol("foo").val,
-            Value::Symbol(StringReference(0))
+            Value::Reference(Reference::new_symbol_reference(0))
         );
         assert_eq!(heap.get_symbol(0_usize), Some("foo".into()));
         assert_eq!(heap.get_symbol(1_usize), Some("bar".into()));

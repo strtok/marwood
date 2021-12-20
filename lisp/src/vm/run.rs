@@ -1,4 +1,5 @@
 use crate::cell::Cell;
+use crate::vm::node::TaggedReference::SymbolReference;
 use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
@@ -115,11 +116,14 @@ impl Vm {
                 Some(sym_ref) => self.get_str_bound_to(Node::symbol(sym_ref)),
                 None => "#<undefined>".into(),
             },
-            Value::Symbol(sym_ref) => self
-                .heap
-                .string_heap
-                .get_symbol(sym_ref)
-                .unwrap_or_else(|| "#<undefined>".into()),
+            Value::Reference(ptr) => match ptr.get() {
+                SymbolReference(ptr) => self
+                    .heap
+                    .string_heap
+                    .get_symbol(ptr)
+                    .unwrap_or_else(|| "#<undefined>".into()),
+                _ => "#<undefined>".into(),
+            },
             _ => "#<undefined>".into(),
         }
     }
