@@ -46,13 +46,13 @@ impl Reference {
         0b1 << 48
     }
 
-    pub fn new_node_reference(idx: usize) -> Reference {
-        Reference(idx as u64)
+    pub fn new_node_reference(ptr: usize) -> Reference {
+        Reference(ptr as u64)
     }
 
-    pub fn new_symbol_reference(idx: usize) -> Reference {
-        let idx = (idx as u64) | Self::sym_flag();
-        Reference(idx)
+    pub fn new_symbol_reference(ptr: usize) -> Reference {
+        let ptr = (ptr as u64) | Self::sym_flag();
+        Reference(ptr)
     }
 
     pub fn get(&self) -> TaggedReference {
@@ -76,27 +76,11 @@ impl From<i64> for FixedNum {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(packed)]
-pub struct StringReference(pub usize);
-
-impl From<usize> for StringReference {
-    fn from(idx: usize) -> Self {
-        StringReference(idx)
-    }
-}
-
-impl From<StringReference> for usize {
-    fn from(val: StringReference) -> Self {
-        val.0
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[repr(packed)]
 pub struct EnvSlot(pub usize);
 
 impl From<usize> for EnvSlot {
-    fn from(idx: usize) -> Self {
-        EnvSlot(idx)
+    fn from(slot: usize) -> Self {
+        EnvSlot(slot)
     }
 }
 

@@ -38,9 +38,9 @@ impl Heap {
         match val.into() {
             Value::Reference(ptr) => ptr.into(),
             val => {
-                let idx = self.alloc();
-                *self.heap.get_mut(idx).expect("heap index is out of bounds") = Node::new(val);
-                Node::from(Reference::new_node_reference(idx))
+                let ptr = self.alloc();
+                *self.heap.get_mut(ptr).expect("heap index is out of bounds") = Node::new(val);
+                Node::from(Reference::new_node_reference(ptr))
             }
         }
     }
@@ -80,22 +80,22 @@ impl Heap {
 
     /// Get at Index
     ///
-    /// Get the node at idx.
+    /// Get the node at ptr.
     ///
     /// # Arguments
-    /// `idx` - The index of the node to return.
-    pub fn get_at_index(&self, idx: usize) -> &Node {
-        self.heap.get(idx).expect("heap index out of bounds")
+    /// `ptr` - The index of the node to return.
+    pub fn get_at_index(&self, ptr: usize) -> &Node {
+        self.heap.get(ptr).expect("heap index out of bounds")
     }
 
     /// Get at Index Mut
     ///
-    /// Get the node at idx.
+    /// Get the node at ptr.
     ///
     /// # Arguments
-    /// `idx` - The index of the node to return.
-    pub fn get_at_index_mut(&mut self, idx: usize) -> &mut Node {
-        self.heap.get_mut(idx).expect("heap index out of bounds")
+    /// `ptr` - The index of the node to return.
+    pub fn get_at_index_mut(&mut self, ptr: usize) -> &mut Node {
+        self.heap.get_mut(ptr).expect("heap index out of bounds")
     }
 
     /// Get
@@ -180,38 +180,38 @@ impl StringHeap {
     /// heap and return the position of the node.
     pub fn put_symbol(&mut self, sym: &str) -> Node {
         match self.map.get(sym) {
-            Some(idx) => Node::symbol(*idx),
+            Some(ptr) => Node::symbol(*ptr),
             None => {
-                let idx = self.alloc();
-                *self.heap.get_mut(idx).expect("heap index is out of bounds") = sym.into();
-                self.map.insert(sym.into(), idx);
-                Node::symbol(idx)
+                let ptr = self.alloc();
+                *self.heap.get_mut(ptr).expect("heap index is out of bounds") = sym.into();
+                self.map.insert(sym.into(), ptr);
+                Node::symbol(ptr)
             }
         }
     }
 
     /// Get at Index
     ///
-    /// Get the node at idx.
+    /// Get the node at ptr.
     ///
     /// # Arguments
-    /// `idx` - The index of the node to return.
-    pub fn get_at_index(&self, idx: usize) -> &str {
-        self.heap.get(idx).expect("heap index out of bounds")
+    /// `ptr` - The index of the node to return.
+    pub fn get_at_index(&self, ptr: usize) -> &str {
+        self.heap.get(ptr).expect("heap index out of bounds")
     }
 
     /// Get Symbol
     ///
-    /// Get symbol at idx. This is a reverse lookup of the symbol
+    /// Get symbol at ptr. This is a reverse lookup of the symbol
     /// map and is generally only executed if an error occurred.
     ///
     /// # Arguments
-    /// `idx` - The index of the symbol to return.
-    pub fn get_symbol<T: Into<usize>>(&self, idx: T) -> Option<String> {
-        let idx = idx.into();
+    /// `ptr` - The index of the symbol to return.
+    pub fn get_symbol<T: Into<usize>>(&self, ptr: T) -> Option<String> {
+        let ptr = ptr.into();
         self.map
             .iter()
-            .find(|it| *(it.1) == idx)
+            .find(|it| *(it.1) == ptr)
             .map(|it| it.0.clone())
     }
 }

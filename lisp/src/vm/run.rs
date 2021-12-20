@@ -315,14 +315,13 @@ fn cdr<T: AsRef<Node>>(node: T) -> Result<Node, RuntimeError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vm::node::StringReference;
 
     #[test]
     fn same_binding_same_slot() {
         let mut env = Environment::new();
-        assert_eq!(env.get_binding(StringReference(50)), 0);
-        assert_eq!(env.get_binding(StringReference(100)), 1);
-        assert_eq!(env.get_binding(StringReference(50)), 0);
+        assert_eq!(env.get_binding(50_usize), 0);
+        assert_eq!(env.get_binding(100_usize), 1);
+        assert_eq!(env.get_binding(50_usize), 0);
         assert_eq!(env.get_symbol(0_usize), Some(50_usize));
         assert_eq!(env.get_symbol(1_usize), Some(100_usize));
         assert_eq!(env.get_slot(0), Node::undefined());
@@ -335,7 +334,7 @@ mod tests {
     #[should_panic]
     fn put_slot_panics_if_non_reference() {
         let mut env = Environment::new();
-        assert_eq!(env.get_binding(StringReference(50)), 0);
+        assert_eq!(env.get_binding(50_usize), 0);
         env.put_slot(0, Node::nil());
     }
 }
