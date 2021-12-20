@@ -83,7 +83,7 @@ impl Vm {
             }
             OpCode::Eq => {
                 let arg = self.pop_stack()?;
-                self.acc = self.heap.put(Node::from(self.acc == arg));
+                self.acc = self.heap.put(self.acc == arg);
             }
             OpCode::Push => {
                 self.stack.push(self.acc.clone());

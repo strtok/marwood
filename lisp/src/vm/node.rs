@@ -178,21 +178,27 @@ impl Node {
     }
 }
 
-impl<T> From<T> for Node
-where
-    T: AsRef<Value>,
-{
-    fn from(val: T) -> Self {
-        Node::new(val.as_ref().clone())
-    }
-}
-
 impl<T> From<T> for Value
 where
     T: AsRef<Node>,
 {
     fn from(node: T) -> Self {
         node.as_ref().clone().val
+    }
+}
+
+impl From<bool> for Value {
+    fn from(val: bool) -> Value {
+        Value::Bool(val)
+    }
+}
+
+impl<T> From<T> for Node
+where
+    T: AsRef<Value>,
+{
+    fn from(val: T) -> Self {
+        Node::new(val.as_ref().clone())
     }
 }
 
