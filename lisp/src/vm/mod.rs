@@ -87,6 +87,7 @@ mod tests {
     use super::*;
     use crate::lex;
     use crate::parse;
+    use crate::vm::Error::{ExpectedPair, InvalidArgs, InvalidNumArgs, VariableNotBound};
 
     macro_rules! evals {
         ($($lhs:expr => $rhs:expr),+) => {{
@@ -101,12 +102,12 @@ mod tests {
     }
 
     macro_rules! fails {
-        ($($lhs:expr),+) => {{
+        ($($lhs:expr => $rhs:expr),+) => {{
             let mut vm = Vm::new();
              $(
-                assert!(matches!(vm.eval(
+                assert_eq!(vm.eval(
                     &parse!($lhs)
-                ), Err(_)));
+                ), Err($rhs));
              )+
         }};
     }
@@ -122,7 +123,7 @@ mod tests {
            "()" => "()"
         ];
 
-        fails!["foo"];
+        fails!["foo" => VariableNotBound("foo".into())];
     }
 
     #[test]
@@ -142,7 +143,9 @@ mod tests {
             "(car '(1 2 3))" => "1",
             "(cdr '(1 2 3))" => "(2 3)"
         ];
-        fails!["(car 1)", "(cdr 1)"];
+        fails!["(car 1)" => ExpectedPair("1".into()),
+               "(cdr 1)" => ExpectedPair("1".into())
+        ];
     }
 
     #[test]
@@ -152,7 +155,9 @@ mod tests {
             "(cons '(1 2) '(3 4))" => "((1 2) . (3 4))",
             "(cons 1 (cons 2 (cons 3 '())))" => "(1 2 3)"
         ];
-        fails!["(cons 1)", "(cons 1 2 3)"];
+        fails!["(cons 1)" => ExpectedPair("()".into()),
+               "(cons 1 2 3)" => InvalidNumArgs("cons".into())
+        ];
     }
 
     #[test]
@@ -171,7 +176,10 @@ mod tests {
             "(* 10 10)" => "100",
             "(* 10 10 10)" => "1000"
         ];
-        fails!["(+ '(10))", "(+ 10 '(10))", "(-)"];
+        fails!["(+ '(10))" => InvalidArgs("+".into(), "number".into(), "(10)".into()),
+               "(+ 10 '(10))" => InvalidArgs("+".into(), "number".into(), "(10)".into()),
+               "(-)" => InvalidNumArgs("-".into())
+        ];
     }
 
     #[test]
