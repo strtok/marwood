@@ -27,6 +27,43 @@ impl Value {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(packed)]
+pub struct Reference(u64);
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum TaggedReference {
+    NodeReference(usize),
+    SymbolReference(usize),
+}
+
+impl Reference {
+    const fn mask() -> u64 {
+        0xFFFFFFFF << 48
+    }
+
+    const fn sym_flag() -> u64 {
+        0b1 << 48
+    }
+
+    pub fn new_node_reference(idx: usize) -> Reference {
+        Reference(idx as u64)
+    }
+
+    pub fn new_symbol_reference(idx: usize) -> Reference {
+        let idx = (idx as u64) | Self::sym_flag();
+        Reference(idx)
+    }
+
+    pub fn get(&self) -> TaggedReference {
+        if (self.0 & Self::sym_flag()) > 0 {
+            TaggedReference::SymbolReference((self.0 & !Self::mask()) as usize)
+        } else {
+            TaggedReference::NodeReference(self.0 as usize)
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(packed)]
 pub struct FixedNum(pub i64);
@@ -34,16 +71,6 @@ pub struct FixedNum(pub i64);
 impl From<i64> for FixedNum {
     fn from(val: i64) -> Self {
         FixedNum(val)
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[repr(packed)]
-pub struct Reference(pub usize);
-
-impl From<usize> for Reference {
-    fn from(idx: usize) -> Self {
-        Reference(idx)
     }
 }
 
@@ -96,8 +123,8 @@ impl Node {
         Node::new(Value::FixedNum(val.into()))
     }
 
-    pub fn reference<T: Into<Reference>>(reference: T) -> Node {
-        Node::new(Value::Reference(reference.into()))
+    pub fn reference(val: usize) -> Node {
+        Node::new(Value::Reference(Reference::new_node_reference(val)))
     }
 
     pub fn env_slot<T: Into<EnvSlot>>(slot: T) -> Node {
@@ -137,14 +164,14 @@ impl Node {
 
     pub fn as_car(&self) -> Option<Node> {
         match self.val {
-            Value::Pair(Reference(car), _) => Some(Node::reference(car)),
+            Value::Pair(car, _) => Some(car.into()),
             _ => None,
         }
     }
 
     pub fn as_cdr(&self) -> Option<Node> {
         match self.val {
-            Value::Pair(_, Reference(cdr)) => Some(Node::reference(cdr)),
+            Value::Pair(_, cdr) => Some(cdr.into()),
             _ => None,
         }
     }
@@ -275,5 +302,14 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn reference_tagged_type() {
+        let node_ref = Reference::new_node_reference(50);
+        assert_eq!(node_ref.get(), TaggedReference::NodeReference(50));
+
+        let sym_ref = Reference::new_symbol_reference(50);
+        assert_eq!(sym_ref.get(), TaggedReference::SymbolReference(50));
     }
 }

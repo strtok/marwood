@@ -1,5 +1,6 @@
 use crate::cell;
 use crate::cell::Cell;
+use crate::vm::node::TaggedReference::{NodeReference, SymbolReference};
 use crate::vm::node::{FixedNum, Node, Reference, StringReference, Value};
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -34,12 +35,14 @@ impl Heap {
     /// Put the given cell value on the next available free node in the
     /// heap and return the position of the node.
     pub fn put<T: Into<Value> + Clone>(&mut self, val: T) -> Node {
-        if let Value::Reference(val) = val.clone().into() {
-            Node::from(val)
-        } else {
-            let idx = self.alloc();
-            *self.heap.get_mut(idx).expect("heap index is out of bounds") = Node::new(val.into());
-            Node::from(Reference(idx))
+        match val.into() {
+            Value::Reference(ptr) => ptr.into(),
+            Value::Symbol(ptr) => Reference::new_symbol_reference(ptr.0).into(),
+            val => {
+                let idx = self.alloc();
+                *self.heap.get_mut(idx).expect("heap index is out of bounds") = Node::new(val);
+                Node::from(Reference::new_node_reference(idx))
+            }
         }
     }
 
@@ -105,7 +108,10 @@ impl Heap {
     /// `node` - The reference node
     pub fn get(&self, node: &Node) -> Node {
         match node.val {
-            Value::Reference(Reference(idx)) => self.get_at_index(idx).clone(),
+            Value::Reference(ptr) => match ptr.get() {
+                NodeReference(ptr) => self.get_at_index(ptr).clone(),
+                SymbolReference(ptr) => Node::symbol(ptr),
+            },
             _ => node.clone(),
         }
     }
@@ -121,17 +127,19 @@ impl Heap {
     /// `node` - The node to map to a cell
     pub fn get_as_cell(&self, node: &Node) -> Cell {
         match node.val {
-            Value::Reference(Reference(idx)) => self.get_as_cell(self.get_at_index(idx)),
+            Value::Reference(ptr) => match ptr.get() {
+                SymbolReference(ptr) => self.get_as_cell(&Node::symbol(ptr)),
+                NodeReference(ptr) => self.get_as_cell(self.get_at_index(ptr)),
+            },
             Value::Symbol(StringReference(idx)) => {
                 Cell::Symbol(self.string_heap.get_at_index(idx).into())
             }
             Value::FixedNum(FixedNum(val)) => Cell::Number(val),
             Value::Nil => Cell::Nil,
             Value::Bool(val) => Cell::Bool(val),
-            Value::Pair(Reference(car), Reference(cdr)) => Cell::new_pair(
-                self.get_as_cell(self.get_at_index(car)),
-                self.get_as_cell(self.get_at_index(cdr)),
-            ),
+            Value::Pair(car, cdr) => {
+                Cell::new_pair(self.get_as_cell(&car.into()), self.get_as_cell(&cdr.into()))
+            }
             Value::EnvSlot(_) => panic!("unexpected environment slot"),
             Value::OpCode(_) => panic!("unexpected opcode"),
             Value::Undefined => Cell::Undefined,
