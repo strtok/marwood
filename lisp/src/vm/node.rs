@@ -1,3 +1,4 @@
+use crate::vm::node::TaggedReference::{NodeReference, SymbolReference};
 use crate::vm::opcode::OpCode;
 use std::fmt;
 
@@ -265,7 +266,10 @@ impl fmt::Display for Node {
         match self.val.clone() {
             Value::Bool(true) => write!(f, "#t"),
             Value::Bool(false) => write!(f, "#f"),
-            Value::Reference(Reference(val)) => write!(f, "[{}]", val),
+            Value::Reference(ptr) => match ptr.get() {
+                SymbolReference(ptr) => write!(f, "sym[{}]", ptr),
+                NodeReference(ptr) => write!(f, "[{}]", ptr),
+            },
             Value::EnvSlot(EnvSlot(val)) => write!(f, "env[{}]", val),
             Value::Symbol(StringReference(val)) => write!(f, "str[{}]", val),
             Value::OpCode(val) => write!(f, "{:?}", val),
