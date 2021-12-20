@@ -110,7 +110,7 @@ impl Vm {
     /// to provide a reverse lookup for.
     fn get_str_bound_to<T: Into<Node>>(&self, node: T) -> String {
         let node = node.into();
-        match node.clone().val {
+        match node.val {
             Value::EnvSlot(slot) => match self.globenv.get_symbol(slot) {
                 Some(sym_ref) => self.get_str_bound_to(Node::symbol(sym_ref)),
                 None => "#<undefined>".into(),
@@ -259,6 +259,12 @@ impl Environment {
     pub fn put_slot(&mut self, slot: usize, node: Node) {
         assert!(matches!(node.val, Value::Reference(_) | Value::Undefined));
         *self.slots.get_mut(slot).expect("invalid environment slot") = node;
+    }
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

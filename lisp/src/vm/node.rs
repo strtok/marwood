@@ -57,9 +57,9 @@ impl From<usize> for StringReference {
     }
 }
 
-impl Into<usize> for StringReference {
-    fn into(self) -> usize {
-        self.0
+impl From<StringReference> for usize {
+    fn from(val: StringReference) -> Self {
+        val.0
     }
 }
 
@@ -73,9 +73,9 @@ impl From<usize> for EnvSlot {
     }
 }
 
-impl Into<usize> for EnvSlot {
-    fn into(self) -> usize {
-        self.0
+impl From<EnvSlot> for usize {
+    fn from(val: EnvSlot) -> usize {
+        val.0
     }
 }
 
