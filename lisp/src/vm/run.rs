@@ -2,7 +2,7 @@ use crate::cell::Cell;
 use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
-    ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode,
+    ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, VariableNotBound,
 };
 use crate::vm::{Error, Vm};
 use std::collections::HashMap;
@@ -69,6 +69,22 @@ impl Vm {
                     cdr.as_reference().unwrap(),
                 ));
             }
+            OpCode::EnvGet => {
+                let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
+                self.acc = self.globenv.get_slot(env_slot.0);
+                if matches!(self.acc.val, Value::Undefined) {
+                    return Err(VariableNotBound(self.get_str_bound_to(env_slot)));
+                }
+            }
+            OpCode::EnvSet => {
+                let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
+                self.globenv.put_slot(env_slot.0, self.acc.clone());
+                self.acc = self.heap.put(Node::void());
+            }
+            OpCode::Eq => {
+                let arg = self.pop_stack()?;
+                self.acc = self.heap.put(Node::from(self.acc == arg));
+            }
             OpCode::Push => {
                 self.stack.push(self.acc.clone());
             }
@@ -79,6 +95,33 @@ impl Vm {
         }
 
         Ok(false)
+    }
+
+    /// Get Symbol Bound To
+    ///
+    /// Given either an environment slot, or a symbol reference, return the
+    /// original string bound to the reference.
+    ///
+    /// The runtime cost of this function is > O(1), but it's only needed
+    /// during an error path or debugging.
+    ///
+    /// # Arguments
+    /// `node` - The node containing an environment slot of sym reference
+    /// to provide a reverse lookup for.
+    fn get_str_bound_to<T: Into<Node>>(&self, node: T) -> String {
+        let node = node.into();
+        match node.clone().val {
+            Value::EnvSlot(slot) => match self.globenv.get_symbol(slot) {
+                Some(sym_ref) => self.get_str_bound_to(Node::symbol(sym_ref)),
+                None => "#<undefined>".into(),
+            },
+            Value::Symbol(sym_ref) => self
+                .heap
+                .string_heap
+                .get_symbol(sym_ref)
+                .unwrap_or_else(|| "#<undefined>".into()),
+            _ => "#<undefined>".into(),
+        }
     }
 
     /// Pop Stack
@@ -166,6 +209,21 @@ impl Environment {
         }
     }
 
+    /// Get Symbol
+    ///
+    /// Get the symbol bound to an environment slot. This is a reverse lookup
+    /// of a binding created with get_binding().
+    ///
+    /// # Arguments
+    /// `slot` - The slot to find the symbol for.
+    pub fn get_symbol<T: Into<usize>>(&self, slot: T) -> Option<usize> {
+        let slot = slot.into();
+        self.bindings
+            .iter()
+            .find(|it| *(it.1) == slot)
+            .map(|it| *it.0)
+    }
+
     /// Get slot
     ///
     /// Get slot provides a shallow binding interface. Given the environment
@@ -210,6 +268,7 @@ pub enum RuntimeError {
     InvalidArgs(String, String, Node),
     InvalidBytecode,
     ExpectedStackValue,
+    VariableNotBound(String),
 }
 
 impl RuntimeError {
@@ -226,6 +285,7 @@ impl RuntimeError {
             }
             InvalidBytecode => Error::InvalidBytecode,
             ExpectedStackValue => Error::ExpectedStackValue,
+            VariableNotBound(sym) => Error::VariableNotBound(sym),
         }
     }
 }
@@ -253,6 +313,8 @@ mod tests {
         assert_eq!(env.get_binding(StringReference(50)), 0);
         assert_eq!(env.get_binding(StringReference(100)), 1);
         assert_eq!(env.get_binding(StringReference(50)), 0);
+        assert_eq!(env.get_symbol(0_usize), Some(50_usize));
+        assert_eq!(env.get_symbol(1_usize), Some(100_usize));
         assert_eq!(env.get_slot(0), Node::undefined());
         env.put_slot(0, Node::reference(42));
         assert_eq!(env.get_slot(0), Node::reference(42));

@@ -1,6 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::heap::Heap;
 use crate::vm::node::Node;
+use crate::vm::run::Environment;
 use log::trace;
 
 pub mod compile;
@@ -11,10 +12,12 @@ pub mod run;
 
 const HEAP_SIZE: usize = 1024;
 
+#[derive(Debug)]
 pub struct Vm {
     heap: Heap,
     bc: Vec<Node>,
     stack: Vec<Node>,
+    globenv: Environment,
     acc: Node,
     ip: usize,
 }
@@ -28,6 +31,7 @@ impl Vm {
             heap: Heap::new(HEAP_SIZE),
             bc: vec![],
             stack: vec![],
+            globenv: Environment::new(),
             acc: Node::undefined(),
             ip: 0,
         }
@@ -73,6 +77,9 @@ pub enum Error {
 
     #[error("unknown procedure {0}")]
     UnknownProcedure(String),
+
+    #[error("variable {0} not bound")]
+    VariableNotBound(String),
 }
 
 #[cfg(test)]
@@ -85,7 +92,10 @@ mod tests {
         ($($lhs:expr => $rhs:expr),+) => {{
             let mut vm = Vm::new();
              $(
-                assert_eq!(vm.eval(&parse!($lhs)), Ok(parse!($rhs)));
+                assert_eq!(vm.eval(&parse!($lhs)), Ok(match $rhs {
+                    "#<void>" => Cell::Void,
+                    _ => parse!($rhs)
+                }));
              )+
         }};
     }
@@ -106,12 +116,13 @@ mod tests {
         evals![
            "1" => "1",
            "-10" => "-10",
-           "foo" => "foo",
            "#t" => "#t",
            "#f" => "#f",
            "'()" => "()",
            "()" => "()"
         ];
+
+        fails!["foo"];
     }
 
     #[test]
@@ -161,5 +172,25 @@ mod tests {
             "(* 10 10 10)" => "1000"
         ];
         fails!["(+ '(10))", "(+ 10 '(10))", "(-)"];
+    }
+
+    #[test]
+    fn eq() {
+        evals![
+            "(define foo '(1 2 3))" => "#<void>",
+            "(define bar '(1 2 3))" => "#<void>",
+            "(define baz foo)" => "#<void>",
+            "(eq? foo bar)" => "#f",
+            "(eq? bar baz)" => "#f",
+            "(eq? foo baz)" => "#t",
+            "(eq? (cdr foo) (cdr baz))" => "#t"
+        ];
+
+        evals![
+            "(eq? 0 0)" => "#f",
+            "(eq? '() '())" => "#f",
+            "(eq? #f #f)" => "#f",
+            "(eq? #t #t)" => "#f"
+        ];
     }
 }

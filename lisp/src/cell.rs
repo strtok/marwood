@@ -6,10 +6,12 @@ use std::ops::DerefMut;
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Cell {
     Bool(bool),
-    Number(i64),
-    Symbol(String),
-    Pair(Box<Cell>, Box<Cell>),
     Nil,
+    Number(i64),
+    Pair(Box<Cell>, Box<Cell>),
+    Symbol(String),
+    Undefined,
+    Void,
 }
 
 impl Cell {
@@ -90,6 +92,10 @@ impl Cell {
         matches!(self, Cell::Pair(_, _))
     }
 
+    pub fn is_symbol(&self) -> bool {
+        matches!(self, Cell::Symbol(_))
+    }
+
     pub fn car(&self) -> Option<&Cell> {
         match self {
             Cell::Pair(car, _) => Some(car),
@@ -107,6 +113,13 @@ impl Cell {
     pub fn as_number(&self) -> Option<i64> {
         match self {
             Cell::Number(val) => Some(*val),
+            _ => None,
+        }
+    }
+
+    pub fn as_symbol(&self) -> Option<&str> {
+        match self {
+            Cell::Symbol(val) => Some(val),
             _ => None,
         }
     }
@@ -243,6 +256,12 @@ impl Display for Cell {
             Cell::Nil => {
                 write!(f, "()")
             }
+            Cell::Undefined => {
+                write!(f, "#<undefined>")
+            }
+            Cell::Void => {
+                write!(f, "#<void>")
+            }
         }
     }
 }
@@ -260,6 +279,13 @@ macro_rules! cell {
         $(v.push(Cell::from($elt));)+
         Cell::from(v)
     }};
+}
+
+#[macro_export]
+macro_rules! void {
+    () => {
+        Cell::Void
+    };
 }
 
 #[macro_export]

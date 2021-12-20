@@ -1,3 +1,4 @@
+use lisp::cell::Cell;
 use lisp::lex::{scan, Token};
 use lisp::parse;
 use lisp::parse::parse;
@@ -81,12 +82,20 @@ fn parse_and_eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
         Ok(cell) => {
             trace!("parser: {}", cell);
             match vm.eval(&cell) {
-                Ok(cell) => println!("{}", cell),
-                Err(e) => println!("error: {}", e),
+                Ok(Cell::Void) => {}
+                Ok(cell) => {
+                    println!("{}", cell);
+                    println!()
+                }
+                Err(e) => {
+                    println!("error: {}", e);
+                    println!()
+                }
             };
         }
         Err(e) => {
             println!("error: {}", e);
+            println!()
         }
     }
 

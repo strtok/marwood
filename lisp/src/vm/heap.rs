@@ -7,9 +7,9 @@ use std::ops::Deref;
 #[derive(Debug)]
 pub struct Heap {
     chunk_size: usize,
-    heap: Vec<Node>,
     free_list: Vec<usize>,
-    string_heap: StringHeap,
+    heap: Vec<Node>,
+    pub string_heap: StringHeap,
 }
 
 impl Heap {
@@ -53,6 +53,8 @@ impl Heap {
     /// `ast` - The structure to allocate recursively on the heap.
     pub fn put_cell(&mut self, ast: &cell::Cell) -> Node {
         match *ast {
+            cell::Cell::Undefined => self.put(Value::Undefined),
+            cell::Cell::Void => self.put(Value::Void),
             cell::Cell::Nil => self.put(Value::Nil),
             cell::Cell::Number(val) => self.put(Value::FixedNum(val.into())),
             cell::Cell::Bool(val) => self.put(Value::Bool(val)),
@@ -113,6 +115,8 @@ impl Heap {
     /// Return a Cell representation of the given node by copying the recursive
     /// structure out of the heap into a Cell structure.
     ///
+    /// Panic if the type is not capable of being represented as a cell.
+    ///
     /// # Arguments
     /// `node` - The node to map to a cell
     pub fn get_as_cell(&self, node: &Node) -> Cell {
@@ -128,8 +132,10 @@ impl Heap {
                 self.get_as_cell(self.get_at_index(car)),
                 self.get_as_cell(self.get_at_index(cdr)),
             ),
+            Value::EnvSlot(_) => panic!("unexpected environment slot"),
             Value::OpCode(_) => panic!("unexpected opcode"),
-            Value::Undefined => panic!("unexpected undefined"),
+            Value::Undefined => Cell::Undefined,
+            Value::Void => Cell::Void,
         }
     }
 }
@@ -189,6 +195,21 @@ impl StringHeap {
     pub fn get_at_index(&self, idx: usize) -> &str {
         self.heap.get(idx).expect("heap index out of bounds")
     }
+
+    /// Get Symbol
+    ///
+    /// Get symbol at idx. This is a reverse lookup of the symbol
+    /// map and is generally only executed if an error occurred.
+    ///
+    /// # Arguments
+    /// `idx` - The index of the symbol to return.
+    pub fn get_symbol<T: Into<usize>>(&self, idx: T) -> Option<String> {
+        let idx = idx.into();
+        self.map
+            .iter()
+            .find(|it| *(it.1) == idx)
+            .map(|it| it.0.clone())
+    }
 }
 
 #[cfg(test)]
@@ -243,5 +264,25 @@ mod tests {
             let node = heap.put_cell(&cell!["foo"]);
             assert_eq!(heap.get_as_cell(&node), cell!["foo"]);
         }
+    }
+
+    #[test]
+    fn string_heap() {
+        let mut heap = StringHeap::new(CHUNK_SIZE);
+        assert_eq!(
+            heap.put_symbol("foo").val,
+            Value::Symbol(StringReference(0))
+        );
+        assert_eq!(
+            heap.put_symbol("bar").val,
+            Value::Symbol(StringReference(1))
+        );
+        assert_eq!(
+            heap.put_symbol("foo").val,
+            Value::Symbol(StringReference(0))
+        );
+        assert_eq!(heap.get_symbol(0_usize), Some("foo".into()));
+        assert_eq!(heap.get_symbol(1_usize), Some("bar".into()));
+        assert_eq!(heap.get_symbol(2_usize), None);
     }
 }

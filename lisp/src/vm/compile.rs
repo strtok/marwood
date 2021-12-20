@@ -1,7 +1,7 @@
 use crate::cell::Cell;
-use crate::vm::node::{Node, Value};
+use crate::vm::node::Node;
 use crate::vm::opcode::OpCode;
-use crate::vm::Error::InvalidNumArgs;
+use crate::vm::Error::{InvalidArgs, InvalidNumArgs};
 use crate::vm::{Error, Vm};
 use std::ops::Deref;
 
@@ -28,19 +28,68 @@ impl Vm {
     pub fn compile_expression(&mut self, bc: &mut Vec<Node>, cell: &Cell) -> Result<(), Error> {
         match cell {
             Cell::Pair(car, cdr) => match car.deref() {
+                Cell::Symbol(s) if s.eq("define") => self.compile_define(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("quote") => self.compile_quote(bc, car!(cdr))?,
                 Cell::Symbol(s) if s.eq("car") => self.compile_car(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("cdr") => self.compile_cdr(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("cons") => self.compile_cons(bc, cdr)?,
+                Cell::Symbol(s) if s.eq("eq?") => self.compile_eq(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("+") => self.compile_operator(bc, cdr, OpCode::Add)?,
                 Cell::Symbol(s) if s.eq("-") => self.compile_operator(bc, cdr, OpCode::Sub)?,
                 Cell::Symbol(s) if s.eq("*") => self.compile_operator(bc, cdr, OpCode::Mul)?,
                 _ => return Err(Error::UnknownProcedure(car.to_string())),
             },
-            Cell::Number(_) | Cell::Symbol(_) | Cell::Bool(_) | Cell::Nil => {
+            Cell::Symbol(_) => self.compile_symbol_lookup(bc, cell)?,
+            Cell::Number(_) | Cell::Bool(_) | Cell::Nil | Cell::Void | Cell::Undefined => {
                 self.compile_quote(bc, cell)?
             }
         };
+        Ok(())
+    }
+
+    pub fn compile_symbol_lookup(&mut self, bc: &mut Vec<Node>, sym: &Cell) -> Result<(), Error> {
+        let sym_ref = self.heap.put_cell(sym);
+        let sym_ref = self
+            .heap
+            .get(&sym_ref)
+            .as_symbol_reference()
+            .expect("expected symbol");
+        let env_slot = Node::env_slot(self.globenv.get_binding(sym_ref));
+        bc.push(OpCode::EnvGet.into());
+        bc.push(env_slot);
+        Ok(())
+    }
+
+    /// Compile Define
+    ///
+    /// (define variable expression)
+    pub fn compile_define(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
+        if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
+            return Err(InvalidNumArgs("define".into()));
+        }
+
+        self.compile_expression(bc, car!(cdr!(lat)))?;
+        let symbol = car!(lat);
+        let sym_ref = self.heap.put_cell(symbol);
+        let sym_ref = self
+            .heap
+            .get(&sym_ref)
+            .as_symbol_reference()
+            .ok_or_else(|| InvalidArgs("define".into(), "variable".into(), symbol.to_string()))?;
+        let env_slot = Node::env_slot(self.globenv.get_binding(sym_ref));
+        bc.push(OpCode::EnvSet.into());
+        bc.push(env_slot);
+        Ok(())
+    }
+
+    pub fn compile_eq(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
+        if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
+            return Err(InvalidNumArgs("eq?".into()));
+        }
+        self.compile_expression(bc, car!(cdr!(lat)))?;
+        bc.push(OpCode::Push.into());
+        self.compile_expression(bc, car!(lat))?;
+        bc.push(OpCode::Eq.into());
         Ok(())
     }
 
@@ -118,51 +167,5 @@ impl Vm {
         }
 
         Ok(())
-    }
-
-    pub fn decompile_text(&self, program: &[Node]) -> String {
-        let mut text = String::new();
-        for it in self.decompile(program) {
-            if !it.1.is_empty() {
-                text.push_str(&format!(
-                    "{0: <5} {1: <10} //{2: <10}\n",
-                    it.0,
-                    it.1.join(","),
-                    it.2.join(",")
-                ));
-            } else {
-                text.push_str(&format!("{}\n", it.0));
-            }
-        }
-        text
-    }
-
-    pub fn decompile(&self, program: &[Node]) -> Vec<(String, Vec<String>, Vec<String>)> {
-        let mut cur = program.iter();
-        let mut result: Vec<(String, Vec<String>, Vec<String>)> = vec![];
-        while let Some(node) = cur.next() {
-            result.push(match node.val {
-                Value::OpCode(ref op) => match op {
-                    OpCode::Add => ("ADD".into(), vec![], vec![]),
-                    OpCode::Car => ("CAR".into(), vec![], vec![]),
-                    OpCode::Cdr => ("CDR".into(), vec![], vec![]),
-                    OpCode::Cons => ("CONS".into(), vec![], vec![]),
-                    OpCode::Halt => ("HALT".into(), vec![], vec![]),
-                    OpCode::Mul => ("MUL".into(), vec![], vec![]),
-                    OpCode::Push => ("PUSH".into(), vec![], vec![]),
-                    OpCode::Quote => {
-                        let arg = cur.next().unwrap();
-                        (
-                            "QUOTE".into(),
-                            vec![arg.to_string()],
-                            vec![self.heap.get_as_cell(arg).to_string()],
-                        )
-                    }
-                    OpCode::Sub => ("SUB".into(), vec![], vec![]),
-                },
-                _ => ("UNKNOWN".into(), vec![], vec![]),
-            });
-        }
-        result
     }
 }

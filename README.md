@@ -29,6 +29,9 @@ ADD    | Perform addition on the values in ACC and the the top of the stack and 
 CAR    | Move the car of the pair in ACC into ACC. Errors if ACC Is not a pair.
 CDR    | Move the cdr of the pair in ACC into ACC. Errors if ACC is not a pair.
 CONS   | Box a pair, storing a reference in ACC. The car of the pair is taken from ACC, and the cdr from the top of the stack.
+ENVGET &lt;SLOT&gt; | Store the value in environment slot SLOT in ACC
+ENVSET &lt;SLOT&gt; | Set the value in environment slot SLOT to the value in ACC
+EQ     | Sets ACC to true if ACC == arg[0], otherwise false. This instruction mirrors the eq? procedure in scheme.
 HALT   | Halt program, returning the result contained within ACC
 MUL    | Perform multiplication on the values in ACC and the the top of the stack and store the result in ACC
 PUSH   | Push the value in ACC on to the stack

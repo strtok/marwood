@@ -10,6 +10,7 @@ pub struct Node {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Value {
     Bool(bool),
+    EnvSlot(EnvSlot),
     FixedNum(FixedNum),
     Nil,
     OpCode(OpCode),
@@ -17,6 +18,7 @@ pub enum Value {
     Reference(Reference),
     Symbol(StringReference),
     Undefined,
+    Void,
 }
 
 impl Value {
@@ -61,6 +63,22 @@ impl Into<usize> for StringReference {
     }
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[repr(packed)]
+pub struct EnvSlot(pub usize);
+
+impl From<usize> for EnvSlot {
+    fn from(idx: usize) -> Self {
+        EnvSlot(idx)
+    }
+}
+
+impl Into<usize> for EnvSlot {
+    fn into(self) -> usize {
+        self.0
+    }
+}
+
 impl Node {
     pub fn new(val: Value) -> Node {
         Node { val, flags: 0 }
@@ -70,12 +88,20 @@ impl Node {
         Node::new(Value::Undefined)
     }
 
+    pub fn void() -> Node {
+        Node::new(Value::Void)
+    }
+
     pub fn fixed_num<T: Into<FixedNum>>(val: T) -> Node {
         Node::new(Value::FixedNum(val.into()))
     }
 
     pub fn reference<T: Into<Reference>>(reference: T) -> Node {
         Node::new(Value::Reference(reference.into()))
+    }
+
+    pub fn env_slot<T: Into<EnvSlot>>(slot: T) -> Node {
+        Node::new(Value::EnvSlot(slot.into()))
     }
 
     pub fn symbol<T: Into<StringReference>>(reference: T) -> Node {
@@ -136,6 +162,20 @@ impl Node {
             _ => None,
         }
     }
+
+    pub fn as_env_slot(&self) -> Option<EnvSlot> {
+        match self.val {
+            Value::EnvSlot(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn as_symbol_reference(&self) -> Option<usize> {
+        match self.val {
+            Value::Symbol(val) => Some(val.0),
+            _ => None,
+        }
+    }
 }
 
 impl<T> From<T> for Node
@@ -179,6 +219,13 @@ impl From<Reference> for Node {
         Node::new(Value::Reference(val))
     }
 }
+
+impl From<EnvSlot> for Node {
+    fn from(val: EnvSlot) -> Self {
+        Node::new(Value::EnvSlot(val))
+    }
+}
+
 impl fmt::Display for Node {
     // This trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -186,12 +233,14 @@ impl fmt::Display for Node {
             Value::Bool(true) => write!(f, "#t"),
             Value::Bool(false) => write!(f, "#f"),
             Value::Reference(Reference(val)) => write!(f, "[{}]", val),
+            Value::EnvSlot(EnvSlot(val)) => write!(f, "env[{}]", val),
             Value::Symbol(StringReference(val)) => write!(f, "str[{}]", val),
             Value::OpCode(val) => write!(f, "{:?}", val),
             Value::Pair(Reference(car), Reference(cdr)) => write!(f, "({}, {})", car, cdr),
             Value::Undefined => write!(f, "undefined"),
             Value::FixedNum(FixedNum(val)) => write!(f, "{}", val),
             Value::Nil => write!(f, "()"),
+            Value::Void => write!(f, ""),
         }
     }
 }
