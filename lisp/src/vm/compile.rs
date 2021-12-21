@@ -30,13 +30,19 @@ impl Vm {
             Cell::Pair(car, cdr) => match car.deref() {
                 Cell::Symbol(s) if s.eq("define") => self.compile_define(bc, cdr)?,
                 Cell::Symbol(s) if s.eq("quote") => self.compile_quote(bc, car!(cdr))?,
-                Cell::Symbol(s) if s.eq("car") => self.compile_car(bc, cdr)?,
-                Cell::Symbol(s) if s.eq("cdr") => self.compile_cdr(bc, cdr)?,
-                Cell::Symbol(s) if s.eq("cons") => self.compile_cons(bc, cdr)?,
-                Cell::Symbol(s) if s.eq("eq?") => self.compile_eq(bc, cdr)?,
-                Cell::Symbol(s) if s.eq("+") => self.compile_operator(bc, cdr, OpCode::Add)?,
-                Cell::Symbol(s) if s.eq("-") => self.compile_operator(bc, cdr, OpCode::Sub)?,
-                Cell::Symbol(s) if s.eq("*") => self.compile_operator(bc, cdr, OpCode::Mul)?,
+                Cell::Symbol(s) if s.eq("car") => {
+                    self.compile_unary(OpCode::Car, "car", bc, cdr)?
+                }
+                Cell::Symbol(s) if s.eq("cdr") => {
+                    self.compile_unary(OpCode::Cdr, "cdr", bc, cdr)?
+                }
+                Cell::Symbol(s) if s.eq("cons") => {
+                    self.compile_arg2(OpCode::Cons, "cons", bc, cdr)?
+                }
+                Cell::Symbol(s) if s.eq("eq?") => self.compile_arg2(OpCode::Eq, "eq?", bc, cdr)?,
+                Cell::Symbol(s) if s.eq("+") => self.compile_var_arg(OpCode::Add, "+", bc, cdr)?,
+                Cell::Symbol(s) if s.eq("-") => self.compile_var_arg(OpCode::Sub, "-", bc, cdr)?,
+                Cell::Symbol(s) if s.eq("*") => self.compile_var_arg(OpCode::Mul, "*", bc, cdr)?,
                 _ => return Err(Error::UnknownProcedure(car.to_string())),
             },
             Cell::Symbol(_) => self.compile_symbol_lookup(bc, cell)?,
@@ -47,6 +53,10 @@ impl Vm {
         Ok(())
     }
 
+    /// Compile Symbol Eval
+    ///
+    /// Given the symbol in sym, compile to a ENVGET instruction to fetch
+    /// the value bound to the symbol.
     pub fn compile_symbol_lookup(&mut self, bc: &mut Vec<Node>, sym: &Cell) -> Result<(), Error> {
         let sym_ref = self.heap.put_cell(sym);
         let sym_ref = self
@@ -82,51 +92,86 @@ impl Vm {
         Ok(())
     }
 
-    pub fn compile_eq(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
+    /// Compile Unary
+    ///
+    /// Compile a procedure that takes one argument (ACC)
+    ///
+    /// # Arguments
+    /// `op` - The opcode operating on the argument
+    /// `name` - The name of the procedure, used for error purposes.
+    /// `bc` - Bytecode vector to emit instructions to
+    /// `lat` - The argument to the procedure
+    pub fn compile_unary(
+        &mut self,
+        op: OpCode,
+        name: &str,
+        bc: &mut Vec<Node>,
+        lat: &Cell,
+    ) -> Result<(), Error> {
+        if lat.is_nil() || !cdr!(lat).is_nil() {
+            return Err(InvalidNumArgs(name.into()));
+        }
+        self.compile_expression(bc, car!(lat))?;
+        bc.push(op.into());
+        Ok(())
+    }
+
+    /// Compile Arg 2
+    ///
+    /// Compile a procedure that takes two arguments (ACC, Arg[0])
+    ///
+    /// # Arguments
+    /// `op` - The opcode operating on the two arguments
+    /// `name` - The name of the procedure, used for error purposes.
+    /// `bc` - Bytecode vector to emit instructions to
+    /// `lat` - The arguments to the procedure
+    pub fn compile_arg2(
+        &mut self,
+        op: OpCode,
+        name: &str,
+        bc: &mut Vec<Node>,
+        lat: &Cell,
+    ) -> Result<(), Error> {
         if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
-            return Err(InvalidNumArgs("eq?".into()));
+            return Err(InvalidNumArgs(name.into()));
         }
         self.compile_expression(bc, car!(cdr!(lat)))?;
         bc.push(OpCode::Push.into());
         self.compile_expression(bc, car!(lat))?;
-        bc.push(OpCode::Eq.into());
+        bc.push(op.into());
         Ok(())
     }
 
-    pub fn compile_cons(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
-        if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
-            return Err(InvalidNumArgs("cons".into()));
-        }
-        self.compile_expression(bc, car!(cdr!(lat)))?;
-        bc.push(OpCode::Push.into());
-        self.compile_expression(bc, car!(lat))?;
-        bc.push(OpCode::Cons.into());
-        Ok(())
-    }
-
-    pub fn compile_car(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
-        self.compile_expression(bc, car!(lat))?;
-        bc.push(OpCode::Car.into());
-        Ok(())
-    }
-
-    pub fn compile_cdr(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
-        self.compile_expression(bc, car!(lat))?;
-        bc.push(OpCode::Cdr.into());
-        Ok(())
-    }
-
+    /// Compile Quote
+    ///
+    /// Quote is compiled as a single argument instruction (QUOTE VAL). Quote is
+    /// special in that the value in cell is not evaluated before being placed
+    /// on the heap.
     pub fn compile_quote(&mut self, bc: &mut Vec<Node>, cell: &Cell) -> Result<(), Error> {
         bc.push(OpCode::Quote.into());
         bc.push(self.heap.put_cell(cell));
         Ok(())
     }
 
-    pub fn compile_operator(
+    /// Compile Var Arg
+    ///
+    /// Compile a procedure that takes zero or more arguments, using the provided
+    /// instruction to fold the result of every two arguments with the next.
+    ///
+    /// Some opcodes may require -at least one- argument, and will return an error
+    /// if at least one argument is not provided.
+    ///
+    /// # Arguments
+    /// `op` - The opcode operating on the list of arguments
+    /// `name` - The name of the procedure, used for error purposes.
+    /// `bc` - Bytecode vector to emit instructions to
+    /// `lat` - The arguments to the procedure
+    pub fn compile_var_arg(
         &mut self,
+        op: OpCode,
+        name: &str,
         bc: &mut Vec<Node>,
         lat: &Cell,
-        op: OpCode,
     ) -> Result<(), Error> {
         let mut lat = lat;
 
@@ -138,7 +183,7 @@ impl Vm {
         // Special zero arg form. Evaluate to the base value.
         if lat.is_nil() {
             if op == OpCode::Sub {
-                return Err(InvalidNumArgs("-".to_string()));
+                return Err(InvalidNumArgs(name.to_string()));
             }
             self.compile_quote(bc, base_value)?;
             return Ok(());
