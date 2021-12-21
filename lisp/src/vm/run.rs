@@ -109,6 +109,10 @@ impl Vm {
     /// # Arguments
     /// `node` - The node containing an environment slot of sym reference
     /// to provide a reverse lookup for.
+    ///
+    /// # Returns
+    /// Returns the bound symbol, or "#<undefined>" if symbol lookup failed
+    /// for any reason.
     fn get_str_bound_to<T: Into<Node>>(&self, node: T) -> String {
         let node = node.into();
         match node.val {
