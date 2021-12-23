@@ -5,6 +5,7 @@ use crate::vm::run::Environment;
 use log::trace;
 
 pub mod compile;
+pub mod gc;
 pub mod heap;
 pub mod node;
 pub mod opcode;
