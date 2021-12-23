@@ -177,13 +177,13 @@ impl Vm {
 /// vector of shallow bindings (slot -> Node).
 #[derive(Debug)]
 pub struct Environment {
-    /// Deep bindings is a map of symbol reference -> slot, and
+    /// Deep bindings is a map of symbol ptr -> slot, and
     /// is used by the compiler to aassociate a symbol at compilation
     /// time with the environment slot.
     bindings: HashMap<usize, usize>,
 
     /// Environment slots. The compiler produces shallow bindings as
-    /// references into this vector at compile time.
+    /// ptr into this vector at compile time.
     slots: Vec<Node>,
 }
 
@@ -258,7 +258,7 @@ impl Environment {
     /// time, so any reference to an unknown slot is considered a critical error
     /// and will cause a panic of the runtime.
     ///
-    /// Any value other than a reference or undefined is considered a runtime error
+    /// Any value other than a ptr or undefined is considered a runtime error
     /// and will result in a panic.
     ///
     /// # Arguments
@@ -288,7 +288,7 @@ impl RuntimeError {
     /// Into Error
     ///
     /// Convert a runtime error into a vm::Error, converting any runtime values
-    /// (e.g. references to heap values) to printable forms -- This function requires
+    /// (e.g. ptrs to heap values) to printable forms -- This function requires
     /// read only access to the Vm in order to access the heap.
     fn into_error(self, vm: &Vm) -> Error {
         match self {
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn put_slot_panics_if_non_reference() {
+    fn put_slot_panics_if_non_ptr() {
         let mut env = Environment::new();
         assert_eq!(env.get_binding(50_usize), 0);
         env.put_slot(0, Node::nil());

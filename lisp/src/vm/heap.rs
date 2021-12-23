@@ -47,7 +47,7 @@ impl Heap {
 
     /// Put Cell
     ///
-    /// Allocate the given cell on the heap, returning a Node::Reference
+    /// Allocate the given cell on the heap, returning a Node::Ptr
     /// to the root of the allocated structure. This will recursively
     /// allocate a structure and may result in multiple allocations.
     ///
@@ -66,7 +66,7 @@ impl Heap {
                     self.put_cell(cdr.deref()).val,
                 ) {
                     (Value::Ptr(car), Value::Ptr(cdr)) => self.put(Value::Pair(car, cdr)),
-                    _ => panic!("expected references, got {:?}", ast),
+                    _ => panic!("expected ptr, got {:?}", ast),
                 }
             }
             cell::Cell::Symbol(ref sym) => {
@@ -98,11 +98,11 @@ impl Heap {
 
     /// Get
     ///
-    /// Return a node from the heap at the given reference. If the node is not
-    /// a reference, then return the node.
+    /// Return a node from the heap at the given ptr. If the node is not
+    /// a ptr, then return the node.
     ///
     /// # Arguments
-    /// `node` - The reference node
+    /// `node` - The ptr node
     pub fn get(&self, node: &Node) -> Node {
         match node.val {
             Value::Ptr(ptr) => match ptr.get() {

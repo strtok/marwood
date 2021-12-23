@@ -24,7 +24,7 @@ pub struct Map {
 ///       allocated.
 ///
 /// Allocated: The object is allocated and believed to be in use. It is
-///       subject to garbage collection checks
+///       subject to garbage collection checks.
 ///
 /// Used: The object has been marked during garbage collection. This is an
 ///       ephemeral state used during GC before the object is either marked
