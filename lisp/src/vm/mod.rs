@@ -10,6 +10,7 @@ pub mod heap;
 pub mod node;
 pub mod opcode;
 pub mod run;
+pub mod string_heap;
 
 const HEAP_SIZE: usize = 1024;
 

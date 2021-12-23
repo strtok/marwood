@@ -10,6 +10,7 @@
 ///
 /// The initial state for a node is free (0x0, and then when allocated
 /// the state is transitioned to Allocated.
+#[derive(Debug)]
 pub struct Map {
     size: usize,
     map: Vec<u8>,
