@@ -1,4 +1,4 @@
-use crate::vm::node::RefType::{NodePtr, SymbolPtr};
+use crate::vm::node::TaggedPtr::{NodePtr, SymbolPtr};
 use crate::vm::opcode::OpCode;
 use std::fmt;
 
@@ -32,7 +32,7 @@ impl Value {
 pub struct Ptr(u64);
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum RefType {
+pub enum TaggedPtr {
     NodePtr(usize),
     SymbolPtr(usize),
 }
@@ -55,11 +55,11 @@ impl Ptr {
         Ptr(ptr)
     }
 
-    pub fn get(&self) -> RefType {
+    pub fn get(&self) -> TaggedPtr {
         if (self.0 & Self::sym_flag()) > 0 {
-            RefType::SymbolPtr((self.0 & !Self::mask()) as usize)
+            TaggedPtr::SymbolPtr((self.0 & !Self::mask()) as usize)
         } else {
-            RefType::NodePtr(self.0 as usize)
+            TaggedPtr::NodePtr(self.0 as usize)
         }
     }
 }
@@ -306,9 +306,9 @@ mod tests {
     #[test]
     fn ptr_tagged_type() {
         let node_ref = Ptr::new_node_ptr(50);
-        assert_eq!(node_ref.get(), RefType::NodePtr(50));
+        assert_eq!(node_ref.get(), TaggedPtr::NodePtr(50));
 
         let sym_ref = Ptr::new_symbol_ptr(50);
-        assert_eq!(sym_ref.get(), RefType::SymbolPtr(50));
+        assert_eq!(sym_ref.get(), TaggedPtr::SymbolPtr(50));
     }
 }

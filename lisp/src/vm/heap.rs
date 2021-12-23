@@ -2,7 +2,7 @@ use crate::cell;
 use crate::cell::Cell;
 use crate::vm::gc;
 use crate::vm::gc::State;
-use crate::vm::node::RefType::{NodePtr, SymbolPtr};
+use crate::vm::node::TaggedPtr::{NodePtr, SymbolPtr};
 use crate::vm::node::{FixedNum, Node, Ptr, Value};
 use crate::vm::string_heap;
 use std::ops::Deref;
@@ -157,7 +157,7 @@ mod tests {
     const CHUNK_SIZE: usize = 1024;
 
     #[test]
-    fn alloc() {
+    fn alloc_allocs_and_sets_gc_state() {
         let mut heap = Heap::new(CHUNK_SIZE);
         assert_eq!(heap.heap_map.get(0), Some(State::Free));
         assert_eq!(heap.heap_map.get(1), Some(State::Free));
@@ -168,6 +168,7 @@ mod tests {
         heap.get_at_index_mut(0).val = Value::FixedNum(42.into());
         heap.get_at_index_mut(1).val = Value::FixedNum(43.into());
         assert_eq!(heap.get_at_index(0).val, Value::FixedNum(42.into()));
+        assert_eq!(heap.get_at_index(1).val, Value::FixedNum(43.into()));
     }
 
     #[test]

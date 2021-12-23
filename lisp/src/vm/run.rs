@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::vm::node::RefType::SymbolPtr;
+use crate::vm::node::TaggedPtr::SymbolPtr;
 use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
