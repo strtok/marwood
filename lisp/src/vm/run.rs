@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::vm::node::TaggedReference::SymbolReference;
+use crate::vm::node::RefType::SymbolPtr;
 use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
@@ -65,10 +65,9 @@ impl Vm {
                 let car = self.heap.put(self.acc.clone());
                 let cdr = self.pop_stack()?;
                 let cdr = self.heap.put(cdr);
-                self.acc = self.heap.put(Value::Pair(
-                    car.as_reference().unwrap(),
-                    cdr.as_reference().unwrap(),
-                ));
+                self.acc = self
+                    .heap
+                    .put(Value::Pair(car.as_ptr().unwrap(), cdr.as_ptr().unwrap()));
             }
             OpCode::EnvGet => {
                 let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
@@ -120,8 +119,8 @@ impl Vm {
                 Some(sym_ref) => self.get_str_bound_to(Node::symbol(sym_ref)),
                 None => "#<undefined>".into(),
             },
-            Value::Reference(ptr) => match ptr.get() {
-                SymbolReference(ptr) => self
+            Value::Ptr(ptr) => match ptr.get() {
+                SymbolPtr(ptr) => self
                     .heap
                     .string_heap
                     .get_symbol(ptr)
@@ -265,7 +264,7 @@ impl Environment {
     /// # Arguments
     /// `slot` - The slot to return a value for
     pub fn put_slot(&mut self, slot: usize, node: Node) {
-        assert!(matches!(node.val, Value::Reference(_) | Value::Undefined));
+        assert!(matches!(node.val, Value::Ptr(_) | Value::Undefined));
         *self.slots.get_mut(slot).expect("invalid environment slot") = node;
     }
 }
@@ -329,8 +328,8 @@ mod tests {
         assert_eq!(env.get_symbol(0_usize), Some(50_usize));
         assert_eq!(env.get_symbol(1_usize), Some(100_usize));
         assert_eq!(env.get_slot(0), Node::undefined());
-        env.put_slot(0, Node::reference(42));
-        assert_eq!(env.get_slot(0), Node::reference(42));
+        env.put_slot(0, Node::ptr(42));
+        assert_eq!(env.get_slot(0), Node::ptr(42));
         env.put_slot(0, Node::undefined());
     }
 

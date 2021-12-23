@@ -1,7 +1,7 @@
 use crate::cell;
 use crate::cell::Cell;
-use crate::vm::node::TaggedReference::{NodeReference, SymbolReference};
-use crate::vm::node::{FixedNum, Node, Reference, Value};
+use crate::vm::node::RefType::{NodePtr, SymbolPtr};
+use crate::vm::node::{FixedNum, Node, Ptr, Value};
 use std::collections::HashMap;
 use std::ops::Deref;
 
@@ -36,11 +36,11 @@ impl Heap {
     /// heap and return the position of the node.
     pub fn put<T: Into<Value> + Clone>(&mut self, val: T) -> Node {
         match val.into() {
-            Value::Reference(ptr) => ptr.into(),
+            Value::Ptr(ptr) => ptr.into(),
             val => {
                 let ptr = self.alloc();
                 *self.heap.get_mut(ptr).expect("heap index is out of bounds") = Node::new(val);
-                Node::from(Reference::new_node_reference(ptr))
+                Node::from(Ptr::new_node_ptr(ptr))
             }
         }
     }
@@ -65,9 +65,7 @@ impl Heap {
                     self.put_cell(car.deref()).val,
                     self.put_cell(cdr.deref()).val,
                 ) {
-                    (Value::Reference(car), Value::Reference(cdr)) => {
-                        self.put(Value::Pair(car, cdr))
-                    }
+                    (Value::Ptr(car), Value::Ptr(cdr)) => self.put(Value::Pair(car, cdr)),
                     _ => panic!("expected references, got {:?}", ast),
                 }
             }
@@ -107,9 +105,9 @@ impl Heap {
     /// `node` - The reference node
     pub fn get(&self, node: &Node) -> Node {
         match node.val {
-            Value::Reference(ptr) => match ptr.get() {
-                NodeReference(ptr) => self.get_at_index(ptr).clone(),
-                SymbolReference(ptr) => Node::symbol(ptr),
+            Value::Ptr(ptr) => match ptr.get() {
+                NodePtr(ptr) => self.get_at_index(ptr).clone(),
+                SymbolPtr(ptr) => Node::symbol(ptr),
             },
             _ => node.clone(),
         }
@@ -126,9 +124,9 @@ impl Heap {
     /// `node` - The node to map to a cell
     pub fn get_as_cell(&self, node: &Node) -> Cell {
         match node.val {
-            Value::Reference(ptr) => match ptr.get() {
-                SymbolReference(ptr) => self.string_heap.get_at_index(ptr).into(),
-                NodeReference(ptr) => self.get_as_cell(self.get_at_index(ptr)),
+            Value::Ptr(ptr) => match ptr.get() {
+                SymbolPtr(ptr) => self.string_heap.get_at_index(ptr).into(),
+                NodePtr(ptr) => self.get_as_cell(self.get_at_index(ptr)),
             },
             Value::FixedNum(FixedNum(val)) => Cell::Number(val),
             Value::Nil => Cell::Nil,
@@ -275,15 +273,15 @@ mod tests {
         let mut heap = StringHeap::new(CHUNK_SIZE);
         assert_eq!(
             heap.put_symbol("foo").val,
-            Value::Reference(Reference::new_symbol_reference(0))
+            Value::Ptr(Ptr::new_symbol_ptr(0))
         );
         assert_eq!(
             heap.put_symbol("bar").val,
-            Value::Reference(Reference::new_symbol_reference(1))
+            Value::Ptr(Ptr::new_symbol_ptr(1))
         );
         assert_eq!(
             heap.put_symbol("foo").val,
-            Value::Reference(Reference::new_symbol_reference(0))
+            Value::Ptr(Ptr::new_symbol_ptr(0))
         );
         assert_eq!(heap.get_symbol(0_usize), Some("foo".into()));
         assert_eq!(heap.get_symbol(1_usize), Some("bar".into()));

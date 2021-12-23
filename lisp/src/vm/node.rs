@@ -1,4 +1,4 @@
-use crate::vm::node::TaggedReference::{NodeReference, SymbolReference};
+use crate::vm::node::RefType::{NodePtr, SymbolPtr};
 use crate::vm::opcode::OpCode;
 use std::fmt;
 
@@ -15,8 +15,8 @@ pub enum Value {
     FixedNum(FixedNum),
     Nil,
     OpCode(OpCode),
-    Pair(Reference, Reference),
-    Reference(Reference),
+    Pair(Ptr, Ptr),
+    Ptr(Ptr),
     Undefined,
     Void,
 }
@@ -29,15 +29,15 @@ impl Value {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(packed)]
-pub struct Reference(u64);
+pub struct Ptr(u64);
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum TaggedReference {
-    NodeReference(usize),
-    SymbolReference(usize),
+pub enum RefType {
+    NodePtr(usize),
+    SymbolPtr(usize),
 }
 
-impl Reference {
+impl Ptr {
     const fn mask() -> u64 {
         0xFFFFFFFF << 48
     }
@@ -46,20 +46,20 @@ impl Reference {
         0b1 << 48
     }
 
-    pub fn new_node_reference(ptr: usize) -> Reference {
-        Reference(ptr as u64)
+    pub fn new_node_ptr(ptr: usize) -> Ptr {
+        Ptr(ptr as u64)
     }
 
-    pub fn new_symbol_reference(ptr: usize) -> Reference {
+    pub fn new_symbol_ptr(ptr: usize) -> Ptr {
         let ptr = (ptr as u64) | Self::sym_flag();
-        Reference(ptr)
+        Ptr(ptr)
     }
 
-    pub fn get(&self) -> TaggedReference {
+    pub fn get(&self) -> RefType {
         if (self.0 & Self::sym_flag()) > 0 {
-            TaggedReference::SymbolReference((self.0 & !Self::mask()) as usize)
+            RefType::SymbolPtr((self.0 & !Self::mask()) as usize)
         } else {
-            TaggedReference::NodeReference(self.0 as usize)
+            RefType::NodePtr(self.0 as usize)
         }
     }
 }
@@ -107,8 +107,8 @@ impl Node {
         Node::new(Value::FixedNum(val.into()))
     }
 
-    pub fn reference(val: usize) -> Node {
-        Node::new(Value::Reference(Reference::new_node_reference(val)))
+    pub fn ptr(val: usize) -> Node {
+        Node::new(Value::Ptr(Ptr::new_node_ptr(val)))
     }
 
     pub fn env_slot<T: Into<EnvSlot>>(slot: T) -> Node {
@@ -116,15 +116,15 @@ impl Node {
     }
 
     pub fn symbol<T: Into<usize>>(ptr: T) -> Node {
-        Reference::new_symbol_reference(ptr.into()).into()
+        Ptr::new_symbol_ptr(ptr.into()).into()
     }
 
     pub fn nil() -> Node {
         Node::new(Value::Nil)
     }
 
-    pub fn is_reference(&self) -> bool {
-        matches!(self.val, Value::Reference(_))
+    pub fn is_ptr(&self) -> bool {
+        matches!(self.val, Value::Ptr(_))
     }
 
     pub fn is_undefined(&self) -> bool {
@@ -167,9 +167,9 @@ impl Node {
         }
     }
 
-    pub fn as_reference(&self) -> Option<Reference> {
+    pub fn as_ptr(&self) -> Option<Ptr> {
         match self.val {
-            Value::Reference(val) => Some(val),
+            Value::Ptr(val) => Some(val),
             _ => None,
         }
     }
@@ -181,10 +181,20 @@ impl Node {
         }
     }
 
-    pub fn as_symbol_reference(&self) -> Option<usize> {
+    pub fn as_symbol_ptr(&self) -> Option<usize> {
         match self.val {
-            Value::Reference(ptr) => match ptr.get() {
-                SymbolReference(ptr) => Some(ptr),
+            Value::Ptr(ptr) => match ptr.get() {
+                SymbolPtr(ptr) => Some(ptr),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    pub fn as_node_ptr(&self) -> Option<usize> {
+        match self.val {
+            Value::Ptr(ptr) => match ptr.get() {
+                NodePtr(ptr) => Some(ptr),
                 _ => None,
             },
             _ => None,
@@ -234,9 +244,9 @@ impl From<FixedNum> for Node {
     }
 }
 
-impl From<Reference> for Node {
-    fn from(val: Reference) -> Self {
-        Node::new(Value::Reference(val))
+impl From<Ptr> for Node {
+    fn from(val: Ptr) -> Self {
+        Node::new(Value::Ptr(val))
     }
 }
 
@@ -252,13 +262,13 @@ impl fmt::Display for Node {
         match self.val.clone() {
             Value::Bool(true) => write!(f, "#t"),
             Value::Bool(false) => write!(f, "#f"),
-            Value::Reference(ptr) => match ptr.get() {
-                SymbolReference(ptr) => write!(f, "sym[{}]", ptr),
-                NodeReference(ptr) => write!(f, "[{}]", ptr),
+            Value::Ptr(ptr) => match ptr.get() {
+                SymbolPtr(ptr) => write!(f, "sym[{}]", ptr),
+                NodePtr(ptr) => write!(f, "[{}]", ptr),
             },
             Value::EnvSlot(EnvSlot(val)) => write!(f, "env[{}]", val),
             Value::OpCode(val) => write!(f, "{:?}", val),
-            Value::Pair(Reference(car), Reference(cdr)) => write!(f, "({}, {})", car, cdr),
+            Value::Pair(Ptr(car), Ptr(cdr)) => write!(f, "({}, {})", car, cdr),
             Value::Undefined => write!(f, "undefined"),
             Value::FixedNum(FixedNum(val)) => write!(f, "{}", val),
             Value::Nil => write!(f, "()"),
@@ -294,11 +304,11 @@ mod tests {
     }
 
     #[test]
-    fn reference_tagged_type() {
-        let node_ref = Reference::new_node_reference(50);
-        assert_eq!(node_ref.get(), TaggedReference::NodeReference(50));
+    fn ptr_tagged_type() {
+        let node_ref = Ptr::new_node_ptr(50);
+        assert_eq!(node_ref.get(), RefType::NodePtr(50));
 
-        let sym_ref = Reference::new_symbol_reference(50);
-        assert_eq!(sym_ref.get(), TaggedReference::SymbolReference(50));
+        let sym_ref = Ptr::new_symbol_ptr(50);
+        assert_eq!(sym_ref.get(), RefType::SymbolPtr(50));
     }
 }
