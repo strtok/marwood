@@ -1,6 +1,6 @@
 use crate::cell::Cell;
+use crate::vm::node::Node;
 use crate::vm::node::TaggedPtr::SymbolPtr;
-use crate::vm::node::{Node, Value};
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, VariableNotBound,
@@ -21,7 +21,9 @@ impl Vm {
                 Err(e) => return Err(e.into_error(self)),
             }
         }
-        Ok(self.heap.get_as_cell(&self.acc))
+        let cell = self.heap.get_as_cell(&self.acc);
+        self.run_gc();
+        Ok(cell)
     }
 
     /// Execute one instruction, returning either a bool or runtime error.
@@ -47,9 +49,9 @@ impl Vm {
                     InvalidArgs(proc_name.to_string(), "number".to_string(), y.clone())
                 })?;
                 match op_code {
-                    OpCode::Add => self.acc = self.heap.put(Value::fixed_num(x + y)),
-                    OpCode::Sub => self.acc = self.heap.put(Value::fixed_num(y - x)),
-                    OpCode::Mul => self.acc = self.heap.put(Value::fixed_num(x * y)),
+                    OpCode::Add => self.acc = self.heap.put(Node::fixed_num(x + y)),
+                    OpCode::Sub => self.acc = self.heap.put(Node::fixed_num(y - x)),
+                    OpCode::Mul => self.acc = self.heap.put(Node::fixed_num(x * y)),
                     _ => return Err(InvalidBytecode),
                 };
             }
@@ -67,18 +69,20 @@ impl Vm {
                 let cdr = self.heap.put(cdr);
                 self.acc = self
                     .heap
-                    .put(Value::Pair(car.as_ptr().unwrap(), cdr.as_ptr().unwrap()));
+                    .put(Node::Pair(car.as_ptr().unwrap(), cdr.as_ptr().unwrap()));
             }
             OpCode::EnvGet => {
                 let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
-                self.acc = self.globenv.get_slot(env_slot.0);
-                if matches!(self.acc.val, Value::Undefined) {
-                    return Err(VariableNotBound(self.get_str_bound_to(env_slot)));
+                self.acc = self.globenv.get_slot(env_slot);
+                if matches!(self.acc, Node::Undefined) {
+                    return Err(VariableNotBound(
+                        self.get_str_bound_to(Node::env_slot(env_slot)),
+                    ));
                 }
             }
             OpCode::EnvSet => {
                 let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
-                self.globenv.put_slot(env_slot.0, self.acc.clone());
+                self.globenv.put_slot(env_slot, self.acc.clone());
                 self.acc = self.heap.put(Node::void());
             }
             OpCode::Eq => {
@@ -114,17 +118,18 @@ impl Vm {
     /// for any reason.
     fn get_str_bound_to<T: Into<Node>>(&self, node: T) -> String {
         let node = node.into();
-        match node.val {
-            Value::EnvSlot(slot) => match self.globenv.get_symbol(slot) {
-                Some(sym_ref) => self.get_str_bound_to(Node::symbol(sym_ref)),
+        match node {
+            Node::EnvSlot(slot) => match self.globenv.get_symbol(slot) {
+                Some(sym_ref) => self.get_str_bound_to(Node::symbol_ptr(sym_ref)),
                 None => "#<undefined>".into(),
             },
-            Value::Ptr(ptr) => match ptr.get() {
-                SymbolPtr(ptr) => self
+            Node::Ptr(ptr) => match ptr.get() {
+                SymbolPtr(_) => self
                     .heap
-                    .string_heap
-                    .get_symbol(ptr)
-                    .unwrap_or_else(|| "#<undefined>".into()),
+                    .get(&node)
+                    .as_symbol()
+                    .unwrap_or("#<undefined>")
+                    .into(),
                 _ => "#<undefined>".into(),
             },
             _ => "#<undefined>".into(),
@@ -193,6 +198,14 @@ impl Environment {
             bindings: HashMap::new(),
             slots: vec![],
         }
+    }
+
+    pub fn iter_bindings(&self) -> std::collections::hash_map::Keys<usize, usize> {
+        self.bindings.keys()
+    }
+
+    pub fn iter_slots(&self) -> std::slice::Iter<Node> {
+        self.slots.iter()
     }
 
     /// Get binding
@@ -264,7 +277,7 @@ impl Environment {
     /// # Arguments
     /// `slot` - The slot to return a value for
     pub fn put_slot(&mut self, slot: usize, node: Node) {
-        assert!(matches!(node.val, Value::Ptr(_) | Value::Undefined));
+        assert!(matches!(node, Node::Ptr(_) | Node::Undefined));
         *self.slots.get_mut(slot).expect("invalid environment slot") = node;
     }
 }

@@ -59,11 +59,7 @@ impl Vm {
     /// the value bound to the symbol.
     pub fn compile_symbol_lookup(&mut self, bc: &mut Vec<Node>, sym: &Cell) -> Result<(), Error> {
         let sym_ref = self.heap.put_cell(sym);
-        let sym_ref = self
-            .heap
-            .get(&sym_ref)
-            .as_symbol_ptr()
-            .expect("expected symbol");
+        let sym_ref = sym_ref.as_symbol_ptr().expect("expected symbol");
         let env_slot = Node::env_slot(self.globenv.get_binding(sym_ref));
         bc.push(OpCode::EnvGet.into());
         bc.push(env_slot);
@@ -80,9 +76,8 @@ impl Vm {
 
         self.compile_expression(bc, car!(cdr!(lat)))?;
         let symbol = car!(lat);
-        let sym_ref = self.heap.put_cell(symbol);
         let sym_ref =
-            self.heap.get(&sym_ref).as_symbol_ptr().ok_or_else(|| {
+            self.heap.put_cell(symbol).as_symbol_ptr().ok_or_else(|| {
                 InvalidArgs("define".into(), "variable".into(), symbol.to_string())
             })?;
         let env_slot = Node::env_slot(self.globenv.get_binding(sym_ref));

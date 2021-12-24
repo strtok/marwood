@@ -10,7 +10,6 @@ pub mod heap;
 pub mod node;
 pub mod opcode;
 pub mod run;
-pub mod string_heap;
 
 const HEAP_SIZE: usize = 1024;
 
@@ -203,5 +202,13 @@ mod tests {
             "(eq? #t #t)" => "#f",
             "(eq? 'foo 'foo)" => "#t"
         ];
+    }
+
+    #[test]
+    fn gc_cleans_intern_map() {
+        evals![
+            "'foo" => "foo",
+            "'foo" => "foo"
+        ]
     }
 }

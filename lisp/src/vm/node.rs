@@ -1,34 +1,23 @@
 use crate::vm::node::TaggedPtr::{NodePtr, SymbolPtr};
 use crate::vm::opcode::OpCode;
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Node {
-    pub flags: u32,
-    pub val: Value,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Value {
+pub enum Node {
     Bool(bool),
-    EnvSlot(EnvSlot),
-    FixedNum(FixedNum),
+    EnvSlot(usize),
+    FixedNum(i64),
     Nil,
     OpCode(OpCode),
     Pair(Ptr, Ptr),
     Ptr(Ptr),
+    Symbol(Rc<String>),
     Undefined,
     Void,
 }
 
-impl Value {
-    pub fn fixed_num(val: i64) -> Value {
-        Value::FixedNum(FixedNum(val))
-    }
-}
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(packed)]
 pub struct Ptr(u64);
 
 #[derive(Debug, Eq, PartialEq)]
@@ -62,128 +51,123 @@ impl Ptr {
             TaggedPtr::NodePtr(self.0 as usize)
         }
     }
-}
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[repr(packed)]
-pub struct FixedNum(pub i64);
-
-impl From<i64> for FixedNum {
-    fn from(val: i64) -> Self {
-        FixedNum(val)
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[repr(packed)]
-pub struct EnvSlot(pub usize);
-
-impl From<usize> for EnvSlot {
-    fn from(slot: usize) -> Self {
-        EnvSlot(slot)
-    }
-}
-
-impl From<EnvSlot> for usize {
-    fn from(val: EnvSlot) -> usize {
-        val.0
+    pub fn as_usize(&self) -> usize {
+        match self.get() {
+            TaggedPtr::SymbolPtr(ptr) | TaggedPtr::NodePtr(ptr) => ptr,
+        }
     }
 }
 
 impl Node {
-    pub fn new(val: Value) -> Node {
-        Node { val, flags: 0 }
-    }
-
     pub fn undefined() -> Node {
-        Node::new(Value::Undefined)
+        Node::Undefined
     }
 
     pub fn void() -> Node {
-        Node::new(Value::Void)
+        Node::Void
     }
 
-    pub fn fixed_num<T: Into<FixedNum>>(val: T) -> Node {
-        Node::new(Value::FixedNum(val.into()))
+    pub fn fixed_num<T: Into<i64>>(val: T) -> Node {
+        Node::FixedNum(val.into())
     }
 
     pub fn ptr(val: usize) -> Node {
-        Node::new(Value::Ptr(Ptr::new_node_ptr(val)))
+        Node::Ptr(Ptr::new_node_ptr(val))
     }
 
-    pub fn env_slot<T: Into<EnvSlot>>(slot: T) -> Node {
-        Node::new(Value::EnvSlot(slot.into()))
+    pub fn pair(car: Ptr, cdr: Ptr) -> Node {
+        Node::Pair(car, cdr)
     }
 
-    pub fn symbol<T: Into<usize>>(ptr: T) -> Node {
+    pub fn env_slot<T: Into<usize>>(slot: T) -> Node {
+        Node::EnvSlot(slot.into())
+    }
+
+    pub fn symbol<T: Into<String>>(ptr: T) -> Node {
+        Node::Symbol(Rc::new(ptr.into()))
+    }
+
+    pub fn symbol_ptr<T: Into<usize>>(ptr: T) -> Node {
         Ptr::new_symbol_ptr(ptr.into()).into()
     }
 
     pub fn nil() -> Node {
-        Node::new(Value::Nil)
+        Node::Nil
+    }
+
+    pub fn is_pair(&self) -> bool {
+        matches!(self, Node::Pair(_, _))
     }
 
     pub fn is_ptr(&self) -> bool {
-        matches!(self.val, Value::Ptr(_))
+        matches!(self, Node::Ptr(_))
     }
 
     pub fn is_undefined(&self) -> bool {
-        matches!(self.val, Value::Undefined)
+        matches!(self, Node::Undefined)
     }
 
     pub fn is_nil(&self) -> bool {
-        matches!(self.val, Value::Nil)
+        matches!(self, Node::Nil)
     }
 
     pub fn is_opcode(&self) -> bool {
-        matches!(self.val, Value::OpCode(_))
+        matches!(self, Node::OpCode(_))
     }
 
     pub fn as_opcode(&self) -> Option<OpCode> {
-        match &self.val {
-            Value::OpCode(op) => Some(op.clone()),
+        match self {
+            Node::OpCode(op) => Some(op.clone()),
             _ => None,
         }
     }
 
     pub fn as_car(&self) -> Option<Node> {
-        match self.val {
-            Value::Pair(car, _) => Some(car.into()),
+        match self {
+            Node::Pair(car, _) => Some(car.into()),
             _ => None,
         }
     }
 
     pub fn as_cdr(&self) -> Option<Node> {
-        match self.val {
-            Value::Pair(_, cdr) => Some(cdr.into()),
+        match self {
+            Node::Pair(_, cdr) => Some(cdr.into()),
             _ => None,
         }
     }
 
     pub fn as_fixed_num(&self) -> Option<i64> {
-        match self.val {
-            Value::FixedNum(FixedNum(val)) => Some(val),
+        match self {
+            Node::FixedNum(val) => Some(*val),
+            _ => None,
+        }
+    }
+
+    pub fn as_symbol(&self) -> Option<&str> {
+        match self {
+            Node::Symbol(s) => Some(&*s),
             _ => None,
         }
     }
 
     pub fn as_ptr(&self) -> Option<Ptr> {
-        match self.val {
-            Value::Ptr(val) => Some(val),
+        match self {
+            Node::Ptr(ptr) => Some(*ptr),
             _ => None,
         }
     }
 
-    pub fn as_env_slot(&self) -> Option<EnvSlot> {
-        match self.val {
-            Value::EnvSlot(val) => Some(val),
+    pub fn as_env_slot(&self) -> Option<usize> {
+        match self {
+            Node::EnvSlot(slot) => Some(*slot),
             _ => None,
         }
     }
 
     pub fn as_symbol_ptr(&self) -> Option<usize> {
-        match self.val {
-            Value::Ptr(ptr) => match ptr.get() {
+        match self {
+            Node::Ptr(ptr) => match ptr.get() {
                 SymbolPtr(ptr) => Some(ptr),
                 _ => None,
             },
@@ -192,8 +176,8 @@ impl Node {
     }
 
     pub fn as_node_ptr(&self) -> Option<usize> {
-        match self.val {
-            Value::Ptr(ptr) => match ptr.get() {
+        match self {
+            Node::Ptr(ptr) => match ptr.get() {
                 NodePtr(ptr) => Some(ptr),
                 _ => None,
             },
@@ -202,77 +186,53 @@ impl Node {
     }
 }
 
-impl<T> From<T> for Value
-where
-    T: AsRef<Node>,
-{
-    fn from(node: T) -> Self {
-        node.as_ref().clone().val
-    }
-}
-
-impl From<bool> for Value {
-    fn from(val: bool) -> Value {
-        Value::Bool(val)
-    }
-}
-
-impl<T> From<T> for Node
-where
-    T: AsRef<Value>,
-{
-    fn from(val: T) -> Self {
-        Node::new(val.as_ref().clone())
-    }
-}
-
 impl From<OpCode> for Node {
-    fn from(val: OpCode) -> Self {
-        Node::new(Value::OpCode(val))
+    fn from(op: OpCode) -> Self {
+        Node::OpCode(op)
     }
 }
 
 impl From<bool> for Node {
     fn from(val: bool) -> Self {
-        Node::new(Value::Bool(val))
+        Node::Bool(val)
     }
 }
 
-impl From<FixedNum> for Node {
-    fn from(val: FixedNum) -> Self {
-        Node::new(Value::FixedNum(val))
+impl From<i64> for Node {
+    fn from(val: i64) -> Self {
+        Node::FixedNum(val)
     }
 }
 
 impl From<Ptr> for Node {
-    fn from(val: Ptr) -> Self {
-        Node::new(Value::Ptr(val))
+    fn from(ptr: Ptr) -> Self {
+        Node::Ptr(ptr)
     }
 }
 
-impl From<EnvSlot> for Node {
-    fn from(val: EnvSlot) -> Self {
-        Node::new(Value::EnvSlot(val))
+impl From<&Ptr> for Node {
+    fn from(ptr: &Ptr) -> Self {
+        Node::Ptr(*ptr)
     }
 }
 
 impl fmt::Display for Node {
-    // This trait requires `fmt` with this exact signature.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.val.clone() {
-            Value::Bool(true) => write!(f, "#t"),
-            Value::Bool(false) => write!(f, "#f"),
-            Value::Ptr(ptr) => match ptr.get() {
+        match self {
+            Node::Bool(true) => write!(f, "#t"),
+            Node::Bool(false) => write!(f, "#f"),
+            Node::Ptr(ptr) => match ptr.get() {
                 SymbolPtr(ptr) => write!(f, "sym[{}]", ptr),
                 NodePtr(ptr) => write!(f, "[{}]", ptr),
             },
-            Value::EnvSlot(EnvSlot(val)) => write!(f, "env[{}]", val),
-            Value::OpCode(val) => write!(f, "{:?}", val),
-            Value::Pair(Ptr(car), Ptr(cdr)) => write!(f, "({}, {})", car, cdr),
-            Value::Undefined => write!(f, "undefined"),
-            Value::FixedNum(FixedNum(val)) => write!(f, "{}", val),
-            Value::Nil => write!(f, "()"),
-            Value::Void => write!(f, ""),
+            Node::EnvSlot(slot) => write!(f, "env[{}]", slot),
+            Node::OpCode(val) => write!(f, "{:?}", val),
+            Node::Pair(car, cdr) => write!(f, "([{}], [{}])", car.as_usize(), cdr.as_usize()),
+            Node::Undefined => write!(f, "undefined"),
+            Node::FixedNum(val) => write!(f, "{}", val),
+            Node::Nil => write!(f, "()"),
+            Node::Symbol(s) => write!(f, "sym\"{}\"", *s),
+            Node::Void => write!(f, "#<void>"),
         }
     }
 }
@@ -294,13 +254,7 @@ mod tests {
 
     #[test]
     fn new_cell_is_undefined() {
-        assert!(matches!(
-            Node::undefined(),
-            Node {
-                val: Value::Undefined,
-                ..
-            }
-        ));
+        assert!(matches!(Node::undefined(), Node::Undefined));
     }
 
     #[test]

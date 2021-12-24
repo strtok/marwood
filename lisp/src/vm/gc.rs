@@ -1,3 +1,21 @@
+use crate::vm::node::Ptr;
+use crate::vm::Vm;
+
+impl Vm {
+    pub fn run_gc(&mut self) {
+        self.globenv
+            .iter_bindings()
+            .for_each(|it| self.heap.mark(Ptr::new_symbol_ptr(*it)));
+
+        self.globenv
+            .iter_slots()
+            .filter_map(|it| it.as_ptr())
+            .for_each(|it| self.heap.mark(it));
+
+        self.heap.sweep();
+    }
+}
+
 /// GcMap
 ///
 /// GcMap is a map used to track the disposition of objects on a
@@ -104,6 +122,14 @@ impl Map {
             }
             None => panic!("invalid gc index"),
         }
+    }
+
+    pub fn mark(&mut self, index: usize) {
+        self.set(index, State::Used);
+    }
+
+    pub fn is_marked(&self, index: usize) -> bool {
+        matches!(self.get(index), Some(State::Used))
     }
 
     pub fn capacity(&self) -> usize {

@@ -1,4 +1,4 @@
-use crate::vm::node::{Node, Value};
+use crate::vm::node::Node;
 use crate::vm::Vm;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -41,8 +41,8 @@ impl Vm {
         let mut cur = program.iter();
         let mut result: Vec<(String, Vec<String>, Vec<String>)> = vec![];
         while let Some(node) = cur.next() {
-            result.push(match node.val {
-                Value::OpCode(ref op) => match op {
+            result.push(match node {
+                Node::OpCode(ref op) => match op {
                     OpCode::Add => ("ADD".into(), vec![], vec![]),
                     OpCode::Car => ("CAR".into(), vec![], vec![]),
                     OpCode::Cdr => ("CDR".into(), vec![], vec![]),

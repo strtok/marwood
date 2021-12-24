@@ -3,8 +3,9 @@ use crate::cell::Cell;
 use crate::vm::gc;
 use crate::vm::gc::State;
 use crate::vm::node::TaggedPtr::{NodePtr, SymbolPtr};
-use crate::vm::node::{FixedNum, Node, Ptr, Value};
-use crate::vm::string_heap;
+use crate::vm::node::{Node, Ptr};
+use log::trace;
+use std::collections::HashMap;
 use std::ops::Deref;
 
 #[derive(Debug)]
@@ -13,17 +14,21 @@ pub struct Heap {
     free_list: Vec<usize>,
     heap: Vec<Node>,
     heap_map: gc::Map,
-    pub string_heap: string_heap::Heap,
+    str_map: HashMap<String, usize>,
 }
 
 impl Heap {
+    /// New
+    ///
+    /// Construct a new node of the given chunk size, and allocating an initial
+    /// chunk of free nodes.
     pub fn new(chunk_size: usize) -> Heap {
         Heap {
             chunk_size,
             heap: vec![Node::undefined(); chunk_size],
             free_list: (0..chunk_size).rev().into_iter().collect(),
             heap_map: gc::Map::new(chunk_size),
-            string_heap: string_heap::Heap::new(chunk_size),
+            str_map: HashMap::new(),
         }
     }
 
@@ -36,16 +41,39 @@ impl Heap {
         ptr
     }
 
+    /// Free
+    ///
+    /// Free a node, overwriting its value with Undefined and
+    /// adding it back to the free list.
+    pub fn free(&mut self, ptr: usize) {
+        self.heap_map.set(ptr, State::Free);
+        if let Some(Node::Symbol(sym)) = self.heap.get(ptr) {
+            self.str_map.remove(&**sym);
+        }
+        *self.heap.get_mut(ptr).unwrap() = Node::Undefined;
+        self.free_list.push(ptr);
+    }
+
     /// Put
     ///
     /// Put the given cell value on the next available free node in the
     /// heap and return the position of the node.
-    pub fn put<T: Into<Value> + Clone>(&mut self, val: T) -> Node {
-        match val.into() {
-            Value::Ptr(ptr) => ptr.into(),
-            val => {
+    pub fn put<T: Into<Node> + Clone>(&mut self, node: T) -> Node {
+        let node = node.into();
+        match &node {
+            Node::Ptr(ptr) => ptr.into(),
+            Node::Symbol(sym) => match self.str_map.get(sym.deref()) {
+                Some(ptr) => Node::symbol_ptr(*ptr),
+                None => {
+                    let ptr = self.alloc();
+                    *self.heap.get_mut(ptr).expect("heap index is out of bounds") = node.clone();
+                    self.str_map.insert(sym.deref().into(), ptr);
+                    Node::symbol_ptr(ptr)
+                }
+            },
+            node => {
                 let ptr = self.alloc();
-                *self.heap.get_mut(ptr).expect("heap index is out of bounds") = Node::new(val);
+                *self.heap.get_mut(ptr).expect("heap index is out of bounds") = node.clone();
                 Node::from(Ptr::new_node_ptr(ptr))
             }
         }
@@ -61,24 +89,18 @@ impl Heap {
     /// `ast` - The structure to allocate recursively on the heap.
     pub fn put_cell(&mut self, ast: &cell::Cell) -> Node {
         match *ast {
-            cell::Cell::Undefined => self.put(Value::Undefined),
-            cell::Cell::Void => self.put(Value::Void),
-            cell::Cell::Nil => self.put(Value::Nil),
-            cell::Cell::Number(val) => self.put(Value::FixedNum(val.into())),
-            cell::Cell::Bool(val) => self.put(Value::Bool(val)),
+            cell::Cell::Undefined => self.put(Node::Undefined),
+            cell::Cell::Void => self.put(Node::Void),
+            cell::Cell::Nil => self.put(Node::Nil),
+            cell::Cell::Number(val) => self.put(Node::FixedNum(val)),
+            cell::Cell::Bool(val) => self.put(Node::Bool(val)),
             cell::Cell::Pair(ref car, ref cdr) => {
-                match (
-                    self.put_cell(car.deref()).val,
-                    self.put_cell(cdr.deref()).val,
-                ) {
-                    (Value::Ptr(car), Value::Ptr(cdr)) => self.put(Value::Pair(car, cdr)),
+                match (self.put_cell(car.deref()), self.put_cell(cdr.deref())) {
+                    (Node::Ptr(car), Node::Ptr(cdr)) => self.put(Node::Pair(car, cdr)),
                     _ => panic!("expected ptr, got {:?}", ast),
                 }
             }
-            cell::Cell::Symbol(ref sym) => {
-                let node = self.string_heap.put_symbol(sym);
-                self.put(node)
-            }
+            cell::Cell::Symbol(ref sym) => self.put(Node::symbol(sym.clone())),
         }
     }
 
@@ -110,10 +132,10 @@ impl Heap {
     /// # Arguments
     /// `node` - The ptr node
     pub fn get(&self, node: &Node) -> Node {
-        match node.val {
-            Value::Ptr(ptr) => match ptr.get() {
+        match node {
+            Node::Ptr(ptr) => match ptr.get() {
                 NodePtr(ptr) => self.get_at_index(ptr).clone(),
-                SymbolPtr(ptr) => Node::symbol(ptr),
+                SymbolPtr(ptr) => self.get_at_index(ptr).clone(),
             },
             _ => node.clone(),
         }
@@ -129,22 +151,85 @@ impl Heap {
     /// # Arguments
     /// `node` - The node to map to a cell
     pub fn get_as_cell(&self, node: &Node) -> Cell {
-        match node.val {
-            Value::Ptr(ptr) => match ptr.get() {
-                SymbolPtr(ptr) => self.string_heap.get_at_index(ptr).into(),
-                NodePtr(ptr) => self.get_as_cell(self.get_at_index(ptr)),
-            },
-            Value::FixedNum(FixedNum(val)) => Cell::Number(val),
-            Value::Nil => Cell::Nil,
-            Value::Bool(val) => Cell::Bool(val),
-            Value::Pair(car, cdr) => {
+        match node {
+            Node::Ptr(ptr) => self.get_as_cell(self.get_at_index(ptr.as_usize())),
+            Node::FixedNum(val) => Cell::Number(*val),
+            Node::Nil => Cell::Nil,
+            Node::Bool(val) => Cell::Bool(*val),
+            Node::Pair(ref car, cdr) => {
                 Cell::new_pair(self.get_as_cell(&car.into()), self.get_as_cell(&cdr.into()))
             }
-            Value::EnvSlot(_) => panic!("unexpected environment slot"),
-            Value::OpCode(_) => panic!("unexpected opcode"),
-            Value::Undefined => Cell::Undefined,
-            Value::Void => Cell::Void,
+            Node::EnvSlot(_) => panic!("unexpected environment slot"),
+            Node::OpCode(_) => panic!("unexpected opcode"),
+            Node::Undefined => Cell::Undefined,
+            Node::Symbol(s) => Cell::Symbol(s.deref().into()),
+            Node::Void => Cell::Void,
         }
+    }
+
+    /// Mark
+    ///
+    /// Mark the given root node in the gc map, and recursively mark any of
+    /// its children.
+    ///
+    /// # Arguments
+    /// `root` - The root node to mark
+    pub fn mark(&mut self, root: Ptr) {
+        let mut ptr = root;
+        loop {
+            let node = match self.heap.get(ptr.as_usize()) {
+                Some(node) => node.clone(),
+                None => {
+                    return;
+                }
+            };
+
+            // Avoid cyclic graphs by following already marked paths
+            if self.heap_map.is_marked(ptr.as_usize()) {
+                return;
+            } else {
+                self.heap_map.mark(ptr.as_usize());
+            }
+
+            trace!("mark {} => {}", ptr.as_usize(), node);
+            match node {
+                Node::Pair(car, cdr) => {
+                    self.mark(car);
+                    ptr = cdr;
+                }
+                Node::Ptr(cdr) => {
+                    ptr = cdr;
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Sweep
+    ///
+    /// Iterate the heap map. Performing the following for each object state:
+    ///
+    /// * State::Free - no op
+    /// * State::Allocated - Mark the node as State::Free and append it to the
+    ///        free list.
+    /// * State::Used - Mark the node as allocated.
+    pub fn sweep(&mut self) {
+        let before = self.free_list.len();
+        for it in 0..self.heap.len() {
+            match self.heap_map.get(it) {
+                Some(State::Allocated) => {
+                    trace!("free {} => {}", it, self.heap.get(it).unwrap());
+                    self.free(it);
+                }
+                Some(State::Used) => {
+                    self.heap_map.set(it, State::Allocated);
+                }
+                _ => {}
+            }
+        }
+        trace!("freed {} node(s)", self.free_list.len() - before);
     }
 }
 
@@ -152,7 +237,6 @@ impl Heap {
 mod tests {
     use super::*;
     use crate::cell::Cell;
-    use crate::vm::node::Value;
     use crate::{cell, cons};
     const CHUNK_SIZE: usize = 1024;
 
@@ -165,10 +249,17 @@ mod tests {
         assert_eq!(heap.heap_map.get(0), Some(State::Allocated));
         assert_eq!(heap.alloc(), 1);
         assert_eq!(heap.heap_map.get(1), Some(State::Allocated));
-        heap.get_at_index_mut(0).val = Value::FixedNum(42.into());
-        heap.get_at_index_mut(1).val = Value::FixedNum(43.into());
-        assert_eq!(heap.get_at_index(0).val, Value::FixedNum(42.into()));
-        assert_eq!(heap.get_at_index(1).val, Value::FixedNum(43.into()));
+        *heap.get_at_index_mut(0) = Node::FixedNum(42.into());
+        *heap.get_at_index_mut(1) = Node::FixedNum(43.into());
+        assert_eq!(heap.get_at_index(0), &Node::FixedNum(42.into()));
+        assert_eq!(heap.get_at_index(1), &Node::FixedNum(43.into()));
+    }
+
+    #[test]
+    fn symbols_are_interned() {
+        let mut heap = Heap::new(CHUNK_SIZE);
+        assert_eq!(heap.put_cell(&cell!["foo"]), heap.put_cell(&cell!["foo"]));
+        assert_ne!(heap.put_cell(&cell!["foo"]), heap.put_cell(&cell!["bar"]));
     }
 
     #[test]
@@ -205,5 +296,37 @@ mod tests {
             let node = heap.put_cell(&cell!["foo"]);
             assert_eq!(heap.get_as_cell(&node), cell!["foo"]);
         }
+    }
+
+    #[test]
+    fn single_node_mark() {
+        let mut heap = Heap::new(CHUNK_SIZE);
+        let root = heap.put_cell(&cell![42]);
+        assert_eq!(heap.heap_map.get(0), Some(State::Allocated));
+        heap.mark(root.as_ptr().unwrap());
+        assert_eq!(heap.heap_map.get(0), Some(State::Used));
+    }
+
+    #[test]
+    fn pair_mark() {
+        let mut heap = Heap::new(CHUNK_SIZE);
+        let root = heap.put_cell(&cons![100, 200]);
+        assert_eq!(heap.heap_map.get(0), Some(State::Allocated));
+        assert_eq!(heap.heap_map.get(1), Some(State::Allocated));
+        assert_eq!(heap.heap_map.get(2), Some(State::Allocated));
+        heap.mark(root.as_ptr().unwrap());
+        assert_eq!(heap.heap_map.get(0), Some(State::Used));
+        assert_eq!(heap.heap_map.get(1), Some(State::Used));
+        assert_eq!(heap.heap_map.get(2), Some(State::Used));
+    }
+
+    #[test]
+    fn cyclic_mark_and_sweep() {
+        let mut heap = Heap::new(CHUNK_SIZE);
+        let car = heap.put_cell(&cell![100]);
+        let pair = heap.put(Node::Pair(car.as_ptr().unwrap(), Ptr::new_node_ptr(1)));
+        heap.mark(pair.as_ptr().unwrap());
+        heap.sweep();
+        assert_eq!(heap.free_list.len(), CHUNK_SIZE - 2);
     }
 }
