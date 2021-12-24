@@ -2,6 +2,15 @@ use crate::vm::node::Ptr;
 use crate::vm::Vm;
 
 impl Vm {
+    /// Run GC
+    ///
+    /// Run GC performs two steps in order:
+    ///
+    /// 1. It performs a mark on all roots:
+    ///    * The global environment
+    ///    * Any data referecned by the running program & stack
+    ///
+    /// 2. A sweep, freeing any nodes not marked as used in step #1.
     pub fn run_gc(&mut self) {
         self.globenv
             .iter_bindings()
