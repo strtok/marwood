@@ -1,6 +1,6 @@
 use crate::cell::Cell;
-use crate::vm::node::Node;
 use crate::vm::node::TaggedPtr::SymbolPtr;
+use crate::vm::node::{Node, Ptr};
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, VariableNotBound,
@@ -172,6 +172,28 @@ impl Vm {
             .ok_or(InvalidBytecode);
         self.ip += 1;
         op
+    }
+
+    /// Run GC
+    ///
+    /// Run GC performs two steps in order:
+    ///
+    /// 1. It performs a mark on all roots:
+    ///    * The global environment
+    ///    * Any data referecned by the running program & stack
+    ///
+    /// 2. A sweep, freeing any nodes not marked as used in step #1.
+    pub fn run_gc(&mut self) {
+        self.globenv
+            .iter_bindings()
+            .for_each(|it| self.heap.mark(Ptr::new_symbol_ptr(*it)));
+
+        self.globenv
+            .iter_slots()
+            .filter_map(|it| it.as_ptr())
+            .for_each(|it| self.heap.mark(it));
+
+        self.heap.sweep();
     }
 }
 
