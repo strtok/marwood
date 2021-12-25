@@ -305,10 +305,14 @@ mod tests {
         assert_eq!(heap.heap_map.get(0), Some(State::Allocated));
         heap.mark(root.as_ptr().unwrap());
         assert_eq!(heap.heap_map.get(0), Some(State::Used));
+        heap.sweep();
+        assert_eq!(heap.free_list.len(), CHUNK_SIZE - 1);
+        heap.sweep();
+        assert_eq!(heap.free_list.len(), CHUNK_SIZE);
     }
 
     #[test]
-    fn pair_mark() {
+    fn pair_mark_and_sweep() {
         let mut heap = Heap::new(CHUNK_SIZE);
         let root = heap.put_cell(&cons![100, 200]);
         assert_eq!(heap.heap_map.get(0), Some(State::Allocated));
@@ -318,6 +322,10 @@ mod tests {
         assert_eq!(heap.heap_map.get(0), Some(State::Used));
         assert_eq!(heap.heap_map.get(1), Some(State::Used));
         assert_eq!(heap.heap_map.get(2), Some(State::Used));
+        heap.sweep();
+        assert_eq!(heap.free_list.len(), CHUNK_SIZE - 3);
+        heap.sweep();
+        assert_eq!(heap.free_list.len(), CHUNK_SIZE);
     }
 
     #[test]
