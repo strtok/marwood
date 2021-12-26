@@ -105,11 +105,11 @@ impl Node {
     }
 
     pub fn is_undefined(&self) -> bool {
-        matches!(self, Node::Undefined)
+        *self == Node::Undefined
     }
 
     pub fn is_nil(&self) -> bool {
-        matches!(self, Node::Nil)
+        *self == Node::Nil
     }
 
     pub fn is_opcode(&self) -> bool {

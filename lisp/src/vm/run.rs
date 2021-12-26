@@ -74,7 +74,7 @@ impl Vm {
             OpCode::EnvGet => {
                 let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
                 self.acc = self.globenv.get_slot(env_slot);
-                if matches!(self.acc, Node::Undefined) {
+                if self.acc == Node::Undefined {
                     return Err(VariableNotBound(
                         self.get_str_bound_to(Node::env_slot(env_slot)),
                     ));
