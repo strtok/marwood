@@ -1,5 +1,4 @@
 use crate::vm::opcode::OpCode;
-use crate::vm::vcell::TaggedPtr::{SymbolPtr, VCellPtr};
 use std::fmt;
 use std::rc::Rc;
 
@@ -10,53 +9,11 @@ pub enum VCell {
     FixedNum(i64),
     Nil,
     OpCode(OpCode),
-    Pair(Ptr, Ptr),
-    Ptr(Ptr),
+    Pair(usize, usize),
+    Ptr(usize),
     Symbol(Rc<String>),
     Undefined,
     Void,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Ptr(u64);
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum TaggedPtr {
-    VCellPtr(usize),
-    SymbolPtr(usize),
-}
-
-impl Ptr {
-    const fn mask() -> u64 {
-        0xFFFFFFFF << 48
-    }
-
-    const fn sym_flag() -> u64 {
-        0b1 << 48
-    }
-
-    pub fn new_vcell_ptr(ptr: usize) -> Ptr {
-        Ptr(ptr as u64)
-    }
-
-    pub fn new_symbol_ptr(ptr: usize) -> Ptr {
-        let ptr = (ptr as u64) | Self::sym_flag();
-        Ptr(ptr)
-    }
-
-    pub fn get(&self) -> TaggedPtr {
-        if (self.0 & Self::sym_flag()) > 0 {
-            TaggedPtr::SymbolPtr((self.0 & !Self::mask()) as usize)
-        } else {
-            TaggedPtr::VCellPtr(self.0 as usize)
-        }
-    }
-
-    pub fn as_usize(&self) -> usize {
-        match self.get() {
-            TaggedPtr::SymbolPtr(ptr) | TaggedPtr::VCellPtr(ptr) => ptr,
-        }
-    }
 }
 
 impl VCell {
@@ -73,10 +30,10 @@ impl VCell {
     }
 
     pub fn ptr(val: usize) -> VCell {
-        VCell::Ptr(Ptr::new_vcell_ptr(val))
+        VCell::Ptr(val)
     }
 
-    pub fn pair(car: Ptr, cdr: Ptr) -> VCell {
+    pub fn pair(car: usize, cdr: usize) -> VCell {
         VCell::Pair(car, cdr)
     }
 
@@ -86,10 +43,6 @@ impl VCell {
 
     pub fn symbol<T: Into<String>>(ptr: T) -> VCell {
         VCell::Symbol(Rc::new(ptr.into()))
-    }
-
-    pub fn symbol_ptr<T: Into<usize>>(ptr: T) -> VCell {
-        Ptr::new_symbol_ptr(ptr.into()).into()
     }
 
     pub fn nil() -> VCell {
@@ -125,14 +78,14 @@ impl VCell {
 
     pub fn as_car(&self) -> Option<VCell> {
         match self {
-            VCell::Pair(car, _) => Some(car.into()),
+            VCell::Pair(car, _) => Some(VCell::Ptr(*car)),
             _ => None,
         }
     }
 
     pub fn as_cdr(&self) -> Option<VCell> {
         match self {
-            VCell::Pair(_, cdr) => Some(cdr.into()),
+            VCell::Pair(_, cdr) => Some(VCell::Ptr(*cdr)),
             _ => None,
         }
     }
@@ -151,7 +104,7 @@ impl VCell {
         }
     }
 
-    pub fn as_ptr(&self) -> Option<Ptr> {
+    pub fn as_ptr(&self) -> Option<usize> {
         match self {
             VCell::Ptr(ptr) => Some(*ptr),
             _ => None,
@@ -161,26 +114,6 @@ impl VCell {
     pub fn as_env_slot(&self) -> Option<usize> {
         match self {
             VCell::EnvSlot(slot) => Some(*slot),
-            _ => None,
-        }
-    }
-
-    pub fn as_symbol_ptr(&self) -> Option<usize> {
-        match self {
-            VCell::Ptr(ptr) => match ptr.get() {
-                SymbolPtr(ptr) => Some(ptr),
-                _ => None,
-            },
-            _ => None,
-        }
-    }
-
-    pub fn as_vcell_ptr(&self) -> Option<usize> {
-        match self {
-            VCell::Ptr(ptr) => match ptr.get() {
-                VCellPtr(ptr) => Some(ptr),
-                _ => None,
-            },
             _ => None,
         }
     }
@@ -204,30 +137,15 @@ impl From<i64> for VCell {
     }
 }
 
-impl From<Ptr> for VCell {
-    fn from(ptr: Ptr) -> Self {
-        VCell::Ptr(ptr)
-    }
-}
-
-impl From<&Ptr> for VCell {
-    fn from(ptr: &Ptr) -> Self {
-        VCell::Ptr(*ptr)
-    }
-}
-
 impl fmt::Display for VCell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
-            VCell::Ptr(ptr) => match ptr.get() {
-                SymbolPtr(ptr) => write!(f, "sym[{}]", ptr),
-                VCellPtr(ptr) => write!(f, "[{}]", ptr),
-            },
+            VCell::Ptr(ptr) => write!(f, "[{}]", ptr),
             VCell::EnvSlot(slot) => write!(f, "env[{}]", slot),
             VCell::OpCode(val) => write!(f, "{:?}", val),
-            VCell::Pair(car, cdr) => write!(f, "([{}], [{}])", car.as_usize(), cdr.as_usize()),
+            VCell::Pair(car, cdr) => write!(f, "([{}], [{}])", car, cdr),
             VCell::Undefined => write!(f, "undefined"),
             VCell::FixedNum(val) => write!(f, "{}", val),
             VCell::Nil => write!(f, "()"),
@@ -255,14 +173,5 @@ mod tests {
     #[test]
     fn new_cell_is_undefined() {
         assert!(matches!(VCell::undefined(), VCell::Undefined));
-    }
-
-    #[test]
-    fn ptr_tagged_type() {
-        let vcell_ref = Ptr::new_vcell_ptr(50);
-        assert_eq!(vcell_ref.get(), TaggedPtr::VCellPtr(50));
-
-        let sym_ref = Ptr::new_symbol_ptr(50);
-        assert_eq!(sym_ref.get(), TaggedPtr::SymbolPtr(50));
     }
 }

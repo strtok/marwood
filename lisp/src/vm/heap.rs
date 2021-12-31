@@ -2,8 +2,7 @@ use crate::cell;
 use crate::cell::Cell;
 use crate::vm::gc;
 use crate::vm::gc::State;
-use crate::vm::vcell::TaggedPtr::{SymbolPtr, VCellPtr};
-use crate::vm::vcell::{Ptr, VCell};
+use crate::vm::vcell::VCell;
 use log::trace;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -61,20 +60,20 @@ impl Heap {
     pub fn put<T: Into<VCell> + Clone>(&mut self, vcell: T) -> VCell {
         let vcell = vcell.into();
         match &vcell {
-            VCell::Ptr(ptr) => ptr.into(),
+            VCell::Ptr(_) => vcell,
             VCell::Symbol(sym) => match self.str_map.get(sym.deref()) {
-                Some(ptr) => VCell::symbol_ptr(*ptr),
+                Some(ptr) => VCell::ptr(*ptr),
                 None => {
                     let ptr = self.alloc();
                     *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
                     self.str_map.insert(sym.deref().into(), ptr);
-                    VCell::symbol_ptr(ptr)
+                    VCell::ptr(ptr)
                 }
             },
             vcell => {
                 let ptr = self.alloc();
                 *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
-                VCell::from(Ptr::new_vcell_ptr(ptr))
+                VCell::Ptr(ptr)
             }
         }
     }
@@ -133,10 +132,7 @@ impl Heap {
     /// `vcell` - The ptr vcell
     pub fn get(&self, vcell: &VCell) -> VCell {
         match vcell {
-            VCell::Ptr(ptr) => match ptr.get() {
-                VCellPtr(ptr) => self.get_at_index(ptr).clone(),
-                SymbolPtr(ptr) => self.get_at_index(ptr).clone(),
-            },
+            VCell::Ptr(ptr) => self.get_at_index(*ptr).clone(),
             _ => vcell.clone(),
         }
     }
@@ -152,13 +148,14 @@ impl Heap {
     /// `vcell` - The vcell to map to a cell
     pub fn get_as_cell(&self, vcell: &VCell) -> Cell {
         match vcell {
-            VCell::Ptr(ptr) => self.get_as_cell(self.get_at_index(ptr.as_usize())),
+            VCell::Ptr(ptr) => self.get_as_cell(self.get_at_index(*ptr)),
             VCell::FixedNum(val) => Cell::Number(*val),
             VCell::Nil => Cell::Nil,
             VCell::Bool(val) => Cell::Bool(*val),
-            VCell::Pair(ref car, cdr) => {
-                Cell::new_pair(self.get_as_cell(&car.into()), self.get_as_cell(&cdr.into()))
-            }
+            VCell::Pair(ref car, cdr) => Cell::new_pair(
+                self.get_as_cell(&VCell::Ptr(*car)),
+                self.get_as_cell(&VCell::Ptr(*cdr)),
+            ),
             VCell::EnvSlot(_) => panic!("unexpected environment slot"),
             VCell::OpCode(_) => panic!("unexpected opcode"),
             VCell::Undefined => Cell::Undefined,
@@ -174,10 +171,10 @@ impl Heap {
     ///
     /// # Arguments
     /// `root` - The root vcell to mark
-    pub fn mark(&mut self, root: Ptr) {
+    pub fn mark(&mut self, root: usize) {
         let mut ptr = root;
         loop {
-            let vcell = match self.heap.get(ptr.as_usize()) {
+            let vcell = match self.heap.get(ptr) {
                 Some(vcell) => vcell.clone(),
                 None => {
                     return;
@@ -185,13 +182,13 @@ impl Heap {
             };
 
             // Avoid cyclic graphs by following already marked paths
-            if self.heap_map.is_marked(ptr.as_usize()) {
+            if self.heap_map.is_marked(ptr) {
                 return;
             } else {
-                self.heap_map.mark(ptr.as_usize());
+                self.heap_map.mark(ptr);
             }
 
-            trace!("mark {} => {}", ptr.as_usize(), vcell);
+            trace!("mark {} => {}", ptr, vcell);
             match vcell {
                 VCell::Pair(car, cdr) => {
                     self.mark(car);
@@ -332,7 +329,7 @@ mod tests {
     fn cyclic_mark_and_sweep() {
         let mut heap = Heap::new(CHUNK_SIZE);
         let car = heap.put_cell(&cell![100]);
-        let pair = heap.put(VCell::Pair(car.as_ptr().unwrap(), Ptr::new_vcell_ptr(1)));
+        let pair = heap.put(VCell::Pair(car.as_ptr().unwrap(), 1));
         heap.mark(pair.as_ptr().unwrap());
         heap.sweep();
         assert_eq!(heap.free_list.len(), CHUNK_SIZE - 2);

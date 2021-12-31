@@ -3,8 +3,7 @@ use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, VariableNotBound,
 };
-use crate::vm::vcell::TaggedPtr::SymbolPtr;
-use crate::vm::vcell::{Ptr, VCell};
+use crate::vm::vcell::VCell;
 use crate::vm::{Error, Vm};
 
 impl Vm {
@@ -119,18 +118,15 @@ impl Vm {
         let vcell = vcell.into();
         match vcell {
             VCell::EnvSlot(slot) => match self.globenv.get_symbol(slot) {
-                Some(sym_ref) => self.get_str_bound_to(VCell::symbol_ptr(sym_ref)),
+                Some(sym_ref) => self.get_str_bound_to(VCell::Ptr(sym_ref)),
                 None => "#<undefined>".into(),
             },
-            VCell::Ptr(ptr) => match ptr.get() {
-                SymbolPtr(_) => self
-                    .heap
-                    .get(&vcell)
-                    .as_symbol()
-                    .unwrap_or("#<undefined>")
-                    .into(),
-                _ => "#<undefined>".into(),
-            },
+            VCell::Ptr(_) => self
+                .heap
+                .get(&vcell)
+                .as_symbol()
+                .unwrap_or("#<undefined>")
+                .into(),
             _ => "#<undefined>".into(),
         }
     }
@@ -185,7 +181,7 @@ impl Vm {
     pub fn run_gc(&mut self) {
         self.globenv
             .iter_bindings()
-            .for_each(|it| self.heap.mark(Ptr::new_symbol_ptr(*it)));
+            .for_each(|it| self.heap.mark(*it));
 
         self.globenv
             .iter_slots()
