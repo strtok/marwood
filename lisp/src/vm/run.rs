@@ -97,7 +97,7 @@ impl Vm {
                 let vcell = self.deref_operand()?;
                 self.store_using_operand(vcell)?;
             }
-            OpCode::MovVal => {
+            OpCode::MovImmediate => {
                 let vcell = self.read_operand()?;
                 self.store_using_operand(vcell)?;
             }

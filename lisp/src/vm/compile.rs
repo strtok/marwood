@@ -149,7 +149,7 @@ impl Vm {
     /// special in that the value in cell is not evaluated before being placed
     /// on the heap.
     pub fn compile_quote(&mut self, bc: &mut Vec<VCell>, cell: &Cell) -> Result<(), Error> {
-        bc.push(OpCode::MovVal.into());
+        bc.push(OpCode::MovImmediate.into());
         bc.push(self.heap.put_cell(cell));
         bc.push(VCell::Acc);
         Ok(())

@@ -141,13 +141,13 @@ impl From<i64> for VCell {
 impl fmt::Display for VCell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            VCell::Acc => write!(f, "acc"),
+            VCell::Acc => write!(f, "%acc"),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
-            VCell::Ptr(ptr) => write!(f, "[{}]", ptr),
-            VCell::EnvSlot(slot) => write!(f, "g[{}]", slot),
+            VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
+            VCell::EnvSlot(slot) => write!(f, "g${:02x}", slot),
             VCell::OpCode(val) => write!(f, "{:?}", val),
-            VCell::Pair(car, cdr) => write!(f, "([{}], [{}])", car, cdr),
+            VCell::Pair(car, cdr) => write!(f, "(${:02x}, ${:02x})", car, cdr),
             VCell::Undefined => write!(f, "undefined"),
             VCell::FixedNum(val) => write!(f, "{}", val),
             VCell::Nil => write!(f, "()"),

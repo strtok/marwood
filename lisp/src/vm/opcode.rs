@@ -11,7 +11,7 @@ pub enum OpCode {
     EnvSet,
     Eq,
     Mov,
-    MovVal,
+    MovImmediate,
     Mul,
     Halt,
     Push,
@@ -63,16 +63,25 @@ impl Vm {
                         let dest = cur.next().unwrap();
                         (
                             "MOV".into(),
-                            vec![format!("[{}]", src.to_string()), dest.to_string()],
+                            vec![
+                                format!("[{}]", src.to_string()),
+                                format!("[{}]", dest.to_string()),
+                            ],
                             vec![],
                         )
                     }
-                    OpCode::MovVal => {
+                    OpCode::MovImmediate => {
                         let src = cur.next().unwrap();
                         let dest = cur.next().unwrap();
                         (
                             "MOV".into(),
-                            vec![src.to_string(), dest.to_string()],
+                            vec![
+                                src.to_string(),
+                                match dest {
+                                    VCell::Acc => dest.to_string(),
+                                    _ => format!("[{}]", dest.to_string()),
+                                },
+                            ],
                             vec![],
                         )
                     }
@@ -97,7 +106,7 @@ mod tests {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
             vm.bc = vec![
-                OpCode::MovVal.into(),
+                OpCode::MovImmediate.into(),
                 ptr.clone(),
                 VCell::Acc,
                 OpCode::Halt.into(),
