@@ -1,6 +1,6 @@
 use crate::cell::Cell;
-use crate::vm::node::Node;
 use crate::vm::opcode::OpCode;
+use crate::vm::vcell::VCell;
 use crate::vm::Error::{InvalidArgs, InvalidNumArgs};
 use crate::vm::{Error, Vm};
 use std::ops::Deref;
@@ -18,14 +18,14 @@ macro_rules! cdr {
 }
 
 impl Vm {
-    pub fn compile(&mut self, cell: &Cell) -> Result<Vec<Node>, Error> {
+    pub fn compile(&mut self, cell: &Cell) -> Result<Vec<VCell>, Error> {
         let mut bc = vec![];
         self.compile_expression(&mut bc, cell)?;
-        bc.push(Node::from(OpCode::Halt));
+        bc.push(VCell::from(OpCode::Halt));
         Ok(bc)
     }
 
-    pub fn compile_expression(&mut self, bc: &mut Vec<Node>, cell: &Cell) -> Result<(), Error> {
+    pub fn compile_expression(&mut self, bc: &mut Vec<VCell>, cell: &Cell) -> Result<(), Error> {
         match cell {
             Cell::Pair(car, cdr) => match car.deref() {
                 Cell::Symbol(s) if s.eq("define") => self.compile_define(bc, cdr)?,
@@ -57,10 +57,10 @@ impl Vm {
     ///
     /// Given the symbol in sym, compile to a ENVGET instruction to fetch
     /// the value bound to the symbol.
-    pub fn compile_symbol_lookup(&mut self, bc: &mut Vec<Node>, sym: &Cell) -> Result<(), Error> {
+    pub fn compile_symbol_lookup(&mut self, bc: &mut Vec<VCell>, sym: &Cell) -> Result<(), Error> {
         let sym_ref = self.heap.put_cell(sym);
         let sym_ref = sym_ref.as_symbol_ptr().expect("expected symbol");
-        let env_slot = Node::env_slot(self.globenv.get_binding(sym_ref));
+        let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
         bc.push(OpCode::EnvGet.into());
         bc.push(env_slot);
         Ok(())
@@ -69,7 +69,7 @@ impl Vm {
     /// Compile Define
     ///
     /// (define variable expression)
-    pub fn compile_define(&mut self, bc: &mut Vec<Node>, lat: &Cell) -> Result<(), Error> {
+    pub fn compile_define(&mut self, bc: &mut Vec<VCell>, lat: &Cell) -> Result<(), Error> {
         if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
             return Err(InvalidNumArgs("define".into()));
         }
@@ -80,7 +80,7 @@ impl Vm {
             self.heap.put_cell(symbol).as_symbol_ptr().ok_or_else(|| {
                 InvalidArgs("define".into(), "variable".into(), symbol.to_string())
             })?;
-        let env_slot = Node::env_slot(self.globenv.get_binding(sym_ref));
+        let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
         bc.push(OpCode::EnvSet.into());
         bc.push(env_slot);
         Ok(())
@@ -99,7 +99,7 @@ impl Vm {
         &mut self,
         op: OpCode,
         name: &str,
-        bc: &mut Vec<Node>,
+        bc: &mut Vec<VCell>,
         lat: &Cell,
     ) -> Result<(), Error> {
         if lat.is_nil() || !cdr!(lat).is_nil() {
@@ -123,7 +123,7 @@ impl Vm {
         &mut self,
         op: OpCode,
         name: &str,
-        bc: &mut Vec<Node>,
+        bc: &mut Vec<VCell>,
         lat: &Cell,
     ) -> Result<(), Error> {
         if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
@@ -141,7 +141,7 @@ impl Vm {
     /// Quote is compiled as a single argument instruction (QUOTE VAL). Quote is
     /// special in that the value in cell is not evaluated before being placed
     /// on the heap.
-    pub fn compile_quote(&mut self, bc: &mut Vec<Node>, cell: &Cell) -> Result<(), Error> {
+    pub fn compile_quote(&mut self, bc: &mut Vec<VCell>, cell: &Cell) -> Result<(), Error> {
         bc.push(OpCode::Quote.into());
         bc.push(self.heap.put_cell(cell));
         Ok(())
@@ -164,7 +164,7 @@ impl Vm {
         &mut self,
         op: OpCode,
         name: &str,
-        bc: &mut Vec<Node>,
+        bc: &mut Vec<VCell>,
         lat: &Cell,
     ) -> Result<(), Error> {
         let mut lat = lat;

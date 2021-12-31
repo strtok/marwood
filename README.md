@@ -8,7 +8,7 @@
 [Deploy]: https://github.com/strtok/lisp/actions/workflows/deploy.yml
 This is a work in progress [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) virtual machine for rust, featuring:
 
-* a 64 bit virtual machine and heap composed of 3x64 bit nodes (cells)
+* a 64 bit virtual machine and heap composed of 3x64 bit cells
 * mark & sweep garbage collection
 * a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
 * a Web Assembly based repl using [xterm-js-rs](https://github.com/segeljakt/xterm-js-rs) auto deployed to [github pages](https://strtok.github.io/lisp/)

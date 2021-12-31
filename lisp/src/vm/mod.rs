@@ -1,26 +1,26 @@
 use crate::cell::Cell;
 use crate::vm::environment::Environment;
 use crate::vm::heap::Heap;
-use crate::vm::node::Node;
+use crate::vm::vcell::VCell;
 use log::trace;
 
 pub mod compile;
 pub mod environment;
 pub mod gc;
 pub mod heap;
-pub mod node;
 pub mod opcode;
 pub mod run;
+pub mod vcell;
 
 const HEAP_SIZE: usize = 1024;
 
 #[derive(Debug)]
 pub struct Vm {
     heap: Heap,
-    bc: Vec<Node>,
-    stack: Vec<Node>,
+    bc: Vec<VCell>,
+    stack: Vec<VCell>,
     globenv: Environment,
-    acc: Node,
+    acc: VCell,
     ip: usize,
 }
 
@@ -34,7 +34,7 @@ impl Vm {
             bc: vec![],
             stack: vec![],
             globenv: Environment::new(),
-            acc: Node::undefined(),
+            acc: VCell::undefined(),
             ip: 0,
         }
     }

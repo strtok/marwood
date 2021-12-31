@@ -8,7 +8,7 @@
 /// * Allocated
 /// * Used
 ///
-/// The initial state for a node is free (0x0, and then when allocated
+/// The initial state for a vcell is free (0x0, and then when allocated
 /// the state is transitioned to Allocated.
 #[derive(Debug)]
 pub struct Map {

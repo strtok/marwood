@@ -1,4 +1,4 @@
-use crate::vm::node::Node;
+use crate::vm::vcell::VCell;
 use crate::vm::Vm;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -18,7 +18,7 @@ pub enum OpCode {
 }
 
 impl Vm {
-    pub fn decompile_text(&self, program: &[Node]) -> String {
+    pub fn decompile_text(&self, program: &[VCell]) -> String {
         let mut text = String::new();
         for it in self.decompile(program) {
             if !it.1.is_empty() && !it.2.is_empty() {
@@ -37,12 +37,12 @@ impl Vm {
         text
     }
 
-    pub fn decompile(&self, program: &[Node]) -> Vec<(String, Vec<String>, Vec<String>)> {
+    pub fn decompile(&self, program: &[VCell]) -> Vec<(String, Vec<String>, Vec<String>)> {
         let mut cur = program.iter();
         let mut result: Vec<(String, Vec<String>, Vec<String>)> = vec![];
-        while let Some(node) = cur.next() {
-            result.push(match node {
-                Node::OpCode(ref op) => match op {
+        while let Some(vcell) = cur.next() {
+            result.push(match vcell {
+                VCell::OpCode(ref op) => match op {
                     OpCode::Add => ("ADD".into(), vec![], vec![]),
                     OpCode::Car => ("CAR".into(), vec![], vec![]),
                     OpCode::Cdr => ("CDR".into(), vec![], vec![]),

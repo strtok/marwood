@@ -1,10 +1,10 @@
 use crate::cell::Cell;
-use crate::vm::node::TaggedPtr::SymbolPtr;
-use crate::vm::node::{Node, Ptr};
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, VariableNotBound,
 };
+use crate::vm::vcell::TaggedPtr::SymbolPtr;
+use crate::vm::vcell::{Ptr, VCell};
 use crate::vm::{Error, Vm};
 
 impl Vm {
@@ -48,9 +48,9 @@ impl Vm {
                     InvalidArgs(proc_name.to_string(), "number".to_string(), y.clone())
                 })?;
                 match op_code {
-                    OpCode::Add => self.acc = self.heap.put(Node::fixed_num(x + y)),
-                    OpCode::Sub => self.acc = self.heap.put(Node::fixed_num(y - x)),
-                    OpCode::Mul => self.acc = self.heap.put(Node::fixed_num(x * y)),
+                    OpCode::Add => self.acc = self.heap.put(VCell::fixed_num(x + y)),
+                    OpCode::Sub => self.acc = self.heap.put(VCell::fixed_num(y - x)),
+                    OpCode::Mul => self.acc = self.heap.put(VCell::fixed_num(x * y)),
                     _ => return Err(InvalidBytecode),
                 };
             }
@@ -68,21 +68,21 @@ impl Vm {
                 let cdr = self.heap.put(cdr);
                 self.acc = self
                     .heap
-                    .put(Node::Pair(car.as_ptr().unwrap(), cdr.as_ptr().unwrap()));
+                    .put(VCell::Pair(car.as_ptr().unwrap(), cdr.as_ptr().unwrap()));
             }
             OpCode::EnvGet => {
                 let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
                 self.acc = self.globenv.get_slot(env_slot);
-                if self.acc == Node::Undefined {
+                if self.acc == VCell::Undefined {
                     return Err(VariableNotBound(
-                        self.get_str_bound_to(Node::env_slot(env_slot)),
+                        self.get_str_bound_to(VCell::env_slot(env_slot)),
                     ));
                 }
             }
             OpCode::EnvSet => {
                 let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
                 self.globenv.put_slot(env_slot, self.acc.clone());
-                self.acc = self.heap.put(Node::void());
+                self.acc = self.heap.put(VCell::void());
             }
             OpCode::Eq => {
                 let arg = self.pop_stack()?;
@@ -109,23 +109,23 @@ impl Vm {
     /// during an error path or debugging.
     ///
     /// # Arguments
-    /// `node` - The node containing an environment slot of sym reference
+    /// `vcell` - The vcell containing an environment slot of sym reference
     /// to provide a reverse lookup for.
     ///
     /// # Returns
     /// Returns the bound symbol, or "#<undefined>" if symbol lookup failed
     /// for any reason.
-    fn get_str_bound_to<T: Into<Node>>(&self, node: T) -> String {
-        let node = node.into();
-        match node {
-            Node::EnvSlot(slot) => match self.globenv.get_symbol(slot) {
-                Some(sym_ref) => self.get_str_bound_to(Node::symbol_ptr(sym_ref)),
+    fn get_str_bound_to<T: Into<VCell>>(&self, vcell: T) -> String {
+        let vcell = vcell.into();
+        match vcell {
+            VCell::EnvSlot(slot) => match self.globenv.get_symbol(slot) {
+                Some(sym_ref) => self.get_str_bound_to(VCell::symbol_ptr(sym_ref)),
                 None => "#<undefined>".into(),
             },
-            Node::Ptr(ptr) => match ptr.get() {
+            VCell::Ptr(ptr) => match ptr.get() {
                 SymbolPtr(_) => self
                     .heap
-                    .get(&node)
+                    .get(&vcell)
                     .as_symbol()
                     .unwrap_or("#<undefined>")
                     .into(),
@@ -138,15 +138,15 @@ impl Vm {
     /// Pop Stack
     ///
     /// Pop a value off the stack. Error if the stack is empty.
-    fn pop_stack(&mut self) -> Result<Node, RuntimeError> {
+    fn pop_stack(&mut self) -> Result<VCell, RuntimeError> {
         self.stack.pop().ok_or(ExpectedStackValue)
     }
 
     /// Read Arg
     ///
-    /// Read an argument node from program[ip], increment ip and
+    /// Read an argument vcell from program[ip], increment ip and
     /// return the value.
-    fn read_arg(&mut self) -> Result<Node, RuntimeError> {
+    fn read_arg(&mut self) -> Result<VCell, RuntimeError> {
         let arg = self
             .bc
             .get(self.ip)
@@ -181,7 +181,7 @@ impl Vm {
     ///    * The global environment
     ///    * Any data referecned by the running program & stack
     ///
-    /// 2. A sweep, freeing any nodes not marked as used in step #1.
+    /// 2. A sweep, freeing any vcells not marked as used in step #1.
     pub fn run_gc(&mut self) {
         self.globenv
             .iter_bindings()
@@ -198,8 +198,8 @@ impl Vm {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum RuntimeError {
-    ExpectedPair(Node),
-    InvalidArgs(String, String, Node),
+    ExpectedPair(VCell),
+    InvalidArgs(String, String, VCell),
     InvalidBytecode,
     ExpectedStackValue,
     VariableNotBound(String),
@@ -213,7 +213,7 @@ impl RuntimeError {
     /// read only access to the Vm in order to access the heap.
     fn into_error(self, vm: &Vm) -> Error {
         match self {
-            ExpectedPair(node) => Error::ExpectedPair(vm.heap.get_as_cell(&node).to_string()),
+            ExpectedPair(vcell) => Error::ExpectedPair(vm.heap.get_as_cell(&vcell).to_string()),
             InvalidArgs(proc, expected, got) => {
                 Error::InvalidArgs(proc, expected, vm.heap.get_as_cell(&got).to_string())
             }
@@ -224,16 +224,18 @@ impl RuntimeError {
     }
 }
 
-fn car<T: AsRef<Node>>(node: T) -> Result<Node, RuntimeError> {
-    node.as_ref()
+fn car<T: AsRef<VCell>>(vcell: T) -> Result<VCell, RuntimeError> {
+    vcell
+        .as_ref()
         .as_car()
-        .ok_or_else(|| ExpectedPair(node.as_ref().clone()))
+        .ok_or_else(|| ExpectedPair(vcell.as_ref().clone()))
 }
 
-fn cdr<T: AsRef<Node>>(node: T) -> Result<Node, RuntimeError> {
-    node.as_ref()
+fn cdr<T: AsRef<VCell>>(vcell: T) -> Result<VCell, RuntimeError> {
+    vcell
+        .as_ref()
         .as_cdr()
-        .ok_or_else(|| ExpectedPair(node.as_ref().clone()))
+        .ok_or_else(|| ExpectedPair(vcell.as_ref().clone()))
 }
 
 #[cfg(test)]

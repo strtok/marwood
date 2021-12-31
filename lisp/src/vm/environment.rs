@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::vm::node::Node;
+use crate::vm::vcell::VCell;
 use crate::vm::Error;
 use lazy_static::lazy_static;
 use std::collections::{HashMap, HashSet};
@@ -126,7 +126,7 @@ impl Cell {
 ///
 /// Environment represents a binding of a symbol to a value in the heap.
 /// The environment tracks both deep bindings (sym -> slot), and also a
-/// vector of shallow bindings (slot -> Node).
+/// vector of shallow bindings (slot -> vcell).
 #[derive(Debug)]
 pub struct Environment {
     /// Deep bindings is a map of symbol ptr -> slot, and
@@ -136,7 +136,7 @@ pub struct Environment {
 
     /// Environment slots. The compiler produces shallow bindings as
     /// ptr into this vector at compile time.
-    slots: Vec<Node>,
+    slots: Vec<VCell>,
 }
 
 impl Environment {
@@ -151,7 +151,7 @@ impl Environment {
         self.bindings.keys()
     }
 
-    pub fn iter_slots(&self) -> std::slice::Iter<Node> {
+    pub fn iter_slots(&self) -> std::slice::Iter<VCell> {
         self.slots.iter()
     }
 
@@ -168,7 +168,7 @@ impl Environment {
         match self.bindings.get(&sym) {
             Some(slot) => *slot,
             None => {
-                self.slots.push(Node::undefined());
+                self.slots.push(VCell::undefined());
                 let slot = self.slots.len() - 1;
                 self.bindings.insert(sym, slot);
                 slot
@@ -202,7 +202,7 @@ impl Environment {
     ///
     /// # Arguments
     /// `slot` - The slot to return a value for
-    pub fn get_slot(&self, slot: usize) -> Node {
+    pub fn get_slot(&self, slot: usize) -> VCell {
         self.slots
             .get(slot)
             .expect("invalid environment slot")
@@ -223,9 +223,9 @@ impl Environment {
     ///
     /// # Arguments
     /// `slot` - The slot to return a value for
-    pub fn put_slot(&mut self, slot: usize, node: Node) {
-        assert!(matches!(node, Node::Ptr(_) | Node::Undefined));
-        *self.slots.get_mut(slot).expect("invalid environment slot") = node;
+    pub fn put_slot(&mut self, slot: usize, vcell: VCell) {
+        assert!(matches!(vcell, VCell::Ptr(_) | VCell::Undefined));
+        *self.slots.get_mut(slot).expect("invalid environment slot") = vcell;
     }
 }
 
@@ -248,10 +248,10 @@ mod tests {
         assert_eq!(env.get_binding(50_usize), 0);
         assert_eq!(env.get_symbol(0_usize), Some(50_usize));
         assert_eq!(env.get_symbol(1_usize), Some(100_usize));
-        assert_eq!(env.get_slot(0), Node::undefined());
-        env.put_slot(0, Node::ptr(42));
-        assert_eq!(env.get_slot(0), Node::ptr(42));
-        env.put_slot(0, Node::undefined());
+        assert_eq!(env.get_slot(0), VCell::undefined());
+        env.put_slot(0, VCell::ptr(42));
+        assert_eq!(env.get_slot(0), VCell::ptr(42));
+        env.put_slot(0, VCell::undefined());
     }
 
     #[test]
@@ -259,7 +259,7 @@ mod tests {
     fn put_slot_panics_if_non_ptr() {
         let mut env = Environment::new();
         assert_eq!(env.get_binding(50_usize), 0);
-        env.put_slot(0, Node::nil());
+        env.put_slot(0, VCell::nil());
     }
 
     #[test]
