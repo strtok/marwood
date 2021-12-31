@@ -20,7 +20,6 @@ This is a work in progress [Scheme R5RS](https://schemers.org/Documents/Standard
 Register | Description
 ---------|------------
 ACC      | Accumulator
-IP       | Instruction Pointer
 
 ## OpCodes
 
@@ -34,9 +33,9 @@ ENVGET &lt;SLOT&gt; | Store the value in environment slot SLOT in ACC
 ENVSET &lt;SLOT&gt; | Set the value in environment slot SLOT to the value in ACC
 EQ     | Sets ACC to true if ACC == arg[0], otherwise false. This instruction mirrors the eq? procedure in scheme.
 HALT   | Halt program, returning the result contained within ACC
+MOV &lt;SRC&gt; &lt;DEST&gt; | Move the value from SRC into DEST
 MUL    | Perform multiplication on the values in ACC and the the top of the stack and store the result in ACC
 PUSH   | Push the value in ACC on to the stack
-QUOTE &lt;VAL&gt; | Move VAL into ACC
 SUB    | Perform subtraction on the values in ACC and the the top of the stack and store the result in ACC
 
 # License
