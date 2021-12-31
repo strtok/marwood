@@ -6,7 +6,6 @@ use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, VariableNotBound,
 };
 use crate::vm::{Error, Vm};
-use std::collections::HashMap;
 
 impl Vm {
     /// Run
@@ -197,119 +196,6 @@ impl Vm {
     }
 }
 
-/// Environment
-///
-/// Environment represents a binding of a symbol to a value in the heap.
-/// The environment tracks both deep bindings (sym -> slot), and also a
-/// vector of shallow bindings (slot -> Node).
-#[derive(Debug)]
-pub struct Environment {
-    /// Deep bindings is a map of symbol ptr -> slot, and
-    /// is used by the compiler to aassociate a symbol at compilation
-    /// time with the environment slot.
-    bindings: HashMap<usize, usize>,
-
-    /// Environment slots. The compiler produces shallow bindings as
-    /// ptr into this vector at compile time.
-    slots: Vec<Node>,
-}
-
-impl Environment {
-    pub fn new() -> Environment {
-        Environment {
-            bindings: HashMap::new(),
-            slots: vec![],
-        }
-    }
-
-    pub fn iter_bindings(&self) -> std::collections::hash_map::Keys<usize, usize> {
-        self.bindings.keys()
-    }
-
-    pub fn iter_slots(&self) -> std::slice::Iter<Node> {
-        self.slots.iter()
-    }
-
-    /// Get binding
-    ///
-    /// Get binding provides a deep binding lookup of sym -> slot. If the
-    /// binding does not already exist, get_binding() will crates a new
-    /// binding and return the newly bound slot.
-    ///
-    /// # Arguments
-    /// `sym` - The symbol to provide a binding for
-    pub fn get_binding<T: Into<usize>>(&mut self, sym: T) -> usize {
-        let sym: usize = sym.into();
-        match self.bindings.get(&sym) {
-            Some(slot) => *slot,
-            None => {
-                self.slots.push(Node::undefined());
-                let slot = self.slots.len() - 1;
-                self.bindings.insert(sym, slot);
-                slot
-            }
-        }
-    }
-
-    /// Get Symbol
-    ///
-    /// Get the symbol bound to an environment slot. This is a reverse lookup
-    /// of a binding created with get_binding().
-    ///
-    /// # Arguments
-    /// `slot` - The slot to find the symbol for.
-    pub fn get_symbol<T: Into<usize>>(&self, slot: T) -> Option<usize> {
-        let slot = slot.into();
-        self.bindings
-            .iter()
-            .find(|it| *(it.1) == slot)
-            .map(|it| *it.0)
-    }
-
-    /// Get slot
-    ///
-    /// Get slot provides a shallow binding interface. Given the environment
-    /// slot, return the bound value.
-    ///
-    /// Any slot accessed by the runtime must have been valid at compilation
-    /// time, so any reference to an unknown slot is considered a critical error
-    /// and will cause a panic of the runtime.
-    ///
-    /// # Arguments
-    /// `slot` - The slot to return a value for
-    pub fn get_slot(&self, slot: usize) -> Node {
-        self.slots
-            .get(slot)
-            .expect("invalid environment slot")
-            .clone()
-    }
-
-    /// Put slot
-    ///
-    /// Get slot provides a shallow binding interface. Given the environment
-    /// slot, return the bound value.
-    ///
-    /// Any slot accessed by the runtime must have been valid at compilation
-    /// time, so any reference to an unknown slot is considered a critical error
-    /// and will cause a panic of the runtime.
-    ///
-    /// Any value other than a ptr or undefined is considered a runtime error
-    /// and will result in a panic.
-    ///
-    /// # Arguments
-    /// `slot` - The slot to return a value for
-    pub fn put_slot(&mut self, slot: usize, node: Node) {
-        assert!(matches!(node, Node::Ptr(_) | Node::Undefined));
-        *self.slots.get_mut(slot).expect("invalid environment slot") = node;
-    }
-}
-
-impl Default for Environment {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[derive(Debug, Eq, PartialEq)]
 pub enum RuntimeError {
     ExpectedPair(Node),
@@ -351,28 +237,4 @@ fn cdr<T: AsRef<Node>>(node: T) -> Result<Node, RuntimeError> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn same_binding_same_slot() {
-        let mut env = Environment::new();
-        assert_eq!(env.get_binding(50_usize), 0);
-        assert_eq!(env.get_binding(100_usize), 1);
-        assert_eq!(env.get_binding(50_usize), 0);
-        assert_eq!(env.get_symbol(0_usize), Some(50_usize));
-        assert_eq!(env.get_symbol(1_usize), Some(100_usize));
-        assert_eq!(env.get_slot(0), Node::undefined());
-        env.put_slot(0, Node::ptr(42));
-        assert_eq!(env.get_slot(0), Node::ptr(42));
-        env.put_slot(0, Node::undefined());
-    }
-
-    #[test]
-    #[should_panic]
-    fn put_slot_panics_if_non_ptr() {
-        let mut env = Environment::new();
-        assert_eq!(env.get_binding(50_usize), 0);
-        env.put_slot(0, Node::nil());
-    }
-}
+mod tests {}

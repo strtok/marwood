@@ -1,10 +1,11 @@
 use crate::cell::Cell;
+use crate::vm::environment::Environment;
 use crate::vm::heap::Heap;
 use crate::vm::node::Node;
-use crate::vm::run::Environment;
 use log::trace;
 
 pub mod compile;
+pub mod environment;
 pub mod gc;
 pub mod heap;
 pub mod node;

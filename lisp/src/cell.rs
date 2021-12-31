@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::DerefMut;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum Cell {
     Bool(bool),
     Nil,
@@ -107,6 +107,20 @@ impl Cell {
         match self {
             Cell::Pair(_, cdr) => Some(cdr),
             _ => None,
+        }
+    }
+
+    pub fn cadr(&self) -> Option<&Cell> {
+        match self.cdr() {
+            Some(cell) => cell.car(),
+            None => None,
+        }
+    }
+
+    pub fn cddr(&self) -> Option<&Cell> {
+        match self.cdr() {
+            Some(cell) => cell.cdr(),
+            None => None,
         }
     }
 
