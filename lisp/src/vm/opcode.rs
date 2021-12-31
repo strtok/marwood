@@ -63,10 +63,7 @@ impl Vm {
                         let dest = cur.next().unwrap();
                         (
                             "MOV".into(),
-                            vec![
-                                format!("[{}]", src.to_string()),
-                                format!("[{}]", dest.to_string()),
-                            ],
+                            vec![format!("[{}]", src.to_string()), dest.to_string()],
                             vec![],
                         )
                     }
@@ -75,13 +72,7 @@ impl Vm {
                         let dest = cur.next().unwrap();
                         (
                             "MOV".into(),
-                            vec![
-                                src.to_string(),
-                                match dest {
-                                    VCell::Acc => dest.to_string(),
-                                    _ => format!("[{}]", dest.to_string()),
-                                },
-                            ],
+                            vec![src.to_string(), dest.to_string()],
                             vec![],
                         )
                     }
