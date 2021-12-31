@@ -147,7 +147,7 @@ impl fmt::Display for VCell {
             VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
             VCell::EnvSlot(slot) => write!(f, "g${:02x}", slot),
             VCell::OpCode(val) => write!(f, "{:?}", val),
-            VCell::Pair(car, cdr) => write!(f, "(${:02x}, ${:02x})", car, cdr),
+            VCell::Pair(car, cdr) => write!(f, "(${:02x} . ${:02x})", car, cdr),
             VCell::Undefined => write!(f, "undefined"),
             VCell::FixedNum(val) => write!(f, "{}", val),
             VCell::Nil => write!(f, "()"),
