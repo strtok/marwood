@@ -94,6 +94,10 @@ impl Vm {
                 self.acc = self.heap.put(self.acc == arg);
             }
             OpCode::Mov => {
+                let vcell = self.deref_operand()?;
+                self.store_using_operand(vcell)?;
+            }
+            OpCode::MovVal => {
                 let vcell = self.read_operand()?;
                 self.store_using_operand(vcell)?;
             }
@@ -164,7 +168,6 @@ impl Vm {
     ///
     /// Read an argument and return the value that it references.
     /// If the operand is not a reference type, return InvalidBytecode
-    #[allow(dead_code)]
     fn deref_operand(&mut self) -> Result<VCell, RuntimeError> {
         match self.read_operand()? {
             VCell::Acc => Ok(self.acc.clone()),

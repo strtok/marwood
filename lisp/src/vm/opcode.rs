@@ -11,6 +11,7 @@ pub enum OpCode {
     EnvSet,
     Eq,
     Mov,
+    MovVal,
     Mul,
     Halt,
     Push,
@@ -62,6 +63,15 @@ impl Vm {
                         let dest = cur.next().unwrap();
                         (
                             "MOV".into(),
+                            vec![format!("[{}]", src.to_string()), dest.to_string()],
+                            vec![],
+                        )
+                    }
+                    OpCode::MovVal => {
+                        let src = cur.next().unwrap();
+                        let dest = cur.next().unwrap();
+                        (
+                            "MOV".into(),
                             vec![src.to_string(), dest.to_string()],
                             vec![],
                         )
@@ -87,13 +97,25 @@ mod tests {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
             vm.bc = vec![
-                OpCode::Mov.into(),
+                OpCode::MovVal.into(),
                 ptr.clone(),
                 VCell::Acc,
                 OpCode::Halt.into(),
             ];
             assert!(vm.run().is_ok());
             assert_eq!(vm.acc, ptr);
+        }
+        {
+            let mut vm = Vm::new();
+            let ptr = vm.heap.put(VCell::Bool(true));
+            vm.bc = vec![
+                OpCode::Mov.into(),
+                ptr.clone(),
+                VCell::Acc,
+                OpCode::Halt.into(),
+            ];
+            assert!(vm.run().is_ok());
+            assert_eq!(vm.acc, VCell::Bool(true));
         }
     }
 }
