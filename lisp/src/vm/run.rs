@@ -28,7 +28,7 @@ impl Vm {
     /// If the bool is set true, it indicates a HALT was encountered and
     /// execution should cease.
     fn run_one(&mut self) -> Result<bool, RuntimeError> {
-        let op_code = self.read_op()?;
+        let op_code = self.read_opcode()?;
         match op_code {
             OpCode::Add | OpCode::Sub | OpCode::Mul => {
                 let proc_name = match op_code {
@@ -70,7 +70,10 @@ impl Vm {
                     .put(VCell::Pair(car.as_ptr().unwrap(), cdr.as_ptr().unwrap()));
             }
             OpCode::EnvGet => {
-                let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
+                let env_slot = self
+                    .read_operand()?
+                    .as_env_slot()
+                    .expect("expected env slot");
                 self.acc = self.globenv.get_slot(env_slot);
                 if self.acc == VCell::Undefined {
                     return Err(VariableNotBound(
@@ -79,7 +82,10 @@ impl Vm {
                 }
             }
             OpCode::EnvSet => {
-                let env_slot = self.read_arg()?.as_env_slot().expect("expected env slot");
+                let env_slot = self
+                    .read_operand()?
+                    .as_env_slot()
+                    .expect("expected env slot");
                 self.globenv.put_slot(env_slot, self.acc.clone());
                 self.acc = self.heap.put(VCell::void());
             }
@@ -87,11 +93,12 @@ impl Vm {
                 let arg = self.pop_stack()?;
                 self.acc = self.heap.put(self.acc == arg);
             }
+            OpCode::Mov => {
+                let vcell = self.read_operand()?;
+                self.store_using_operand(vcell)?;
+            }
             OpCode::Push => {
                 self.stack.push(self.acc.clone());
-            }
-            OpCode::Quote => {
-                self.acc = self.read_arg()?;
             }
             OpCode::Halt => return Ok(true),
         }
@@ -142,22 +149,56 @@ impl Vm {
     ///
     /// Read an argument vcell from program[ip], increment ip and
     /// return the value.
-    fn read_arg(&mut self) -> Result<VCell, RuntimeError> {
-        let arg = self
+    fn read_operand(&mut self) -> Result<VCell, RuntimeError> {
+        let operand = self
             .bc
             .get(self.ip)
             .cloned()
             .filter(|it| !it.is_opcode())
             .ok_or(InvalidBytecode);
         self.ip += 1;
-        arg
+        operand
+    }
+
+    /// Deref Arg
+    ///
+    /// Read an argument and return the value that it references.
+    /// If the operand is not a reference type, return InvalidBytecode
+    #[allow(dead_code)]
+    fn deref_operand(&mut self) -> Result<VCell, RuntimeError> {
+        match self.read_operand()? {
+            VCell::Acc => Ok(self.acc.clone()),
+            VCell::Ptr(ptr) => Ok(self.heap.get_at_index(ptr).clone()),
+            VCell::EnvSlot(slot) => Ok(self.heap.get(&self.globenv.get_slot(slot))),
+            _ => Err(InvalidBytecode),
+        }
+    }
+
+    /// Store Using Operand
+    ///
+    /// Read an operand and use it as a destination to store the
+    /// given vcell.
+    fn store_using_operand(&mut self, vcell: VCell) -> Result<(), RuntimeError> {
+        match self.read_operand()? {
+            VCell::Acc => {
+                self.acc = vcell;
+            }
+            VCell::Ptr(ptr) => {
+                *self.heap.get_at_index_mut(ptr) = vcell;
+            }
+            VCell::EnvSlot(slot) => {
+                self.globenv.put_slot(slot, vcell);
+            }
+            _ => return Err(InvalidBytecode),
+        }
+        Ok(())
     }
 
     /// Read Op
     ///
     /// Read an op code from program[ip], increment ip and
     /// return the opcode.
-    fn read_op(&mut self) -> Result<OpCode, RuntimeError> {
+    fn read_opcode(&mut self) -> Result<OpCode, RuntimeError> {
         let op = self
             .bc
             .get(self.ip)

@@ -224,7 +224,11 @@ impl Environment {
     /// # Arguments
     /// `slot` - The slot to return a value for
     pub fn put_slot(&mut self, slot: usize, vcell: VCell) {
-        assert!(matches!(vcell, VCell::Ptr(_) | VCell::Undefined));
+        assert!(
+            matches!(vcell, VCell::Ptr(_) | VCell::Undefined),
+            "unexpected put_slot() of {:?}",
+            vcell
+        );
         *self.slots.get_mut(slot).expect("invalid environment slot") = vcell;
     }
 }

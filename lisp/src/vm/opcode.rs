@@ -10,10 +10,10 @@ pub enum OpCode {
     EnvGet,
     EnvSet,
     Eq,
+    Mov,
     Mul,
     Halt,
     Push,
-    Quote,
     Sub,
 }
 
@@ -25,11 +25,11 @@ impl Vm {
                 text.push_str(&format!(
                     "{0: <8} {1: <10} //{2: <10}\n",
                     it.0,
-                    it.1.join(","),
-                    it.2.join(",")
+                    it.1.join(" "),
+                    it.2.join(" ")
                 ));
             } else if !it.1.is_empty() {
-                text.push_str(&format!("{0: <8} {1: <10}\n", it.0, it.1.join(",")));
+                text.push_str(&format!("{0: <8} {1: <10}\n", it.0, it.1.join(" ")));
             } else {
                 text.push_str(&format!("{}\n", it.0));
             }
@@ -57,21 +57,43 @@ impl Vm {
                     }
                     OpCode::Eq => ("EQ".into(), vec![], vec![]),
                     OpCode::Halt => ("HALT".into(), vec![], vec![]),
-                    OpCode::Mul => ("MUL".into(), vec![], vec![]),
-                    OpCode::Push => ("PUSH".into(), vec![], vec![]),
-                    OpCode::Quote => {
-                        let arg = cur.next().unwrap();
+                    OpCode::Mov => {
+                        let src = cur.next().unwrap();
+                        let dest = cur.next().unwrap();
                         (
-                            "QUOTE".into(),
-                            vec![arg.to_string()],
-                            vec![self.heap.get_as_cell(arg).to_string()],
+                            "MOV".into(),
+                            vec![src.to_string(), dest.to_string()],
+                            vec![],
                         )
                     }
+                    OpCode::Mul => ("MUL".into(), vec![], vec![]),
+                    OpCode::Push => ("PUSH".into(), vec![], vec![]),
                     OpCode::Sub => ("SUB".into(), vec![], vec![]),
                 },
                 _ => ("UNKNOWN".into(), vec![], vec![]),
             });
         }
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mov() {
+        {
+            let mut vm = Vm::new();
+            let ptr = vm.heap.put(VCell::Bool(true));
+            vm.bc = vec![
+                OpCode::Mov.into(),
+                ptr.clone(),
+                VCell::Acc,
+                OpCode::Halt.into(),
+            ];
+            assert!(vm.run().is_ok());
+            assert_eq!(vm.acc, ptr);
+        }
     }
 }

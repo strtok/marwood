@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum VCell {
+    Acc,
     Bool(bool),
     EnvSlot(usize),
     FixedNum(i64),
@@ -140,10 +141,11 @@ impl From<i64> for VCell {
 impl fmt::Display for VCell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            VCell::Acc => write!(f, "acc"),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
             VCell::Ptr(ptr) => write!(f, "[{}]", ptr),
-            VCell::EnvSlot(slot) => write!(f, "env[{}]", slot),
+            VCell::EnvSlot(slot) => write!(f, "g[{}]", slot),
             VCell::OpCode(val) => write!(f, "{:?}", val),
             VCell::Pair(car, cdr) => write!(f, "([{}], [{}])", car, cdr),
             VCell::Undefined => write!(f, "undefined"),

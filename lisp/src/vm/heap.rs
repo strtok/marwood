@@ -148,19 +148,22 @@ impl Heap {
     /// `vcell` - The vcell to map to a cell
     pub fn get_as_cell(&self, vcell: &VCell) -> Cell {
         match vcell {
-            VCell::Ptr(ptr) => self.get_as_cell(self.get_at_index(*ptr)),
+            VCell::Bool(val) => Cell::Bool(*val),
             VCell::FixedNum(val) => Cell::Number(*val),
             VCell::Nil => Cell::Nil,
-            VCell::Bool(val) => Cell::Bool(*val),
             VCell::Pair(ref car, cdr) => Cell::new_pair(
                 self.get_as_cell(&VCell::Ptr(*car)),
                 self.get_as_cell(&VCell::Ptr(*cdr)),
             ),
-            VCell::EnvSlot(_) => panic!("unexpected environment slot"),
-            VCell::OpCode(_) => panic!("unexpected opcode"),
-            VCell::Undefined => Cell::Undefined,
+            VCell::Ptr(ptr) => self.get_as_cell(self.get_at_index(*ptr)),
             VCell::Symbol(s) => Cell::Symbol(s.deref().into()),
+            VCell::Undefined => Cell::Undefined,
             VCell::Void => Cell::Void,
+            // Any internal values used by bytecode aren't convertible to Cells and
+            // result in a panic.
+            VCell::Acc | VCell::EnvSlot(_) | VCell::OpCode(_) => {
+                panic!("unexpected converstion of internal VCell value to Cell")
+            }
         }
     }
 
