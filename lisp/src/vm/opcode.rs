@@ -21,10 +21,35 @@ pub enum OpCode {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-enum Operand {
+pub enum Operand {
+    /// Immediate
+    ///
+    /// The operand value is used, unless:
+    /// * The operand is a register, in which case the value in the
+    ///   register is used
     Immediate,
-    Reference,
-    Dereference,
+
+    /// StoreReference
+    ///
+    /// The operand is used as a reference to a location to store a
+    /// value. It must be a register or reference type.
+    ///
+    /// * If the operand is a register, the value is stored in the
+    /// register itself. No dereference occurs.
+    /// * If the operand is a reference type, the value is stored
+    /// in the location the reference points to.
+    StoreReference,
+
+    /// Dereference
+    ///
+    /// The operand is used as a source of a value. It must be a register
+    /// or reference type.
+    ///
+    /// * If the operand is a register, then the value is read from the
+    /// register.
+    /// * If the operand is a reference type, the value is read from
+    /// the location the reference points to.
+    LoadReference,
 }
 
 struct Schema {
@@ -38,6 +63,7 @@ impl Schema {
     }
 }
 
+#[rustfmt::skip]
 fn schema() -> &'static HashMap<OpCode, Schema> {
     lazy_static! {
         static ref SCHEMA: HashMap<OpCode, Schema> = HashMap::from([
@@ -45,23 +71,11 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::Car, Schema::new("CAR", vec![])),
             (OpCode::Cdr, Schema::new("CDR", vec![])),
             (OpCode::Cons, Schema::new("CONS", vec![])),
-            (
-                OpCode::EnvGet,
-                Schema::new("ENVGET", vec![Operand::Reference])
-            ),
-            (
-                OpCode::EnvSet,
-                Schema::new("ENVSET", vec![Operand::Reference])
-            ),
+            (OpCode::EnvGet, Schema::new("ENVGET", vec![Operand::LoadReference])),
+            (OpCode::EnvSet, Schema::new("ENVSET", vec![Operand::StoreReference])),
             (OpCode::Eq, Schema::new("EQ", vec![])),
-            (
-                OpCode::Mov,
-                Schema::new("MOV", vec![Operand::Dereference, Operand::Reference])
-            ),
-            (
-                OpCode::MovImmediate,
-                Schema::new("MOV", vec![Operand::Immediate, Operand::Reference])
-            ),
+            (OpCode::Mov, Schema::new("MOV", vec![Operand::LoadReference, Operand::StoreReference])),
+            (OpCode::MovImmediate, Schema::new("MOV", vec![Operand::Immediate, Operand::StoreReference])),
             (OpCode::Mul, Schema::new("MUL", vec![])),
             (OpCode::Halt, Schema::new("HALT", vec![])),
             (OpCode::Push, Schema::new("PUSH", vec![])),
@@ -74,24 +88,44 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
 impl Vm {
     pub fn decompile_text(&self, program: &[VCell]) -> String {
         let mut text = String::new();
-        for it in self.decompile(program) {
-            if !it.1.is_empty() && !it.2.is_empty() {
+        for instruction in self.decompile(program) {
+            let operands = instruction
+                .1
+                .iter()
+                .map(|it| match it.1 {
+                    Operand::Immediate => {
+                        format!("{}", it.0.to_string())
+                    }
+                    Operand::StoreReference | Operand::LoadReference => match it.0 {
+                        VCell::Acc => format!("{}", it.0.to_string()),
+                        _ => format!("[{}]", it.0.to_string()),
+                    },
+                })
+                .collect::<Vec<_>>();
+            if !instruction.1.is_empty() && !instruction.2.is_empty() {
                 text.push_str(&format!(
                     "{0: <8} {1: <10} //{2: <10}\n",
-                    it.0,
-                    it.1.join(" "),
-                    it.2.join(" ")
+                    instruction.0,
+                    operands.join(" "),
+                    instruction.2.join(" ")
                 ));
-            } else if !it.1.is_empty() {
-                text.push_str(&format!("{0: <8} {1: <10}\n", it.0, it.1.join(" ")));
+            } else if !instruction.1.is_empty() {
+                text.push_str(&format!(
+                    "{0: <8} {1: <10}\n",
+                    instruction.0,
+                    operands.join(" ")
+                ));
             } else {
-                text.push_str(&format!("{}\n", it.0));
+                text.push_str(&format!("{}\n", instruction.0));
             }
         }
         text
     }
 
-    pub fn decompile(&self, program: &[VCell]) -> Vec<(String, Vec<String>, Vec<String>)> {
+    pub fn decompile(
+        &self,
+        program: &[VCell],
+    ) -> Vec<(String, Vec<(VCell, Operand)>, Vec<String>)> {
         let mut cur = program.iter();
         let mut result = vec![];
         while let Some(VCell::OpCode(opcode)) = cur.next() {
@@ -103,18 +137,7 @@ impl Vm {
                 if operand.is_ptr() && values.is_empty() {
                     values.push(self.heap.get_as_cell(operand).to_string());
                 }
-                match it {
-                    Operand::Immediate | Operand::Reference => {
-                        operands.push(operand.to_string());
-                    }
-                    Operand::Dereference => {
-                        if operand.is_reference() {
-                            operands.push(format!("[{}]", operand));
-                        } else {
-                            operands.push(format!("{}", operand));
-                        }
-                    }
-                }
+                operands.push((operand.clone(), it.clone()));
 
                 if values.is_empty() {
                     match operand {
