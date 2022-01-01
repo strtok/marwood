@@ -85,49 +85,48 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
     &SCHEMA
 }
 
+struct DecompiledInstruction {
+    op: &'static str,
+    operands: Vec<(VCell, Operand)>,
+    values: Vec<String>,
+}
+
 impl Vm {
     pub fn decompile_text(&self, program: &[VCell]) -> String {
         let mut text = String::new();
         for instruction in self.decompile(program) {
+            let op = instruction.op;
             let operands = instruction
-                .1
+                .operands
                 .iter()
                 .map(|it| match it.1 {
-                    Operand::Immediate => {
-                        format!("{}", it.0.to_string())
-                    }
+                    Operand::Immediate => it.0.to_string(),
                     Operand::StoreReference | Operand::LoadReference => match it.0 {
-                        VCell::Acc => format!("{}", it.0.to_string()),
+                        VCell::Acc => it.0.to_string(),
                         _ => format!("[{}]", it.0.to_string()),
                     },
                 })
                 .collect::<Vec<_>>();
-            if !instruction.1.is_empty() && !instruction.2.is_empty() {
+            let values = instruction.values;
+            if !operands.is_empty() && !values.is_empty() {
                 text.push_str(&format!(
                     "{0: <8} {1: <10} //{2: <10}\n",
-                    instruction.0,
+                    op,
                     operands.join(" "),
-                    instruction.2.join(" ")
+                    values.join(" ")
                 ));
-            } else if !instruction.1.is_empty() {
-                text.push_str(&format!(
-                    "{0: <8} {1: <10}\n",
-                    instruction.0,
-                    operands.join(" ")
-                ));
+            } else if !operands.is_empty() {
+                text.push_str(&format!("{0: <8} {1: <10}\n", op, operands.join(" ")));
             } else {
-                text.push_str(&format!("{}\n", instruction.0));
+                text.push_str(&format!("{}\n", op));
             }
         }
         text
     }
 
-    pub fn decompile(
-        &self,
-        program: &[VCell],
-    ) -> Vec<(String, Vec<(VCell, Operand)>, Vec<String>)> {
+    fn decompile(&self, program: &[VCell]) -> Vec<DecompiledInstruction> {
         let mut cur = program.iter();
-        let mut result = vec![];
+        let mut instructions = vec![];
         while let Some(VCell::OpCode(opcode)) = cur.next() {
             let schema = schema().get(opcode).expect("unknown opcode");
             let mut operands = vec![];
@@ -152,10 +151,14 @@ impl Vm {
                     }
                 }
             }
-            result.push((schema.name.to_string(), operands, values));
+            instructions.push(DecompiledInstruction {
+                op: schema.name,
+                operands,
+                values,
+            })
         }
 
-        result
+        instructions
     }
 }
 
@@ -165,6 +168,7 @@ mod tests {
 
     #[test]
     fn mov() {
+        // MOV $01 %acc
         {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
@@ -177,6 +181,7 @@ mod tests {
             assert!(vm.run().is_ok());
             assert_eq!(vm.acc, ptr);
         }
+        // MOV [$01] %acc
         {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));

@@ -162,7 +162,7 @@ impl Heap {
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
             VCell::Acc | VCell::EnvSlot(_) | VCell::OpCode(_) => {
-                panic!("unexpected converstion of internal VCell value to Cell")
+                panic!("cannot convert VCell {} to Cell", vcell)
             }
         }
     }
