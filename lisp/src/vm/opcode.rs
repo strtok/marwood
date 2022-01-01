@@ -52,6 +52,15 @@ pub enum Operand {
     LoadReference,
 }
 
+/// Schema
+///
+/// Schema and the static mapped returned by Schema() are used by the
+/// decompiler to determine the formatting for opcodes and operands
+/// when decompiling a set of byte code.
+///
+/// While schema would be useful to the virtual machine runtime, it's
+/// not currently referenced by the VM runtime code for performance
+/// concerns.
 struct Schema {
     name: &'static str,
     operands: Vec<Operand>,

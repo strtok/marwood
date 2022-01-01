@@ -2,6 +2,16 @@ use crate::vm::opcode::OpCode;
 use std::fmt;
 use std::rc::Rc;
 
+/// VCell
+///
+/// VCell is a 24 byte (3x64bit) type that's used to represent values
+/// in VM runtime:
+///
+/// * Primitive list values (bool, fixednum, pairs, nil, etc)
+/// * Opcodes
+/// * References into the heap (Ptr)
+/// * Environment slot references (EnvSlot)
+/// * Other runtime sentinel values, such as Undefined and Void.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum VCell {
     Acc,
