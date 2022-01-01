@@ -60,7 +60,7 @@ impl Heap {
     pub fn put<T: Into<VCell> + Clone>(&mut self, vcell: T) -> VCell {
         let vcell = vcell.into();
         match &vcell {
-            VCell::Ptr(_) => vcell,
+            VCell::Ptr(_) => panic!("put() on {} would double box", vcell),
             VCell::Symbol(sym) => match self.str_map.get(sym.deref()) {
                 Some(ptr) => VCell::ptr(*ptr),
                 None => {
@@ -125,15 +125,15 @@ impl Heap {
 
     /// Get
     ///
-    /// Return a vcell from the heap at the given ptr. If the vcell is not
-    /// a ptr, then return the vcell.
+    /// Return a vcell from the heap at the given ptr. If the vcell
+    /// is not a heap pointer, panic.
     ///
     /// # Arguments
     /// `vcell` - The ptr vcell
     pub fn get(&self, vcell: &VCell) -> VCell {
         match vcell {
             VCell::Ptr(ptr) => self.get_at_index(*ptr).clone(),
-            _ => vcell.clone(),
+            _ => panic!("heap get() called on non-reference value {}", vcell),
         }
     }
 

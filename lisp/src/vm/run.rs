@@ -62,12 +62,9 @@ impl Vm {
                 self.acc = cdr(arg)?;
             }
             OpCode::Cons => {
-                let car = self.heap.put(self.acc.clone());
-                let cdr = self.pop_stack()?;
-                let cdr = self.heap.put(cdr);
-                self.acc = self
-                    .heap
-                    .put(VCell::Pair(car.as_ptr().unwrap(), cdr.as_ptr().unwrap()));
+                let car = self.acc.clone().as_ptr().ok_or(InvalidBytecode)?;
+                let cdr = self.pop_stack()?.as_ptr().ok_or(InvalidBytecode)?;
+                self.acc = self.heap.put(VCell::Pair(car, cdr));
             }
             OpCode::EnvGet => {
                 let env_slot = self
@@ -94,12 +91,12 @@ impl Vm {
                 self.acc = self.heap.put(self.acc == arg);
             }
             OpCode::Mov => {
-                let vcell = self.deref_operand()?;
-                self.store_using_operand(vcell)?;
+                let vcell = self.load_operand()?;
+                self.store_operand(vcell)?;
             }
             OpCode::MovImmediate => {
                 let vcell = self.read_operand()?;
-                self.store_using_operand(vcell)?;
+                self.store_operand(vcell)?;
             }
             OpCode::Push => {
                 self.stack.push(self.acc.clone());
@@ -168,7 +165,7 @@ impl Vm {
     ///
     /// Read an argument and return the value that it references.
     /// If the operand is not a reference type, return InvalidBytecode
-    fn deref_operand(&mut self) -> Result<VCell, RuntimeError> {
+    fn load_operand(&mut self) -> Result<VCell, RuntimeError> {
         match self.read_operand()? {
             VCell::Acc => Ok(self.acc.clone()),
             VCell::Ptr(ptr) => Ok(self.heap.get_at_index(ptr).clone()),
@@ -181,7 +178,7 @@ impl Vm {
     ///
     /// Read an operand and use it as a destination to store the
     /// given vcell.
-    fn store_using_operand(&mut self, vcell: VCell) -> Result<(), RuntimeError> {
+    fn store_operand(&mut self, vcell: VCell) -> Result<(), RuntimeError> {
         match self.read_operand()? {
             VCell::Acc => {
                 self.acc = vcell;
