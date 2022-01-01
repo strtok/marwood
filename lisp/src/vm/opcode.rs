@@ -108,7 +108,11 @@ impl Vm {
                         operands.push(operand.to_string());
                     }
                     Operand::Dereference => {
-                        operands.push(format!("[{}]", operand));
+                        if operand.is_reference() {
+                            operands.push(format!("[{}]", operand));
+                        } else {
+                            operands.push(format!("{}", operand));
+                        }
                     }
                 }
 

@@ -58,6 +58,14 @@ impl VCell {
         matches!(self, VCell::Ptr(_))
     }
 
+    pub fn is_envslot(&self) -> bool {
+        matches!(self, VCell::EnvSlot(_))
+    }
+
+    pub fn is_reference(&self) -> bool {
+        self.is_ptr() || self.is_envslot()
+    }
+
     pub fn is_undefined(&self) -> bool {
         *self == VCell::Undefined
     }
