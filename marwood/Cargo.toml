@@ -3,7 +3,6 @@ name = "marwood"
 version = "0.1.0"
 description = "Scheme R5RS Virtual Machine"
 repository = "https://github.com/strtok/marwood"
-readme = "README.md"
 authors = ["Erik Bremen <strtok@strtok.net>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
