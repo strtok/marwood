@@ -29,18 +29,18 @@ jobs:
         run: |
           wasm-pack build
           npm install
-        working-directory: ./wasm-repl
+        working-directory: ./marwood-wasm
 
       - name: Compile website
         run: |
           npm install
           npm run build
-        working-directory: ./wasm-repl/www
+        working-directory: ./marwood-wasm/www
 
       - name: Deploy to gh-pages
         if: success()
         uses: peaceiris/actions-gh-pages@v3
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-          publish_dir: ./wasm-repl/www/dist
+          publish_dir: ./marwood-wasm/www/dist
           force_orphan: true

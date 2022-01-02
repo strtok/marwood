@@ -1,8 +1,8 @@
-use lisp::cell::Cell;
-use lisp::lex::{scan, Token};
-use lisp::parse;
-use lisp::parse::parse;
-use lisp::vm::Vm;
+use marwood::cell::Cell;
+use marwood::lex::{scan, Token};
+use marwood::parse;
+use marwood::parse::parse;
+use marwood::vm::Vm;
 use log::trace;
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};

@@ -1,5 +1,5 @@
 [package]
-name = "lisp"
+name = "marwood"
 version = "0.1.0"
 authors = ["Erik Bremen <strtok@strtok.net>"]
 edition = "2021"

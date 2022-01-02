@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "lisp",
-    "repl",
-    "wasm-repl"
+    "marwood",
+    "marwood-repl",
+    "marwood-wasm"
 ]

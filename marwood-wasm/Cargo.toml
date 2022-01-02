@@ -1,5 +1,5 @@
 [package]
-name = "wasm-repl"
+name = "marwood-wasm"
 version = "0.1.0"
 authors = ["Erik Bremen"]
 edition = "2021"
@@ -28,7 +28,7 @@ features = [
 xterm-js-rs = { version = "0.1.1", features = ["xterm-addon-fit"] }
 js-sys = "0.3.55"
 wasm-bindgen = "0.2.78"
-lisp = { path="../lisp" }
+marwood = { path= "../marwood" }
 
 console_error_panic_hook = { version = "0.1.6", optional = true }
 wee_alloc = { version = "0.4.5", optional = true }

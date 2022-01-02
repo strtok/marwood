@@ -1,7 +1,7 @@
 {
-  "name": "lisp",
+  "name": "marwood",
   "version": "0.1.0",
-  "description": "lisp wasm repl",
+  "description": "marwood wasm repl",
   "main": "index.js",
   "bin": {
     "create-wasm-app": ".bin/create-wasm-app.js"
@@ -23,11 +23,11 @@
   "author": "Erik Bremen (strtok@strtok.net)",
   "license": "(MIT OR Apache-2.0)",
   "bugs": {
-    "url": "https://github.com/strtok/lisp/issues"
+    "url": "https://github.com/strtok/marwood/issues"
   },
-  "homepage": "https://github.com/strtok/lisp",
+  "homepage": "https://github.com/strtok/marwood",
   "dependencies": {
-    "lisp": "file:../pkg",
+    "marwood": "file:../pkg",
     "xterm": "^4.15.0",
     "xterm-addon-fit": "^0.5.0"
   },

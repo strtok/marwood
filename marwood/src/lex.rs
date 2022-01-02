@@ -79,8 +79,8 @@ pub enum Error {
 /// # Examples
 ///
 /// ```
-///     use lisp::lex;
-///     use lisp::lex::Token;
+///     use marwood::lex;
+///     use marwood::lex::Token;
 ///     let text = "'(1 2 3)";
 ///     let tokens = lex::scan(text);
 /// ```
