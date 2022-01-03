@@ -16,15 +16,19 @@ const HEAP_SIZE: usize = 1024;
 
 #[derive(Debug)]
 pub struct Vm {
+    /// The heap and global environment
     heap: Heap,
+    globenv: Environment,
+
     /// A heap pointer to the currently executing lambda
     lambda: usize,
-    /// The offset of the next instruction to execute within
-    /// the currently executing lambda
-    ip: usize,
+
+    /// The current program stack
     stack: Vec<VCell>,
-    globenv: Environment,
+
+    /// Registers
     acc: VCell,
+    ip: usize,
 }
 
 impl Vm {
