@@ -96,13 +96,6 @@ pub fn free_symbols(
     Ok(free_set)
 }
 
-/// Is Primitive Symbol
-///
-/// Return true if the given cell is a primitive symbol (e.g. a built-in
-/// procedure)
-///
-/// # Arguments
-/// `cell`
 impl Cell {
     pub fn is_quote(&self) -> bool {
         self.is_symbol_str("quote")
@@ -119,6 +112,13 @@ impl Cell {
         }
     }
 
+    /// Is Primitive Symbol
+    ///
+    /// Return true if the given cell is a primitive symbol (e.g. a built-in
+    /// procedure)
+    ///
+    /// # Arguments
+    /// `cell`
     pub fn is_primitive_symbol(&self) -> bool {
         lazy_static! {
             static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> = HashSet::from([
