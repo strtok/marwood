@@ -215,6 +215,10 @@ impl Lambda {
             bc
         }
     }
+
+    pub fn get(&self, index: usize) -> Option<&VCell> {
+        self.bc.get(index)
+    }
 }
 
 #[cfg(test)]

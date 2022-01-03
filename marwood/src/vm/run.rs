@@ -3,7 +3,7 @@ use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, VariableNotBound,
 };
-use crate::vm::vcell::VCell;
+use crate::vm::vcell::{Lambda, VCell};
 use crate::vm::{Error, Vm};
 
 impl Vm {
@@ -146,16 +146,19 @@ impl Vm {
         self.stack.pop().ok_or(ExpectedStackValue)
     }
 
+    /// Lambda
+    ///
+    /// Dereference the currently executing lambda
+    fn lambda(&self) -> &Lambda {
+        self.heap.get_at_index(self.lambda).as_lambda().expect("expected lambda")
+    }
+
     /// Read Arg
     ///
     /// Read an argument vcell from program[ip], increment ip and
     /// return the value.
     fn read_operand(&mut self) -> Result<VCell, RuntimeError> {
-        let lambda = self.heap.get_at_index(self.lambda);
-        let operand = lambda
-            .as_lambda()
-            .expect("expected lambda")
-            .bc
+        let operand = self.lambda()
             .get(self.ip)
             .cloned()
             .filter(|it| !it.is_opcode())
@@ -202,11 +205,7 @@ impl Vm {
     /// Read an op code from program[ip], increment ip and
     /// return the opcode.
     fn read_opcode(&mut self) -> Result<OpCode, RuntimeError> {
-        let lambda = self.heap.get_at_index(self.lambda);
-        let op = lambda
-            .as_lambda()
-            .expect("expected lambda")
-            .bc
+        let op = self.lambda()
             .get(self.ip)
             .cloned()
             .filter(|it| it.is_opcode())
