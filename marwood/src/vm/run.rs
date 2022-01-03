@@ -151,7 +151,10 @@ impl Vm {
     /// Read an argument vcell from program[ip], increment ip and
     /// return the value.
     fn read_operand(&mut self) -> Result<VCell, RuntimeError> {
-        let operand = self
+        let lambda = self.heap.get_at_index(self.lambda);
+        let operand = lambda
+            .as_lambda()
+            .expect("expected lambda")
             .bc
             .get(self.ip)
             .cloned()
@@ -199,7 +202,10 @@ impl Vm {
     /// Read an op code from program[ip], increment ip and
     /// return the opcode.
     fn read_opcode(&mut self) -> Result<OpCode, RuntimeError> {
-        let op = self
+        let lambda = self.heap.get_at_index(self.lambda);
+        let op = lambda
+            .as_lambda()
+            .expect("expected lambda")
             .bc
             .get(self.ip)
             .cloned()
@@ -229,6 +235,7 @@ impl Vm {
             .filter_map(|it| it.as_ptr())
             .for_each(|it| self.heap.mark(it));
 
+        self.heap.mark(self.lambda);
         self.heap.sweep();
     }
 }

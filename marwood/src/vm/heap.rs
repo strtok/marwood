@@ -161,7 +161,7 @@ impl Heap {
             VCell::Void => Cell::Void,
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
-            VCell::Acc | VCell::EnvSlot(_) | VCell::OpCode(_) => {
+            VCell::Acc | VCell::EnvSlot(_) | VCell::OpCode(_) | VCell::Lambda(_) => {
                 panic!("cannot convert VCell {} to Cell", vcell)
             }
         }

@@ -1,7 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::environment::Environment;
 use crate::vm::heap::Heap;
-use crate::vm::vcell::VCell;
+use crate::vm::vcell::{Lambda, VCell};
 use log::trace;
 
 pub mod compile;
@@ -17,11 +17,14 @@ const HEAP_SIZE: usize = 1024;
 #[derive(Debug)]
 pub struct Vm {
     heap: Heap,
-    bc: Vec<VCell>,
+    /// A heap pointer to the currently executing lambda
+    lambda: usize,
+    /// The offset of the next instruction to execute within
+    /// the currently executing lambda
+    ip: usize,
     stack: Vec<VCell>,
     globenv: Environment,
     acc: VCell,
-    ip: usize,
 }
 
 impl Vm {
@@ -31,11 +34,11 @@ impl Vm {
     pub fn new() -> Vm {
         Vm {
             heap: Heap::new(HEAP_SIZE),
-            bc: vec![],
+            lambda: usize::MAX,
+            ip: 0,
             stack: vec![],
             globenv: Environment::new(),
             acc: VCell::undefined(),
-            ip: 0,
         }
     }
 
@@ -47,8 +50,10 @@ impl Vm {
     /// # Arguments
     /// `cell` - An expression to evaluate
     pub fn eval(&mut self, cell: &Cell) -> Result<Cell, Error> {
-        self.bc = self.compile(cell)?;
-        trace!("emit: \n{}", self.decompile_text(&self.bc));
+        let bc = self.compile(cell)?;
+        trace!("emit: \n{}", self.decompile_text(&bc));
+        let lambda = self.heap.put(Lambda::new(bc));
+        self.lambda = lambda.as_ptr().unwrap();
         self.ip = 0;
         self.run()
     }

@@ -18,6 +18,7 @@ pub enum VCell {
     Bool(bool),
     EnvSlot(usize),
     FixedNum(i64),
+    Lambda(Rc<Lambda>),
     Nil,
     OpCode(OpCode),
     Pair(usize, usize),
@@ -56,6 +57,10 @@ impl VCell {
         VCell::Symbol(Rc::new(ptr.into()))
     }
 
+    pub fn lambda<T: Into<Lambda>>(lambda: T) -> VCell {
+        VCell::Lambda(Rc::new(lambda.into()))
+    }
+
     pub fn nil() -> VCell {
         VCell::Nil
     }
@@ -86,6 +91,10 @@ impl VCell {
 
     pub fn is_opcode(&self) -> bool {
         matches!(self, VCell::OpCode(_))
+    }
+
+    pub fn is_lambda(&self) -> bool {
+        matches!(self, VCell::Lambda(_))
     }
 
     pub fn as_opcode(&self) -> Option<OpCode> {
@@ -123,6 +132,13 @@ impl VCell {
         }
     }
 
+    pub fn as_lambda(&self) -> Option<&Lambda> {
+        match self {
+            VCell::Lambda(lambda) => Some(&*lambda),
+            _ => None,
+        }
+    }
+
     pub fn as_ptr(&self) -> Option<usize> {
         match self {
             VCell::Ptr(ptr) => Some(*ptr),
@@ -144,6 +160,12 @@ impl From<OpCode> for VCell {
     }
 }
 
+impl From<Lambda> for VCell {
+    fn from(lambda: Lambda) -> Self {
+        VCell::lambda(lambda)
+    }
+}
+
 impl From<bool> for VCell {
     fn from(val: bool) -> Self {
         VCell::Bool(val)
@@ -162,14 +184,15 @@ impl fmt::Display for VCell {
             VCell::Acc => write!(f, "%acc"),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
-            VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
             VCell::EnvSlot(slot) => write!(f, "g${:02x}", slot),
+            VCell::FixedNum(val) => write!(f, "{}", val),
+            VCell::Lambda(_) => write!(f, "#<lambda>"),
+            VCell::Nil => write!(f, "()"),
             VCell::OpCode(val) => write!(f, "{:?}", val),
             VCell::Pair(car, cdr) => write!(f, "(${:02x} . ${:02x})", car, cdr),
-            VCell::Undefined => write!(f, "undefined"),
-            VCell::FixedNum(val) => write!(f, "{}", val),
-            VCell::Nil => write!(f, "()"),
+            VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
             VCell::Symbol(s) => write!(f, "sym\"{}\"", *s),
+            VCell::Undefined => write!(f, "undefined"),
             VCell::Void => write!(f, "#<void>"),
         }
     }
@@ -178,6 +201,19 @@ impl fmt::Display for VCell {
 impl AsRef<VCell> for VCell {
     fn as_ref(&self) -> &VCell {
         self
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Lambda {
+    pub bc: Vec<VCell>
+}
+
+impl Lambda {
+    pub fn new(bc: Vec<VCell>) -> Lambda {
+        Lambda {
+            bc
+        }
     }
 }
 

@@ -173,6 +173,7 @@ impl Vm {
 
 #[cfg(test)]
 mod tests {
+    use crate::vm::vcell::Lambda;
     use super::*;
 
     #[test]
@@ -181,12 +182,13 @@ mod tests {
         {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
-            vm.bc = vec![
+            vm.lambda = vm.heap.put(Lambda::new(vec![
                 OpCode::MovImmediate.into(),
                 ptr.clone(),
                 VCell::Acc,
                 OpCode::Halt.into(),
-            ];
+            ])).as_ptr().unwrap();
+
             assert!(vm.run().is_ok());
             assert_eq!(vm.acc, ptr);
         }
@@ -194,12 +196,12 @@ mod tests {
         {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
-            vm.bc = vec![
+            vm.lambda = vm.heap.put(Lambda::new(vec![
                 OpCode::Mov.into(),
                 ptr.clone(),
                 VCell::Acc,
                 OpCode::Halt.into(),
-            ];
+            ])).as_ptr().unwrap();
             assert!(vm.run().is_ok());
             assert_eq!(vm.acc, VCell::Bool(true));
         }
