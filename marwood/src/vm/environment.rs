@@ -19,71 +19,81 @@ use std::collections::{HashMap, HashSet};
 ///
 /// # Arguments
 /// `cell` - The cell to recurse
-/// `env` - The set of symbols bound by encountered formal arguments
-/// while recursing.
-pub fn free_symbols<'a>(
-    cell: &'a Cell,
-    env: &mut HashSet<&'a Cell>,
-) -> Result<HashSet<&'a Cell>, Error> {
-    match cell {
-        Cell::Symbol(_) => match env.contains(&cell) {
-            true => Ok(HashSet::new()),
-            false => Ok(HashSet::from([cell])),
-        },
-        Cell::Pair(car, cdr) => {
-            let car = car.as_ref();
-            let cdr = cdr.as_ref();
-            if car.is_quote() {
-                return Ok(HashSet::new());
-            }
-            let mut union = HashSet::new();
-            if !car.is_primitive_symbol() && !env.contains(car) {
-                union.insert(car);
-            }
+pub fn free_symbols(
+    cell: &Cell
+) -> Result<HashSet<&Cell>, Error> {
 
-            let mut lat = match car {
-                Cell::Symbol(sym) => match sym.as_str() {
-                    "define" => cdr
-                        .cdr()
-                        .ok_or_else(|| Error::InvalidNumArgs("define".into()))?,
-                    "lambda" => {
-                        let mut args = cdr
-                            .car()
-                            .ok_or_else(|| Error::InvalidNumArgs("lambda".into()))?;
-                        while args.is_pair() {
-                            let sym = args.car().unwrap();
-                            if !sym.is_symbol() {
-                                return Err(Error::InvalidArgs(
-                                    "lambda".into(),
-                                    "argument".into(),
-                                    sym.to_string(),
-                                ));
-                            }
-                            env.insert(sym);
-                            args = args.cdr().unwrap();
-                        }
-                        cdr.cdr()
-                            .ok_or_else(|| Error::InvalidNumArgs("lambda".into()))?
-                    }
-                    _ => cdr,
+    fn free_symbols<'a>(cell: &'a Cell,
+                        env: &mut HashSet<&'a Cell>,
+                        free: &mut HashSet<&'a Cell>) -> Result<(), Error>
+    {
+        match cell {
+            Cell::Symbol(_) => match env.contains(&cell) {
+                true => Ok(()),
+                false => {
+                    free.insert(cell);
+                    Ok(())
                 },
-                _ => cdr,
-            };
+            },
+            Cell::Pair(car, cdr) => {
+                let car = car.as_ref();
+                let cdr = cdr.as_ref();
+                if car.is_quote() {
+                    return Ok(());
+                }
+                if !car.is_primitive_symbol() && !env.contains(car) {
+                    free.insert(car);
+                }
 
-            while lat.is_pair() {
-                union.extend(free_symbols(lat.car().unwrap(), env)?.iter());
-                lat = lat.cdr().unwrap();
+                let mut lat = match car {
+                    Cell::Symbol(sym) => match sym.as_str() {
+                        "define" => cdr
+                            .cdr()
+                            .ok_or_else(|| Error::InvalidNumArgs("define".into()))?,
+                        "lambda" => {
+                            let mut args = cdr
+                                .car()
+                                .ok_or_else(|| Error::InvalidNumArgs("lambda".into()))?;
+                            while args.is_pair() {
+                                let sym = args.car().unwrap();
+                                if !sym.is_symbol() {
+                                    return Err(Error::InvalidArgs(
+                                        "lambda".into(),
+                                        "argument".into(),
+                                        sym.to_string(),
+                                    ));
+                                }
+                                env.insert(sym);
+                                args = args.cdr().unwrap();
+                            }
+                            cdr.cdr()
+                                .ok_or_else(|| Error::InvalidNumArgs("lambda".into()))?
+                        }
+                        _ => cdr,
+                    },
+                    _ => cdr,
+                };
+
+                while lat.is_pair() {
+                    free_symbols(lat.car().unwrap(), env, free)?;
+                    lat = lat.cdr().unwrap();
+                }
+
+                // improper list
+                if !lat.is_nil() {
+                    free_symbols(lat, env, free)?;
+                }
+
+                Ok(())
             }
-
-            // improper list
-            if !lat.is_nil() {
-                union.extend(free_symbols(lat, env)?.iter());
-            }
-
-            Ok(union)
+            _ => Ok(()),
         }
-        _ => Ok(HashSet::new()),
     }
+
+    let mut env = HashSet::new();
+    let mut free_set = HashSet::new();
+    free_symbols(cell, &mut env, &mut free_set)?;
+    Ok(free_set)
 }
 
 /// Is Primitive Symbol
@@ -277,41 +287,35 @@ mod tests {
     fn free_syms() {
         // Single symbol not in the environment
         assert_eq!(
-            free_symbols(&parse!["a"], &mut HashSet::new()),
+            free_symbols(&parse!["a"]),
             Ok(HashSet::from([&cell!["a"]]))
-        );
-
-        // A single symbol in the environment
-        assert_eq!(
-            free_symbols(&parse!["a"], &mut HashSet::from([&cell!["a"]])),
-            Ok(HashSet::new())
         );
 
         // Atom
         assert_eq!(
-            free_symbols(&parse!["42"], &mut HashSet::new()),
+            free_symbols(&parse!["42"]),
             Ok(HashSet::new())
         );
         assert_eq!(
-            free_symbols(&parse!["#t"], &mut HashSet::new()),
+            free_symbols(&parse!["#t"]),
             Ok(HashSet::new())
         );
 
         // Any quoted symbols are completely ignored
         assert_eq!(
-            free_symbols(&parse!["(quote (a b c))"], &mut HashSet::new()),
+            free_symbols(&parse!["(quote (a b c))"]),
             Ok(HashSet::new())
         );
 
         // procedure
         assert_eq!(
-            free_symbols(&parse!["(a b c)"], &mut HashSet::new()),
+            free_symbols(&parse!["(a b c)"]),
             Ok(HashSet::from([&cell!["a"], &cell!["b"], &cell!["c"]]))
         );
 
         // Nested primitive procedures
         assert_eq!(
-            free_symbols(&parse!["(+ (* a b) (* c d) e)"], &mut HashSet::new()),
+            free_symbols(&parse!["(+ (* a b) (* c d) e)"]),
             Ok(HashSet::from([
                 &cell!["a"],
                 &cell!["b"],
@@ -323,33 +327,28 @@ mod tests {
 
         // Improper list
         assert_eq!(
-            free_symbols(&parse!["(a b . c)"], &mut HashSet::new()),
+            free_symbols(&parse!["(a b . c)"]),
             Ok(HashSet::from([&cell!["a"], &cell!["b"], &cell!["c"]]))
-        );
-
-        assert_eq!(
-            free_symbols(&parse!["(a b . c)"], &mut HashSet::from([&cell!["c"]])),
-            Ok(HashSet::from([&cell!["a"], &cell!["b"]]))
         );
 
         // Define
         assert_eq!(
-            free_symbols(&parse!["(define a b)"], &mut HashSet::new()),
+            free_symbols(&parse!["(define a b)"]),
             Ok(HashSet::from([&cell!["b"]]))
         );
 
         // lambdas
         assert_eq!(
-            free_symbols(&parse!["(lambda (x) (+ x y) z)"], &mut HashSet::new()),
+            free_symbols(&parse!["(lambda (x) (+ x y) z)"]),
             Ok(HashSet::from([&cell!["y"], &cell!["z"]]))
         );
-        assert!(free_symbols(&parse!["(lambda)"], &mut HashSet::new()).is_err());
-        assert!(free_symbols(&parse!["(lambda (10) (+ x y))"], &mut HashSet::new()).is_err());
-        assert!(free_symbols(&parse!["(lambda (a 10) (+ x y))"], &mut HashSet::new()).is_err());
+        assert!(free_symbols(&parse!["(lambda)"]).is_err());
+        assert!(free_symbols(&parse!["(lambda (10) (+ x y))"]).is_err());
+        assert!(free_symbols(&parse!["(lambda (a 10) (+ x y))"]).is_err());
     }
 
     #[test]
     fn free_syms_returns_errors() {
-        assert!(free_symbols(&parse!["(define)"], &mut HashSet::new()).is_err());
+        assert!(free_symbols(&parse!["(define)"]).is_err());
     }
 }
