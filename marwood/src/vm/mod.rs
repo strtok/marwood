@@ -1,7 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::environment::Environment;
 use crate::vm::heap::Heap;
-use crate::vm::vcell::{Lambda, VCell};
+use crate::vm::vcell::VCell;
 use log::trace;
 
 pub mod compile;
@@ -54,9 +54,9 @@ impl Vm {
     /// # Arguments
     /// `cell` - An expression to evaluate
     pub fn eval(&mut self, cell: &Cell) -> Result<Cell, Error> {
-        let bc = self.compile(cell)?;
-        trace!("emit: \n{}", self.decompile_text(&bc));
-        let lambda = self.heap.put(Lambda::new(bc));
+        let lambda = self.compile(cell)?;
+        trace!("emit: \n{}", self.decompile_text(&lambda));
+        let lambda = self.heap.put(lambda);
         self.lambda = lambda.as_ptr().unwrap();
         self.ip = 0;
         self.run()

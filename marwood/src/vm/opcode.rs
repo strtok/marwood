@@ -1,4 +1,4 @@
-use crate::vm::vcell::VCell;
+use crate::vm::vcell::{Lambda, VCell};
 use crate::vm::Vm;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -101,9 +101,9 @@ struct DecompiledInstruction {
 }
 
 impl Vm {
-    pub fn decompile_text(&self, program: &[VCell]) -> String {
+    pub fn decompile_text(&self, lambda: &Lambda) -> String {
         let mut text = String::new();
-        for instruction in self.decompile(program) {
+        for instruction in self.decompile(lambda) {
             let op = instruction.op;
             let operands = instruction
                 .operands
@@ -133,8 +133,8 @@ impl Vm {
         text
     }
 
-    fn decompile(&self, program: &[VCell]) -> Vec<DecompiledInstruction> {
-        let mut cur = program.iter();
+    fn decompile(&self, lambda: &Lambda) -> Vec<DecompiledInstruction> {
+        let mut cur = lambda.bc.iter();
         let mut instructions = vec![];
         while let Some(VCell::OpCode(opcode)) = cur.next() {
             let schema = schema().get(opcode).expect("unknown opcode");
@@ -182,7 +182,7 @@ mod tests {
         {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
-            vm.lambda = vm.heap.put(Lambda::new(vec![
+            vm.lambda = vm.heap.put(Lambda::from(vec![
                 OpCode::MovImmediate.into(),
                 ptr.clone(),
                 VCell::Acc,
@@ -196,7 +196,7 @@ mod tests {
         {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
-            vm.lambda = vm.heap.put(Lambda::new(vec![
+            vm.lambda = vm.heap.put(Lambda::from(vec![
                 OpCode::Mov.into(),
                 ptr.clone(),
                 VCell::Acc,

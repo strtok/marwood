@@ -1,6 +1,6 @@
 use crate::cell::Cell;
 use crate::vm::opcode::OpCode;
-use crate::vm::vcell::VCell;
+use crate::vm::vcell::{Lambda, VCell};
 use crate::vm::Error::{InvalidArgs, InvalidNumArgs};
 use crate::vm::{Error, Vm};
 use std::ops::Deref;
@@ -18,36 +18,36 @@ macro_rules! cdr {
 }
 
 impl Vm {
-    pub fn compile(&mut self, cell: &Cell) -> Result<Vec<VCell>, Error> {
-        let mut bc = vec![];
-        self.compile_expression(&mut bc, cell)?;
-        bc.push(VCell::from(OpCode::Halt));
-        Ok(bc)
+    pub fn compile(&mut self, cell: &Cell) -> Result<Lambda, Error> {
+        let mut lambda = Lambda::new();
+        self.compile_expression(&mut lambda, cell)?;
+        lambda.emit(VCell::from(OpCode::Halt));
+        Ok(lambda)
     }
 
-    pub fn compile_expression(&mut self, bc: &mut Vec<VCell>, cell: &Cell) -> Result<(), Error> {
+    pub fn compile_expression(&mut self, lambda: &mut Lambda, cell: &Cell) -> Result<(), Error> {
         match cell {
             Cell::Pair(car, cdr) => match car.deref() {
-                Cell::Symbol(s) if s.eq("define") => self.compile_define(bc, cdr)?,
-                Cell::Symbol(s) if s.eq("quote") => self.compile_quote(bc, car!(cdr))?,
+                Cell::Symbol(s) if s.eq("define") => self.compile_define(lambda, cdr)?,
+                Cell::Symbol(s) if s.eq("quote") => self.compile_quote(lambda, car!(cdr))?,
                 Cell::Symbol(s) if s.eq("car") => {
-                    self.compile_unary(OpCode::Car, "car", bc, cdr)?
+                    self.compile_unary(OpCode::Car, "car", lambda, cdr)?
                 }
                 Cell::Symbol(s) if s.eq("cdr") => {
-                    self.compile_unary(OpCode::Cdr, "cdr", bc, cdr)?
+                    self.compile_unary(OpCode::Cdr, "cdr", lambda, cdr)?
                 }
                 Cell::Symbol(s) if s.eq("cons") => {
-                    self.compile_arg2(OpCode::Cons, "cons", bc, cdr)?
+                    self.compile_arg2(OpCode::Cons, "cons", lambda, cdr)?
                 }
-                Cell::Symbol(s) if s.eq("eq?") => self.compile_arg2(OpCode::Eq, "eq?", bc, cdr)?,
-                Cell::Symbol(s) if s.eq("+") => self.compile_var_arg(OpCode::Add, "+", bc, cdr)?,
-                Cell::Symbol(s) if s.eq("-") => self.compile_var_arg(OpCode::Sub, "-", bc, cdr)?,
-                Cell::Symbol(s) if s.eq("*") => self.compile_var_arg(OpCode::Mul, "*", bc, cdr)?,
+                Cell::Symbol(s) if s.eq("eq?") => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr)?,
+                Cell::Symbol(s) if s.eq("+") => self.compile_var_arg(OpCode::Add, "+", lambda, cdr)?,
+                Cell::Symbol(s) if s.eq("-") => self.compile_var_arg(OpCode::Sub, "-", lambda, cdr)?,
+                Cell::Symbol(s) if s.eq("*") => self.compile_var_arg(OpCode::Mul, "*", lambda, cdr)?,
                 _ => return Err(Error::UnknownProcedure(car.to_string())),
             },
-            Cell::Symbol(_) => self.compile_symbol_lookup(bc, cell)?,
+            Cell::Symbol(_) => self.compile_symbol_lookup(lambda, cell)?,
             Cell::Number(_) | Cell::Bool(_) | Cell::Nil | Cell::Void | Cell::Undefined => {
-                self.compile_quote(bc, cell)?
+                self.compile_quote(lambda, cell)?
             }
         };
         Ok(())
@@ -57,24 +57,24 @@ impl Vm {
     ///
     /// Given the symbol in sym, compile to a ENVGET instruction to fetch
     /// the value bound to the symbol.
-    pub fn compile_symbol_lookup(&mut self, bc: &mut Vec<VCell>, sym: &Cell) -> Result<(), Error> {
+    pub fn compile_symbol_lookup(&mut self, lambda: &mut Lambda, sym: &Cell) -> Result<(), Error> {
         let sym_ref = self.heap.put_cell(sym);
         let sym_ref = sym_ref.as_ptr().expect("expected ptr");
         let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
-        bc.push(OpCode::EnvGet.into());
-        bc.push(env_slot);
+        lambda.emit(OpCode::EnvGet);
+        lambda.emit(env_slot);
         Ok(())
     }
 
     /// Compile Define
     ///
     /// (define variable expression)
-    pub fn compile_define(&mut self, bc: &mut Vec<VCell>, lat: &Cell) -> Result<(), Error> {
+    pub fn compile_define(&mut self, lambda: &mut Lambda, lat: &Cell) -> Result<(), Error> {
         if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
             return Err(InvalidNumArgs("define".into()));
         }
 
-        self.compile_expression(bc, car!(cdr!(lat)))?;
+        self.compile_expression(lambda, car!(cdr!(lat)))?;
         let symbol = car!(lat);
         if !symbol.is_symbol() {
             return Err(InvalidArgs(
@@ -88,8 +88,8 @@ impl Vm {
                 InvalidArgs("define".into(), "variable".into(), symbol.to_string())
             })?;
         let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
-        bc.push(OpCode::EnvSet.into());
-        bc.push(env_slot);
+        lambda.emit(OpCode::EnvSet);
+        lambda.emit(env_slot);
         Ok(())
     }
 
@@ -106,14 +106,14 @@ impl Vm {
         &mut self,
         op: OpCode,
         name: &str,
-        bc: &mut Vec<VCell>,
+        lambda: &mut Lambda,
         lat: &Cell,
     ) -> Result<(), Error> {
         if lat.is_nil() || !cdr!(lat).is_nil() {
             return Err(InvalidNumArgs(name.into()));
         }
-        self.compile_expression(bc, car!(lat))?;
-        bc.push(op.into());
+        self.compile_expression(lambda, car!(lat))?;
+        lambda.emit(op);
         Ok(())
     }
 
@@ -130,16 +130,16 @@ impl Vm {
         &mut self,
         op: OpCode,
         name: &str,
-        bc: &mut Vec<VCell>,
+        lambda: &mut Lambda,
         lat: &Cell,
     ) -> Result<(), Error> {
         if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
             return Err(InvalidNumArgs(name.into()));
         }
-        self.compile_expression(bc, car!(cdr!(lat)))?;
-        bc.push(OpCode::Push.into());
-        self.compile_expression(bc, car!(lat))?;
-        bc.push(op.into());
+        self.compile_expression(lambda, car!(cdr!(lat)))?;
+        lambda.emit(OpCode::Push);
+        self.compile_expression(lambda, car!(lat))?;
+        lambda.emit(op);
         Ok(())
     }
 
@@ -148,10 +148,10 @@ impl Vm {
     /// Quote is compiled as a single argument instruction (QUOTE VAL). Quote is
     /// special in that the value in cell is not evaluated before being placed
     /// on the heap.
-    pub fn compile_quote(&mut self, bc: &mut Vec<VCell>, cell: &Cell) -> Result<(), Error> {
-        bc.push(OpCode::MovImmediate.into());
-        bc.push(self.heap.put_cell(cell));
-        bc.push(VCell::Acc);
+    pub fn compile_quote(&mut self, lambda: &mut Lambda, cell: &Cell) -> Result<(), Error> {
+        lambda.emit(OpCode::MovImmediate);
+        lambda.emit(self.heap.put_cell(cell));
+        lambda.emit(VCell::Acc);
         Ok(())
     }
 
@@ -172,7 +172,7 @@ impl Vm {
         &mut self,
         op: OpCode,
         name: &str,
-        bc: &mut Vec<VCell>,
+        lambda: &mut Lambda,
         lat: &Cell,
     ) -> Result<(), Error> {
         let mut lat = lat;
@@ -187,7 +187,7 @@ impl Vm {
             if op == OpCode::Sub {
                 return Err(InvalidNumArgs(name.to_string()));
             }
-            self.compile_quote(bc, base_value)?;
+            self.compile_quote(lambda, base_value)?;
             return Ok(());
         }
 
@@ -197,19 +197,19 @@ impl Vm {
         // Special one arg form. Add it to 0 so that type
         // checking from the ADD instruction still occurs.
         if lat.is_nil() {
-            self.compile_quote(bc, base_value)?;
-            bc.push(OpCode::Push.into());
-            self.compile_expression(bc, first_arg)?;
-            bc.push(op.into());
+            self.compile_quote(lambda, base_value)?;
+            lambda.emit(OpCode::Push);
+            self.compile_expression(lambda, first_arg)?;
+            lambda.emit(op);
             return Ok(());
         }
 
         // Each additional arg is added to ACC
-        self.compile_expression(bc, first_arg)?;
+        self.compile_expression(lambda, first_arg)?;
         while !lat.is_nil() {
-            bc.push(OpCode::Push.into());
-            self.compile_expression(bc, car!(lat))?;
-            bc.push(op.clone().into());
+            lambda.emit(OpCode::Push);
+            self.compile_expression(lambda, car!(lat))?;
+            lambda.emit(op.clone());
             lat = cdr!(lat);
         }
 

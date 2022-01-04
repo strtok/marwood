@@ -204,20 +204,54 @@ impl AsRef<VCell> for VCell {
     }
 }
 
+
+/// Lambda
+///
+/// Lambda represents a unit of executable bytecode constructed
+/// by the compiler with an entry point of bc[0].
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Lambda {
     pub bc: Vec<VCell>
 }
 
 impl Lambda {
-    pub fn new(bc: Vec<VCell>) -> Lambda {
+    /// New
+    ///
+    /// Create a new lambda with an empty bytecode
+    /// vector.
+    pub fn new() -> Lambda {
         Lambda {
-            bc
+            bc: vec![]
         }
     }
 
+    /// Get
+    ///
+    /// Get the opcode or operand at the given index
     pub fn get(&self, index: usize) -> Option<&VCell> {
         self.bc.get(index)
+    }
+
+    /// Emit
+    ///
+    /// Emit the byte code to the internal bc vector. This
+    /// method is used during compilation when forming a lambda.
+    pub fn emit<T: Into<VCell>>(&mut self, vcell: T) {
+        self.bc.push(vcell.into());
+    }
+}
+
+impl Default for Lambda {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl From<Vec<VCell>> for Lambda {
+    fn from(bc: Vec<VCell>) -> Self {
+        Lambda {
+            bc
+        }
     }
 }
 
