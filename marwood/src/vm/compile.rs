@@ -21,7 +21,7 @@ impl Vm {
     pub fn compile(&mut self, cell: &Cell) -> Result<Lambda, Error> {
         let mut lambda = Lambda::new();
         self.compile_expression(&mut lambda, cell)?;
-        lambda.emit(VCell::from(OpCode::Halt));
+        lambda.emit(OpCode::Halt);
         Ok(lambda)
     }
 
