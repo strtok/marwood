@@ -30,7 +30,9 @@ impl Vm {
         match cell {
             Cell::Pair(car, cdr) => match car.deref() {
                 Cell::Symbol(s) if s.eq("define") => self.compile_define(lambda, cdr)?,
-                Cell::Symbol(s) if s.eq("lambda") => self.compile_lambda(lambda, cdr)?,
+                Cell::Symbol(s) if s.eq("lambda") | s.eq("λ") => {
+                    self.compile_lambda(lambda, cdr)?
+                }
                 Cell::Symbol(s) if s.eq("quote") => self.compile_quote(lambda, car!(cdr))?,
                 Cell::Symbol(s) if s.eq("car") => {
                     self.compile_unary(OpCode::Car, "car", lambda, cdr)?
