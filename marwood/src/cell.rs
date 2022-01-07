@@ -10,6 +10,11 @@ pub enum Cell {
     Number(i64),
     Pair(Box<Cell>, Box<Cell>),
     Symbol(String),
+
+    // Types that exist in VCell, but need Cell representation for
+    // printing purposes. These are never created by the lexer/parser.
+    Closure,
+    Lambda,
     Undefined,
     Void,
 }
@@ -269,6 +274,12 @@ impl Display for Cell {
             }
             Cell::Nil => {
                 write!(f, "()")
+            }
+            Cell::Closure => {
+                write!(f, "#<procedure>")
+            }
+            Cell::Lambda => {
+                write!(f, "#<procedure>")
             }
             Cell::Undefined => {
                 write!(f, "#<undefined>")

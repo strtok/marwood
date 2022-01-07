@@ -6,9 +6,11 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum OpCode {
     Add,
+    CallAcc,
     Car,
     Cdr,
     Cons,
+    Enter,
     EnvGet,
     EnvSet,
     Eq,
@@ -17,6 +19,9 @@ pub enum OpCode {
     Mul,
     Halt,
     Push,
+    PushImmediate,
+    PushAcc,
+    Ret,
     Sub,
 }
 
@@ -50,6 +55,12 @@ pub enum Operand {
     /// * If the operand is a reference type, the value is read from
     /// the location the reference points to.
     LoadReference,
+
+    /// Acc
+    ///
+    /// The operand is the ACC register. This is used to render instructions
+    /// where the operand is encoded in the instruction (e.g. CallAcc).
+    Acc,
 }
 
 /// Schema
@@ -77,17 +88,22 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
     lazy_static! {
         static ref SCHEMA: HashMap<OpCode, Schema> = HashMap::from([
             (OpCode::Add, Schema::new("ADD", vec![])),
+            (OpCode::CallAcc, Schema::new("CALL", vec![Operand::Acc])),
             (OpCode::Car, Schema::new("CAR", vec![])),
             (OpCode::Cdr, Schema::new("CDR", vec![])),
             (OpCode::Cons, Schema::new("CONS", vec![])),
             (OpCode::EnvGet, Schema::new("ENVGET", vec![Operand::LoadReference])),
             (OpCode::EnvSet, Schema::new("ENVSET", vec![Operand::StoreReference])),
+            (OpCode::Enter, Schema::new("ENTER", vec![])),
             (OpCode::Eq, Schema::new("EQ", vec![])),
             (OpCode::Mov, Schema::new("MOV", vec![Operand::LoadReference, Operand::StoreReference])),
             (OpCode::MovImmediate, Schema::new("MOV", vec![Operand::Immediate, Operand::StoreReference])),
             (OpCode::Mul, Schema::new("MUL", vec![])),
             (OpCode::Halt, Schema::new("HALT", vec![])),
-            (OpCode::Push, Schema::new("PUSH", vec![])),
+            (OpCode::Push, Schema::new("PUSH", vec![Operand::LoadReference])),
+            (OpCode::PushImmediate, Schema::new("PUSH", vec![Operand::Immediate])),
+            (OpCode::PushAcc, Schema::new("PUSH", vec![Operand::Acc])),
+            (OpCode::Ret, Schema::new("RET", vec![])),
             (OpCode::Sub, Schema::new("SUB", vec![]))
         ]);
     }
@@ -109,11 +125,11 @@ impl Vm {
                 .operands
                 .iter()
                 .map(|it| match it.1 {
-                    Operand::Immediate => it.0.to_string(),
                     Operand::StoreReference | Operand::LoadReference => match it.0 {
                         VCell::Acc => it.0.to_string(),
                         _ => format!("[{}]", it.0.to_string()),
                     },
+                    _ => it.0.to_string(),
                 })
                 .collect::<Vec<_>>();
             let values = instruction.values;
@@ -141,10 +157,11 @@ impl Vm {
             let mut operands = vec![];
             let mut values = vec![];
             for it in &schema.operands {
-                let operand = cur.next().expect("expected operand");
-                if operand.is_ptr() && values.is_empty() {
-                    values.push(self.heap.get_as_cell(operand).to_string());
-                }
+                let operand = match it {
+                    Operand::Acc => &VCell::Acc,
+                    _ => cur.next().expect("expected operand"),
+                };
+
                 operands.push((operand.clone(), it.clone()));
 
                 if values.is_empty() {
@@ -173,8 +190,8 @@ impl Vm {
 
 #[cfg(test)]
 mod tests {
-    use crate::vm::vcell::Lambda;
     use super::*;
+    use crate::vm::vcell::Lambda;
 
     #[test]
     fn mov() {
@@ -182,12 +199,16 @@ mod tests {
         {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
-            vm.lambda = vm.heap.put(Lambda::from(vec![
-                OpCode::MovImmediate.into(),
-                ptr.clone(),
-                VCell::Acc,
-                OpCode::Halt.into(),
-            ])).as_ptr().unwrap();
+            vm.ip.0 = vm
+                .heap
+                .put(Lambda::from(vec![
+                    OpCode::MovImmediate.into(),
+                    ptr.clone(),
+                    VCell::Acc,
+                    OpCode::Halt.into(),
+                ]))
+                .as_ptr()
+                .unwrap();
 
             assert!(vm.run().is_ok());
             assert_eq!(vm.acc, ptr);
@@ -196,12 +217,16 @@ mod tests {
         {
             let mut vm = Vm::new();
             let ptr = vm.heap.put(VCell::Bool(true));
-            vm.lambda = vm.heap.put(Lambda::from(vec![
-                OpCode::Mov.into(),
-                ptr.clone(),
-                VCell::Acc,
-                OpCode::Halt.into(),
-            ])).as_ptr().unwrap();
+            vm.ip.0 = vm
+                .heap
+                .put(Lambda::from(vec![
+                    OpCode::Mov.into(),
+                    ptr.clone(),
+                    VCell::Acc,
+                    OpCode::Halt.into(),
+                ]))
+                .as_ptr()
+                .unwrap();
             assert!(vm.run().is_ok());
             assert_eq!(vm.acc, VCell::Bool(true));
         }

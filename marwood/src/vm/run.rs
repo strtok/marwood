@@ -1,7 +1,8 @@
 use crate::cell::Cell;
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
-    ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, VariableNotBound,
+    ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, InvalidNumArgs,
+    InvalidProcedure, VariableNotBound,
 };
 use crate::vm::vcell::{Lambda, VCell};
 use crate::vm::{Error, Vm};
@@ -53,6 +54,20 @@ impl Vm {
                     _ => return Err(InvalidBytecode),
                 };
             }
+            OpCode::CallAcc => {
+                // Push the current environment pointer
+                self.stack.push(VCell::Ptr(usize::MAX));
+                // Push return IP
+                self.stack
+                    .push(VCell::InstructionPointer(self.ip.0, self.ip.1));
+                // Verify the procedure is a procedure
+                if !self.heap.get(&self.acc).is_procedure() {
+                    return Err(InvalidProcedure(self.heap.get(&self.acc)));
+                }
+                // Jump to ip=0 of lambda in ACC
+                self.ip.0 = self.acc.as_ptr().ok_or(InvalidBytecode)?;
+                self.ip.1 = 0;
+            }
             OpCode::Car => {
                 let arg = self.heap.get(&self.acc);
                 self.acc = car(arg)?;
@@ -65,6 +80,49 @@ impl Vm {
                 let car = self.acc.clone().as_ptr().ok_or(InvalidBytecode)?;
                 let cdr = self.pop_stack()?.as_ptr().ok_or(InvalidBytecode)?;
                 self.acc = self.heap.put(VCell::Pair(car, cdr));
+            }
+            OpCode::Enter => {
+                // Enter performs runtime validation of the called procedure,
+                // and sets up the local stack frame.
+                //
+                // At this point the stack should appear as follows:
+                //  0: Return IP
+                // -1: Last Frame EP
+                // -2: Number of arguments passed by calee
+                // -3: ArgN...
+                //
+                // Get a reference to the lambda being entered, so that
+                // certain runtime type checks can be performed.
+                let lambda = &self.acc;
+                let lambda = self.heap.get(lambda);
+                let lambda = lambda
+                    .as_lambda()
+                    .ok_or_else(|| InvalidProcedure(lambda.clone()))?;
+
+                // Verify that the number of args passed (SP[-2]) is
+                // equal to the argument expectations of the lambda
+                if self
+                    .stack
+                    .get_offset(-2)
+                    .ok_or(InvalidBytecode)?
+                    .as_fixed_num()
+                    .ok_or(InvalidBytecode)? as usize
+                    != lambda.args.len()
+                {
+                    return Err(InvalidNumArgs);
+                }
+
+                // At this point the stack should appear as follows:
+                //  0: Last Frame's BP
+                // -1: Return IP
+                // -2: Last Frame EP
+                // -3: Number of arguments passed by calee
+                // -4: ArgN...
+                //
+                // Push the old BP on to the stack, and set BP
+                // so that BP[0] is ArgN.
+                self.stack.push(VCell::BasePointer(self.bp));
+                self.bp = self.stack.get_sp() - 4;
             }
             OpCode::EnvGet => {
                 let env_slot = self
@@ -99,7 +157,42 @@ impl Vm {
                 self.store_operand(vcell)?;
             }
             OpCode::Push => {
+                let vcell = self.load_operand()?;
+                self.stack.push(vcell);
+            }
+            OpCode::PushImmediate => {
+                let vcell = self.read_operand()?;
+                self.stack.push(vcell);
+            }
+            OpCode::PushAcc => {
                 self.stack.push(self.acc.clone());
+            }
+            OpCode::Ret => {
+                // Restore the calee's SP given the argument
+                // count.
+                let n = self
+                    .stack
+                    .get(self.bp + 1)
+                    .ok_or(InvalidBytecode)?
+                    .as_fixed_num()
+                    .ok_or(InvalidBytecode)? as usize;
+                *self.stack.get_sp_mut() = self.bp - n;
+
+                // Restore the calee's IP
+                self.ip = self
+                    .stack
+                    .get(self.bp + 3)
+                    .ok_or(InvalidBytecode)?
+                    .as_ip()
+                    .ok_or(InvalidBytecode)?;
+
+                // Restore the calee's BP
+                self.bp = self
+                    .stack
+                    .get(self.bp + 4)
+                    .ok_or(InvalidBytecode)?
+                    .as_bp()
+                    .ok_or(InvalidBytecode)?;
             }
             OpCode::Halt => return Ok(true),
         }
@@ -122,7 +215,7 @@ impl Vm {
     /// # Returns
     /// Returns the bound symbol, or "#<undefined>" if symbol lookup failed
     /// for any reason.
-    fn get_str_bound_to<T: Into<VCell>>(&self, vcell: T) -> String {
+    pub fn get_str_bound_to<T: Into<VCell>>(&self, vcell: T) -> String {
         let vcell = vcell.into();
         match vcell {
             VCell::EnvSlot(slot) => match self.globenv.get_symbol(slot) {
@@ -143,14 +236,20 @@ impl Vm {
     ///
     /// Pop a value off the stack. Error if the stack is empty.
     fn pop_stack(&mut self) -> Result<VCell, RuntimeError> {
-        self.stack.pop().ok_or(ExpectedStackValue)
+        self.stack
+            .pop()
+            .ok_or(ExpectedStackValue)
+            .map(|it| it.clone())
     }
 
     /// Lambda
     ///
     /// Dereference the currently executing lambda
     fn lambda(&self) -> &Lambda {
-        self.heap.get_at_index(self.lambda).as_lambda().expect("expected lambda")
+        self.heap
+            .get_at_index(self.ip.0)
+            .as_lambda()
+            .expect("expected lambda")
     }
 
     /// Read Arg
@@ -158,12 +257,13 @@ impl Vm {
     /// Read an argument vcell from program[ip], increment ip and
     /// return the value.
     fn read_operand(&mut self) -> Result<VCell, RuntimeError> {
-        let operand = self.lambda()
-            .get(self.ip)
+        let operand = self
+            .lambda()
+            .get(self.ip.1)
             .cloned()
             .filter(|it| !it.is_opcode())
             .ok_or(InvalidBytecode);
-        self.ip += 1;
+        self.ip.1 += 1;
         operand
     }
 
@@ -205,13 +305,14 @@ impl Vm {
     /// Read an op code from program[ip], increment ip and
     /// return the opcode.
     fn read_opcode(&mut self) -> Result<OpCode, RuntimeError> {
-        let op = self.lambda()
-            .get(self.ip)
+        let op = self
+            .lambda()
+            .get(self.ip.1)
             .cloned()
             .filter(|it| it.is_opcode())
             .map(|it| it.as_opcode().unwrap())
             .ok_or(InvalidBytecode);
-        self.ip += 1;
+        self.ip.1 += 1;
         op
     }
 
@@ -234,7 +335,7 @@ impl Vm {
             .filter_map(|it| it.as_ptr())
             .for_each(|it| self.heap.mark(it));
 
-        self.heap.mark(self.lambda);
+        self.heap.mark(self.ip.0);
         self.heap.sweep();
     }
 }
@@ -244,6 +345,8 @@ pub enum RuntimeError {
     ExpectedPair(VCell),
     InvalidArgs(String, String, VCell),
     InvalidBytecode,
+    InvalidNumArgs,
+    InvalidProcedure(VCell),
     ExpectedStackValue,
     VariableNotBound(String),
 }
@@ -261,6 +364,10 @@ impl RuntimeError {
                 Error::InvalidArgs(proc, expected, vm.heap.get_as_cell(&got).to_string())
             }
             InvalidBytecode => Error::InvalidBytecode,
+            InvalidNumArgs => Error::InvalidNumArgs("procedure".into()),
+            InvalidProcedure(vcell) => {
+                Error::InvalidProcedure(vm.heap.get_as_cell(&vcell).to_string())
+            }
             ExpectedStackValue => Error::ExpectedStackValue,
             VariableNotBound(sym) => Error::VariableNotBound(sym),
         }

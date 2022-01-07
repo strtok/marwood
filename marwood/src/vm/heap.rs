@@ -2,7 +2,7 @@ use crate::cell;
 use crate::cell::Cell;
 use crate::vm::gc;
 use crate::vm::gc::State;
-use crate::vm::vcell::VCell;
+use crate::vm::vcell::{Lambda, VCell};
 use log::trace;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -100,6 +100,8 @@ impl Heap {
                 }
             }
             cell::Cell::Symbol(ref sym) => self.put(VCell::symbol(sym.clone())),
+            cell::Cell::Closure => panic!("unexpected closure"),
+            cell::Cell::Lambda => panic!("unexpected lambda"),
         }
     }
 
@@ -159,9 +161,15 @@ impl Heap {
             VCell::Symbol(s) => Cell::Symbol(s.deref().into()),
             VCell::Undefined => Cell::Undefined,
             VCell::Void => Cell::Void,
+            VCell::Closure(_, _) => Cell::Closure,
+            VCell::Lambda(_) => Cell::Lambda,
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
-            VCell::Acc | VCell::EnvSlot(_) | VCell::OpCode(_) | VCell::Lambda(_) => {
+            VCell::Acc
+            | VCell::EnvSlot(_)
+            | VCell::OpCode(_)
+            | VCell::BasePointer(_)
+            | VCell::InstructionPointer(_, _) => {
                 panic!("cannot convert VCell {} to Cell", vcell)
             }
         }
@@ -200,9 +208,44 @@ impl Heap {
                 VCell::Ptr(cdr) => {
                     ptr = cdr;
                 }
+                VCell::Lambda(ptr) => {
+                    self.mark_lambda(&*ptr);
+                }
                 _ => {
                     break;
                 }
+            }
+        }
+    }
+
+    /// Mark Lambda
+    ///
+    /// Iterate the lambda byte code and mark any value that contains a reference type
+    pub fn mark_lambda(&mut self, lambda: &Lambda) {
+        for it in &lambda.bc {
+            match it {
+                VCell::Closure(lambda, _) => {
+                    self.mark(*lambda);
+                }
+                VCell::Pair(car, cdr) => {
+                    self.mark(*car);
+                    self.mark(*cdr);
+                }
+                VCell::Ptr(ptr) => {
+                    self.mark(*ptr);
+                }
+                VCell::Acc
+                | VCell::BasePointer(_)
+                | VCell::Bool(_)
+                | VCell::EnvSlot(_)
+                | VCell::FixedNum(_)
+                | VCell::InstructionPointer(_, _)
+                | VCell::Lambda(_)
+                | VCell::Nil
+                | VCell::OpCode(_)
+                | VCell::Symbol(_)
+                | VCell::Undefined
+                | VCell::Void => {}
             }
         }
     }

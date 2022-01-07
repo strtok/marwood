@@ -138,30 +138,28 @@ impl Default for Environment {
 ///
 /// # Arguments
 /// `cell` - The cell to recurse
-pub fn free_symbols(
-    cell: &Cell
-) -> Result<HashSet<&Cell>, Error> {
+pub fn free_symbols(cell: &Cell) -> Result<HashSet<&Cell>, Error> {
     let mut env = HashSet::new();
     let mut free_set = HashSet::new();
     find_free_symbols(cell, &mut env, &mut free_set)?;
     Ok(free_set)
 }
 
-
 /// Find Free Symbols
 ///
 /// This is a recursive call from free_syumbols.
-fn find_free_symbols<'a>(cell: &'a Cell,
-                         env: &mut HashSet<&'a Cell>,
-                         free: &mut HashSet<&'a Cell>) -> Result<(), Error>
-{
+fn find_free_symbols<'a>(
+    cell: &'a Cell,
+    env: &mut HashSet<&'a Cell>,
+    free: &mut HashSet<&'a Cell>,
+) -> Result<(), Error> {
     match cell {
         Cell::Symbol(_) => match env.contains(&cell) {
             true => Ok(()),
             false => {
                 free.insert(cell);
                 Ok(())
-            },
+            }
         },
         Cell::Pair(car, cdr) => {
             let car = car.as_ref();
@@ -176,10 +174,11 @@ fn find_free_symbols<'a>(cell: &'a Cell,
 /// Find Free Symbols In Proc
 ///
 /// This is a recursive call from free_syumbols.
-fn find_free_symbols_in_proc<'a>((car, cdr): (&'a Cell, &'a Cell),
-                                 env: &mut HashSet<&'a Cell>,
-                                 free: &mut HashSet<&'a Cell>) -> Result<(), Error>
-{
+fn find_free_symbols_in_proc<'a>(
+    (car, cdr): (&'a Cell, &'a Cell),
+    env: &mut HashSet<&'a Cell>,
+    free: &mut HashSet<&'a Cell>,
+) -> Result<(), Error> {
     if car.is_quote() {
         return Ok(());
     }
@@ -302,26 +301,14 @@ mod tests {
     #[test]
     fn free_syms() {
         // Single symbol not in the environment
-        assert_eq!(
-            free_symbols(&parse!["a"]),
-            Ok(HashSet::from([&cell!["a"]]))
-        );
+        assert_eq!(free_symbols(&parse!["a"]), Ok(HashSet::from([&cell!["a"]])));
 
         // Atom
-        assert_eq!(
-            free_symbols(&parse!["42"]),
-            Ok(HashSet::new())
-        );
-        assert_eq!(
-            free_symbols(&parse!["#t"]),
-            Ok(HashSet::new())
-        );
+        assert_eq!(free_symbols(&parse!["42"]), Ok(HashSet::new()));
+        assert_eq!(free_symbols(&parse!["#t"]), Ok(HashSet::new()));
 
         // Any quoted symbols are completely ignored
-        assert_eq!(
-            free_symbols(&parse!["(quote (a b c))"]),
-            Ok(HashSet::new())
-        );
+        assert_eq!(free_symbols(&parse!["(quote (a b c))"]), Ok(HashSet::new()));
 
         // procedure
         assert_eq!(

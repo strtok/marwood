@@ -1,6 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::environment::Environment;
 use crate::vm::heap::Heap;
+use crate::vm::stack::Stack;
 use crate::vm::vcell::VCell;
 use log::trace;
 
@@ -10,6 +11,7 @@ pub mod gc;
 pub mod heap;
 pub mod opcode;
 pub mod run;
+pub mod stack;
 pub mod vcell;
 
 const HEAP_SIZE: usize = 1024;
@@ -20,15 +22,13 @@ pub struct Vm {
     heap: Heap,
     globenv: Environment,
 
-    /// A heap pointer to the currently executing lambda
-    lambda: usize,
-
     /// The current program stack
-    stack: Vec<VCell>,
+    stack: Stack,
 
     /// Registers
     acc: VCell,
-    ip: usize,
+    ip: (usize, usize),
+    bp: usize,
 }
 
 impl Vm {
@@ -38,11 +38,11 @@ impl Vm {
     pub fn new() -> Vm {
         Vm {
             heap: Heap::new(HEAP_SIZE),
-            lambda: usize::MAX,
-            ip: 0,
-            stack: vec![],
+            ip: (usize::MAX, 0),
+            stack: Stack::new(),
             globenv: Environment::new(),
             acc: VCell::undefined(),
+            bp: 0,
         }
     }
 
@@ -57,8 +57,8 @@ impl Vm {
         let lambda = self.compile(cell)?;
         trace!("emit: \n{}", self.decompile_text(&lambda));
         let lambda = self.heap.put(lambda);
-        self.lambda = lambda.as_ptr().unwrap();
-        self.ip = 0;
+        self.ip.0 = lambda.as_ptr().unwrap();
+        self.ip.1 = 0;
         self.run()
     }
 }
@@ -83,6 +83,12 @@ pub enum Error {
     #[error("invalid bytecode")]
     InvalidBytecode,
 
+    #[error("call of non-procedure: {0}")]
+    InvalidProcedure(String),
+
+    #[error("lambda require at least one expression")]
+    LambdaMissingExpression,
+
     #[error("expected stack value")]
     ExpectedStackValue,
 
@@ -98,7 +104,9 @@ mod tests {
     use super::*;
     use crate::lex;
     use crate::parse;
-    use crate::vm::Error::{ExpectedPair, InvalidArgs, InvalidNumArgs, VariableNotBound};
+    use crate::vm::Error::{
+        ExpectedPair, InvalidArgs, InvalidNumArgs, InvalidProcedure, VariableNotBound,
+    };
 
     macro_rules! evals {
         ($($lhs:expr => $rhs:expr),+) => {{
@@ -220,5 +228,34 @@ mod tests {
             "'foo" => "foo",
             "'foo" => "foo"
         ]
+    }
+
+    #[test]
+    fn invalid_procedure_calls() {
+        fails![
+            "(1 2 3)" => InvalidProcedure("1".to_string()),
+            "((+ 1 1) 2 3)" => InvalidProcedure("2".to_string())
+        ];
+    }
+
+    #[test]
+    fn lambdas() {
+        evals![
+            "((lambda () 10))" => "10",
+            "(+ ((lambda () 50)) ((lambda () 100)))" => "150"
+        ];
+    }
+
+    #[test]
+    fn tge_capturing_lambda() {
+        evals![
+            "(define x 100)" => "#<void>",
+            "(define y 50)" => "#<void>",
+            "((lambda () x))" => "100",
+            "(+ ((lambda () x)) ((lambda () y)))" => "150",
+            "(define x 1000)" => "#<void>",
+            "(define y 500)" => "#<void>",
+            "(+ ((lambda () x)) ((lambda () y)))" => "1500"
+        ];
     }
 }

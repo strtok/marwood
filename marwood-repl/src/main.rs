@@ -1,9 +1,9 @@
+use log::trace;
 use marwood::cell::Cell;
 use marwood::lex::{scan, Token};
 use marwood::parse;
 use marwood::parse::parse;
 use marwood::vm::Vm;
-use log::trace;
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
@@ -85,7 +85,6 @@ fn parse_and_eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
                 Ok(Cell::Void) => {}
                 Ok(cell) => {
                     println!("{}", cell);
-                    println!()
                 }
                 Err(e) => {
                     println!("error: {}", e);

@@ -8,12 +8,12 @@
 [Deploy]: https://github.com/strtok/marwood/actions/workflows/deploy.yml
 Marwood is a [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) implementation for rust, featuring:
 
-* a 64 bit virtual machine and heap composed of 3x64 bit cells
+* a scheme r5rs compiler & 64 bit virtual machine composed of 3x64bit cells
 * mark & sweep garbage collection
 * a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
 * a WASM target repl using [xterm-js-rs](https://github.com/segeljakt/xterm-js-rs) auto deployed to [github pages](https://strtok.github.io/marwood/)
 
-# Virtual Machine
+# Design
 
 ## VCells
 

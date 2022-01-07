@@ -15,9 +15,12 @@ use std::rc::Rc;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum VCell {
     Acc,
+    BasePointer(usize),
     Bool(bool),
+    Closure(usize, usize),
     EnvSlot(usize),
     FixedNum(i64),
+    InstructionPointer(usize, usize),
     Lambda(Rc<Lambda>),
     Nil,
     OpCode(OpCode),
@@ -97,6 +100,14 @@ impl VCell {
         matches!(self, VCell::Lambda(_))
     }
 
+    pub fn is_closure(&self) -> bool {
+        matches!(self, VCell::Closure(_, _))
+    }
+
+    pub fn is_procedure(&self) -> bool {
+        self.is_lambda() || self.is_closure()
+    }
+
     pub fn as_opcode(&self) -> Option<OpCode> {
         match self {
             VCell::OpCode(op) => Some(op.clone()),
@@ -152,6 +163,20 @@ impl VCell {
             _ => None,
         }
     }
+
+    pub fn as_ip(&self) -> Option<(usize, usize)> {
+        match self {
+            VCell::InstructionPointer(lambda, ip) => Some((*lambda, *ip)),
+            _ => None,
+        }
+    }
+
+    pub fn as_bp(&self) -> Option<usize> {
+        match self {
+            VCell::BasePointer(bp) => Some(*bp),
+            _ => None,
+        }
+    }
 }
 
 impl From<OpCode> for VCell {
@@ -182,10 +207,15 @@ impl fmt::Display for VCell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             VCell::Acc => write!(f, "%acc"),
+            VCell::BasePointer(bp) => write!(f, "bp${:02x}", bp),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
+            VCell::Closure(_, _) => write!(f, "#<closure>"),
             VCell::EnvSlot(slot) => write!(f, "g${:02x}", slot),
             VCell::FixedNum(val) => write!(f, "{}", val),
+            VCell::InstructionPointer(lambda, ip) => {
+                write!(f, "ip${:02x},{:02x}", *lambda, *ip)
+            }
             VCell::Lambda(_) => write!(f, "#<lambda>"),
             VCell::Nil => write!(f, "()"),
             VCell::OpCode(val) => write!(f, "{:?}", val),
@@ -204,25 +234,27 @@ impl AsRef<VCell> for VCell {
     }
 }
 
-
 /// Lambda
 ///
 /// Lambda represents a unit of executable bytecode constructed
 /// by the compiler with an entry point of bc[0].
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Lambda {
-    pub bc: Vec<VCell>
+    pub args: Vec<VCell>,
+    pub bc: Vec<VCell>,
 }
 
 impl Lambda {
     /// New
     ///
-    /// Create a new lambda with an empty bytecode
-    /// vector.
-    pub fn new() -> Lambda {
-        Lambda {
-            bc: vec![]
-        }
+    /// Create a new lambda with an empty bytecode vector
+    /// and the given argument list.
+    ///
+    /// # Arguments
+    /// `args` - A vector of VCell::Ptr, each guaranteed to
+    ///          point to a symbol representing a formal argument.
+    pub fn new(args: Vec<VCell>) -> Lambda {
+        Lambda { args, bc: vec![] }
     }
 
     /// Get
@@ -241,17 +273,9 @@ impl Lambda {
     }
 }
 
-impl Default for Lambda {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl From<Vec<VCell>> for Lambda {
     fn from(bc: Vec<VCell>) -> Self {
-        Lambda {
-            bc
-        }
+        Lambda { args: vec![], bc }
     }
 }
 
