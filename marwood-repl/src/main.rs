@@ -88,13 +88,11 @@ fn parse_and_eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
                 }
                 Err(e) => {
                     println!("error: {}", e);
-                    println!()
                 }
             };
         }
         Err(e) => {
             println!("error: {}", e);
-            println!()
         }
     }
 
