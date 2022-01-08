@@ -1,4 +1,5 @@
 use crate::vm::opcode::OpCode;
+use crate::vm::vcell::Binding::Global;
 use std::fmt;
 use std::rc::Rc;
 
@@ -280,6 +281,22 @@ impl Lambda {
     pub fn emit<T: Into<VCell>>(&mut self, vcell: T) {
         self.bc.push(vcell.into());
     }
+
+    /// Binding
+    ///
+    /// Return the binding for the given symbol
+    pub fn binding(&self, sym: &VCell) -> Binding {
+        match self.args.iter().enumerate().find(|it| it.1 == sym) {
+            Some((it, _)) => Binding::Argument(it),
+            _ => Global,
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Binding {
+    Global,
+    Argument(usize),
 }
 
 impl From<Vec<VCell>> for Lambda {
@@ -300,5 +317,13 @@ mod tests {
     #[test]
     fn new_cell_is_undefined() {
         assert!(matches!(VCell::undefined(), VCell::Undefined));
+    }
+
+    #[test]
+    fn lambda_binding() {
+        let lambda = Lambda::new(vec![VCell::ptr(100), VCell::ptr(200)]);
+        assert_eq!(lambda.binding(&VCell::ptr(100)), Binding::Argument(0));
+        assert_eq!(lambda.binding(&VCell::ptr(200)), Binding::Argument(1));
+        assert_eq!(lambda.binding(&VCell::ptr(300)), Binding::Global);
     }
 }
