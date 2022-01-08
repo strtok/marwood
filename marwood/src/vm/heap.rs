@@ -166,9 +166,10 @@ impl Heap {
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
             VCell::Acc
+            | VCell::BasePointer(_)
+            | VCell::BasePointerOffset(_)
             | VCell::EnvSlot(_)
             | VCell::OpCode(_)
-            | VCell::BasePointer(_)
             | VCell::InstructionPointer(_, _) => {
                 panic!("cannot convert VCell {} to Cell", vcell)
             }
@@ -236,6 +237,7 @@ impl Heap {
                 }
                 VCell::Acc
                 | VCell::BasePointer(_)
+                | VCell::BasePointerOffset(_)
                 | VCell::Bool(_)
                 | VCell::EnvSlot(_)
                 | VCell::FixedNum(_)

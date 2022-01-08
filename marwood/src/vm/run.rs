@@ -275,6 +275,11 @@ impl Vm {
         match self.read_operand()? {
             VCell::Acc => Ok(self.acc.clone()),
             VCell::Ptr(ptr) => Ok(self.heap.get_at_index(ptr).clone()),
+            VCell::BasePointerOffset(offset) => Ok(self
+                .stack
+                .get_offset((self.bp as i64) + offset)
+                .ok_or(InvalidBytecode)?
+                .clone()),
             VCell::EnvSlot(slot) => Ok(self.heap.get(&self.globenv.get_slot(slot))),
             _ => Err(InvalidBytecode),
         }
@@ -291,6 +296,12 @@ impl Vm {
             }
             VCell::Ptr(ptr) => {
                 *self.heap.get_at_index_mut(ptr) = vcell;
+            }
+            VCell::BasePointerOffset(offset) => {
+                *self
+                    .stack
+                    .get_offset_mut((self.bp as i64) + offset)
+                    .ok_or(InvalidBytecode)? = vcell;
             }
             VCell::EnvSlot(slot) => {
                 self.globenv.put_slot(slot, vcell);
