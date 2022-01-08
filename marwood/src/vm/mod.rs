@@ -258,4 +258,13 @@ mod tests {
             "(+ ((lambda () x)) ((lambda () y)))" => "1500"
         ];
     }
+
+    #[test]
+    fn lambda_with_args() {
+        evals![
+            "(define x 100)" => "#<void>",
+            "(define add-to-x (lambda (y) (+ x y)))" => "#<void>",
+            "(add-to-x 50)" => "150"
+        ];
+    }
 }

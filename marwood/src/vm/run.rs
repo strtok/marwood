@@ -277,7 +277,7 @@ impl Vm {
             VCell::Ptr(ptr) => Ok(self.heap.get_at_index(ptr).clone()),
             VCell::BasePointerOffset(offset) => Ok(self
                 .stack
-                .get_offset((self.bp as i64) + offset)
+                .get((self.bp as i64 + offset) as usize)
                 .ok_or(InvalidBytecode)?
                 .clone()),
             VCell::EnvSlot(slot) => Ok(self.heap.get(&self.globenv.get_slot(slot))),

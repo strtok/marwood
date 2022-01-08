@@ -1,6 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::opcode::OpCode;
-use crate::vm::vcell::{Lambda, VCell};
+use crate::vm::vcell::VCell::BasePointerOffset;
+use crate::vm::vcell::{Binding, Lambda, VCell};
 use crate::vm::Error::{InvalidArgs, InvalidNumArgs, LambdaMissingExpression};
 use crate::vm::{Error, Vm};
 use log::trace;
@@ -78,10 +79,19 @@ impl Vm {
     /// `sym` - The symbol to evaluate
     pub fn compile_symbol_lookup(&mut self, lambda: &mut Lambda, sym: &Cell) -> Result<(), Error> {
         let sym_ref = self.heap.put_cell(sym);
-        let sym_ref = sym_ref.as_ptr().expect("expected ptr");
-        let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
-        lambda.emit(OpCode::EnvGet);
-        lambda.emit(env_slot);
+        match lambda.binding(&sym_ref) {
+            Binding::Global => {
+                let sym_ref = sym_ref.as_ptr().expect("expected ptr");
+                let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
+                lambda.emit(OpCode::EnvGet);
+                lambda.emit(env_slot);
+            }
+            Binding::Argument(n) => {
+                lambda.emit(OpCode::Mov);
+                lambda.emit(BasePointerOffset((lambda.argc() - 1 - n) as i64));
+                lambda.emit(VCell::Acc);
+            }
+        }
         Ok(())
     }
 

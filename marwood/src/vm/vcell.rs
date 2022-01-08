@@ -291,6 +291,13 @@ impl Lambda {
             _ => Global,
         }
     }
+
+    /// Argument Count
+    ///
+    /// Return the number of arguments
+    pub fn argc(&self) -> usize {
+        self.args.len()
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
