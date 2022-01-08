@@ -135,13 +135,19 @@ impl Vm {
             let values = instruction.values;
             if !operands.is_empty() && !values.is_empty() {
                 text.push_str(&format!(
-                    "{0: <8} {1: <10} //{2: <10}\n",
+                    "{0: <8} {1: <10} {2: <10} //{3: <10}\n",
                     op,
-                    operands.join(" "),
+                    operands.get(0).unwrap_or(&"".to_string()),
+                    operands.get(1).unwrap_or(&"".to_string()),
                     values.join(" ")
                 ));
             } else if !operands.is_empty() {
-                text.push_str(&format!("{0: <8} {1: <10}\n", op, operands.join(" ")));
+                text.push_str(&format!(
+                    "{0: <8} {1: <10} {2: <10}\n",
+                    op,
+                    operands.get(0).unwrap_or(&"".to_string()),
+                    operands.get(1).unwrap_or(&"".to_string()),
+                ));
             } else {
                 text.push_str(&format!("{}\n", op));
             }
