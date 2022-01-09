@@ -46,9 +46,16 @@ be manipulated by the scheme `define` procedure. This environment represents a g
 mapping of symbol => heap reference for the compiler, which in turn emits O(1) shallow
 bindings (environment slot references) for the runtime.
 
+## Lexical Environment
+
 ## Procedure Application
 
+Marwood uses the stack to pass each operand of a procedure being applied to
+the procedure, and the `%acc` register to store the result of a procedure
+evaluation.
+
 Consider the following definition and application of an add procedure:
+
 ```scheme
   (define add (lambda (x y) (+ x y)))
   (add 10 20)
@@ -158,15 +165,18 @@ The RET instruction performs the following in order:
 * Restore caller's %ip
 * Restore caller's %bp
 
-The result of a procedure evaluation in Marwood is always stored in %acc.
+The result of a procedure evaluation in Marwood is always stored in %acc. After a RET 
+instruction, execution will proceed beginning with the caller's %ip+1. In the example 
+above, the HALT instruction of the caller will execute immediately after the RET instruction 
+of the `add` procedure.
 
 ## Registers
 
 | Register | Description         |
 |----------|---------------------|
 | ACC      | Accumulator         |
-| IP       | Instruction pointer |
-| BP       | Frame base pointer  |
+| IP       | Instruction Pointer |
+| BP       | Frame Base Pointer  |
 | SP       | Stack Pointer       |
 
 ## OpCodes
