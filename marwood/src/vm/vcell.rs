@@ -212,27 +212,19 @@ impl From<i64> for VCell {
     }
 }
 
-fn format_offset(offset: i64) -> String {
-    let sign = match offset {
-        0..=i64::MAX => "+",
-        _ => "-",
-    };
-    format!("{}{}", sign, offset.abs())
-}
-
 impl fmt::Display for VCell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             VCell::Acc => write!(f, "%acc"),
             VCell::BasePointer(bp) => write!(f, "%bp[${:+02x}]", bp),
-            VCell::BasePointerOffset(offset) => write!(f, "%bp[{}]", format_offset(*offset)),
+            VCell::BasePointerOffset(offset) => write!(f, "%bp[{}]", *offset),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
             VCell::Closure(_, _) => write!(f, "#<closure>"),
-            VCell::EnvSlot(slot) => write!(f, "g${:02x}", slot),
+            VCell::EnvSlot(slot) => write!(f, "g[${:02x}]", slot),
             VCell::FixedNum(val) => write!(f, "{}", val),
             VCell::InstructionPointer(lambda, ip) => {
-                write!(f, "%ip[{:02x},{:02x}]", *lambda, *ip)
+                write!(f, "%ip[${:02x},${:02x}]", *lambda, *ip)
             }
             VCell::Lambda(_) => write!(f, "#<lambda>"),
             VCell::Nil => write!(f, "()"),
