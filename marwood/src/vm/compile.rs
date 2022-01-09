@@ -87,8 +87,9 @@ impl Vm {
                 lambda.emit(env_slot);
             }
             Binding::Argument(n) => {
+                let arg_offset = 0_i64 - lambda.argc() as i64 + n as i64 + 1;
                 lambda.emit(OpCode::Mov);
-                lambda.emit(BasePointerOffset((lambda.argc() - 1 - n) as i64));
+                lambda.emit(BasePointerOffset(arg_offset));
                 lambda.emit(VCell::Acc);
             }
         }

@@ -261,6 +261,19 @@ mod tests {
 
     #[test]
     fn lambda_with_args() {
+        // Identity
+        evals![
+            "(define identity (lambda (x) x))" => "#<void>",
+            "(identity '(1 2 3))" => "(1 2 3)"
+        ];
+
+        // Two arg
+        evals![
+            "(define make-pair (lambda (x y) (cons x y)))" => "#<void>",
+            "(make-pair 'apples 'bananas)" => "(apples . bananas)"
+        ];
+
+        // Mixed arg and global
         evals![
             "(define x 100)" => "#<void>",
             "(define add-to-x (lambda (y) (+ x y)))" => "#<void>",
