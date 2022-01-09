@@ -35,16 +35,55 @@ bindings (environment slot references) for the runtime.
 
 ### Procedure Application
 
-Consider the following definition and application of add1:
+Consider the following definition and application of add:
 ```scheme
   (define add (lambda (x y) (+ x y)))
-  (add (+ 1 1) (* 2 21))
+  (add 10 20)
 ```
 The compiler will evaluate each operand and push its result on
 the stack left to right, push %ep and then %ip, resulting in the
-following stack:
+following CALL setup and stack:
 
+```asm
+    MOV      $05        %acc       //10
+    PUSH     %acc
+    MOV      $01        %acc       //20
+    PUSH     %acc
+    PUSH     2                     //n=2 args
+    ENVGET   [g$00]                //#<procedure>
+    CALL     %acc
+    HALT
 ```
+```
+    +----------------------------+
+    |             %ip            | <= SP
+    +----------------------------+
+    |             %ep            |
+    +----------------------------+
+    |             n=2            |
+    +----------------------------+
+    |             20             |
+    +----------------------------+
+    |             10             |
+    +----------------------------+
+```
+
+The lambda function itself will immediately execute the ENTER instruction to
+finish setting up the stack. The ENTER instruction pushes the previous frame's
+BP on the stack and points BP to the last argument in the current call frame.
+
+BP will be used by the procedure to access arguments on the stack.
+
+```asm
+ENTER
+MOV      [%bp[-1]]  %acc
+PUSH     %acc
+MOV      [%bp[+0]]  %acc
+ADD
+RET
+```
+    +----------------------------+
+    |             %bp            | <= SP
     +----------------------------+
     |             %ip            |
     +----------------------------+
@@ -52,11 +91,10 @@ following stack:
     +----------------------------+
     |             n=2            |
     +----------------------------+
-    |             42             |
+    |             20             | <= SP
     +----------------------------+
-    |             2              |
+    |             10             |
     +----------------------------+
-```
 
 ## Registers
 
