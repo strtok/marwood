@@ -59,7 +59,7 @@ in the following CALL setup and stack.
 
 The result of a procedure application in Marwood is always stored in %acc.
 
-```asm
+```
     MOV      $05        %acc       //10
     PUSH     %acc
     MOV      $01        %acc       //20
@@ -89,7 +89,7 @@ BP on the stack and points BP to the last argument in the current call frame.
 
 BP will be used by the procedure to access arguments on the stack.
 
-```asm
+```
 ENTER
 MOV      [%bp[-1]]  %acc
 PUSH     %acc
