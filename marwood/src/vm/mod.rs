@@ -280,4 +280,13 @@ mod tests {
             "(add-to-x 50)" => "150"
         ];
     }
+
+    #[test]
+    fn lambda_operator_is_expression() {
+        evals![
+            "(define proc (lambda () add))" => "#<void>",
+            "(define add (lambda (x y) (+ x y)))" => "#<void>",
+            "((proc) 1 2)" => "3"
+        ];
+    }
 }

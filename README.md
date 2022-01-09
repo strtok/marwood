@@ -46,18 +46,41 @@ be manipulated by the scheme `define` procedure. This environment represents a g
 mapping of symbol => heap reference for the compiler, which in turn emits O(1) shallow
 bindings (environment slot references) for the runtime.
 
-### Procedure Application
+## Procedure Application
 
-Consider the following definition and application of add:
+Consider the following definition and application of an add procedure:
 ```scheme
   (define add (lambda (x y) (+ x y)))
   (add 10 20)
 ```
-Marwood's compiler will emit instructions to evaluate each operand and 
-push its result on the stack left to right, push %ep and then %ip, resulting 
-in the following CALL setup and stack.
 
-The result of a procedure application in Marwood is always stored in %acc.
+In compiling the expression `(add 10 20)`, marwood would emit instructions
+to perform the following:
+
+* Evaluate the operands `(10 20)` from left-to-right and push the results of 
+each evaluation on the stack
+* Push the number of operands (in this case 2) on the stack. The procedure being 
+  applied will use this value for error checking and frame restoring.
+* Evaluate the procedure expression `add`. At this point in time %acc 
+  contains a reference to the procedure being applied.
+* Emit a `CALL %acc` instruction
+
+### CALL
+
+The CALL instruction expects the following conditions:
+
+* The operands for the procedure being applied have been pushed on the stack
+* The top of the stack is the number of operands that were pushed.
+* %acc contains a reference to a procedure
+
+CALL will perform the following:
+
+* Error if %acc is not a procedure
+* PUSH %ep
+* PUSH %ip
+* MOV %acc %ip
+
+Here's an example of an immediate-outer-function's (IOF) application of the `add` procedure:
 
 ```
     MOV      $05        %acc       //10
@@ -69,9 +92,10 @@ The result of a procedure application in Marwood is always stored in %acc.
     CALL     %acc
     HALT
 ```
+After the CALL instruction, the stack should appear as follows:
 ```
     +----------------------------+
-    |             %ip            | <= SP
+    |             %ip            | <= %sp
     +----------------------------+
     |             %ep            |
     +----------------------------+
@@ -83,11 +107,21 @@ The result of a procedure application in Marwood is always stored in %acc.
     +----------------------------+
 ```
 
-The lambda function itself will immediately execute the ENTER instruction to
-finish setting up the stack. The ENTER instruction pushes the previous frame's
-BP on the stack and points BP to the last argument in the current call frame.
+### ENTER
 
-BP will be used by the procedure to access arguments on the stack.
+The procedure's byte code will immediately execute the ENTER instruction to
+finish setting up the stack. 
+
+The ENTER instruction performs the following in order:
+* 
+* Error if SP[-2] does not match the lambda's expected operand count
+* PUSH %bp
+* MOV %sp[-4] %bp
+
+Offsets to %bp will be used by the procedure to access arguments on the stack
+as seen below.
+
+Here's the instructions for the example `add` procedure:
 
 ```
     ENTER
@@ -97,9 +131,12 @@ BP will be used by the procedure to access arguments on the stack.
     ADD
     RET
 ```
+
+And the stack after ENTER has finished executing:
+
 ```
     +----------------------------+
-    |             %bp            | <= SP
+    |             %bp            | <= %sp
     +----------------------------+
     |             %ip            |
     +----------------------------+
@@ -107,12 +144,21 @@ BP will be used by the procedure to access arguments on the stack.
     +----------------------------+
     |             n=2            |
     +----------------------------+
-    |             20             | <= SP
+    |             20             | <= %bp
     +----------------------------+
     |             10             |
     +----------------------------+
 ```
-The RET instruction restores the caller's stack given the %bp, %ip and %ep saved on the stack.
+
+### RET
+
+The RET instruction performs the following in order:
+
+* Restore caller's %sp
+* Restore caller's %ip
+* Restore caller's %bp
+
+The result of a procedure evaluation in Marwood is always stored in %acc.
 
 ## Registers
 
