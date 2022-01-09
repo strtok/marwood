@@ -90,12 +90,13 @@ BP on the stack and points BP to the last argument in the current call frame.
 BP will be used by the procedure to access arguments on the stack.
 
 ```
-ENTER
-MOV      [%bp[-1]]  %acc
-PUSH     %acc
-MOV      [%bp[+0]]  %acc
-ADD
-RET
+    ENTER
+    MOV      [%bp[-1]]  %acc
+    PUSH     %acc
+    MOV      [%bp[+0]]  %acc
+    ADD
+    RET
+```
 ```
     +----------------------------+
     |             %bp            | <= SP
@@ -110,7 +111,7 @@ RET
     +----------------------------+
     |             10             |
     +----------------------------+
-
+```
 The RET instruction restores the caller's stack given the %bp, %ip and %ep saved on the stack.
 
 ## Registers
