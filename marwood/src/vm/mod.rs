@@ -9,6 +9,7 @@ pub mod compile;
 pub mod environment;
 pub mod gc;
 pub mod heap;
+pub mod lambda;
 pub mod opcode;
 pub mod run;
 pub mod stack;

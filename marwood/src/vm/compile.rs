@@ -1,7 +1,8 @@
 use crate::cell::Cell;
+use crate::vm::lambda::{Binding, Lambda};
 use crate::vm::opcode::OpCode;
+use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::BasePointerOffset;
-use crate::vm::vcell::{Binding, Lambda, VCell};
 use crate::vm::Error::{InvalidArgs, InvalidNumArgs, LambdaMissingExpression};
 use crate::vm::{Error, Vm};
 use log::trace;

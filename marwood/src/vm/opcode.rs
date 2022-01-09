@@ -1,4 +1,5 @@
-use crate::vm::vcell::{Lambda, VCell};
+use crate::vm::lambda::Lambda;
+use crate::vm::vcell::VCell;
 use crate::vm::Vm;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -197,7 +198,6 @@ impl Vm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vm::vcell::Lambda;
 
     #[test]
     fn mov() {

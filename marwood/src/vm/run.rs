@@ -1,10 +1,11 @@
 use crate::cell::Cell;
+use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, InvalidNumArgs,
     InvalidProcedure, VariableNotBound,
 };
-use crate::vm::vcell::{Lambda, VCell};
+use crate::vm::vcell::VCell;
 use crate::vm::{Error, Vm};
 
 impl Vm {
