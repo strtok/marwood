@@ -55,16 +55,17 @@ impl Vm {
                 };
             }
             OpCode::CallAcc => {
-                // Push the current environment pointer
-                self.stack.push(VCell::Ptr(usize::MAX));
-                // Push return IP
-                self.stack
-                    .push(VCell::InstructionPointer(self.ip.0, self.ip.1));
-                // Verify the procedure is a procedure
+                // CALL does the following in order:
+                // * Error if %acc is not a procedure
+                // * PUSH %ep
+                // * PUSH %ip
+                // * MOV %acc %ip
                 if !self.heap.get(&self.acc).is_procedure() {
                     return Err(InvalidProcedure(self.heap.get(&self.acc)));
                 }
-                // Jump to ip=0 of lambda in ACC
+                self.stack.push(VCell::Ptr(usize::MAX));
+                self.stack
+                    .push(VCell::InstructionPointer(self.ip.0, self.ip.1));
                 self.ip.0 = self.acc.as_ptr().ok_or(InvalidBytecode)?;
                 self.ip.1 = 0;
             }
@@ -82,25 +83,23 @@ impl Vm {
                 self.acc = self.heap.put(VCell::Pair(car, cdr));
             }
             OpCode::Enter => {
-                // Enter performs runtime validation of the called procedure,
-                // and sets up the local stack frame.
+                // ENTER performs the following in order:
+                // * Error if SP[-2] does not match the lambda's expected arg count
+                // * PUSH %bp
+                // * MOV %sp[-4] %bp
                 //
-                // At this point the stack should appear as follows:
+                // Before ENTER Is executed, the stack should be as follows from CALL:
+                //
                 //  0: Return IP
                 // -1: Last Frame EP
                 // -2: Number of arguments passed by calee
                 // -3: ArgN...
-                //
-                // Get a reference to the lambda being entered, so that
-                // certain runtime type checks can be performed.
                 let lambda = &self.acc;
                 let lambda = self.heap.get(lambda);
                 let lambda = lambda
                     .as_lambda()
                     .ok_or_else(|| InvalidProcedure(lambda.clone()))?;
 
-                // Verify that the number of args passed (SP[-2]) is
-                // equal to the argument expectations of the lambda
                 if self
                     .stack
                     .get_offset(-2)
@@ -112,15 +111,6 @@ impl Vm {
                     return Err(InvalidNumArgs);
                 }
 
-                // At this point the stack should appear as follows:
-                //  0: Last Frame's BP
-                // -1: Return IP
-                // -2: Last Frame EP
-                // -3: Number of arguments passed by calee
-                // -4: ArgN...
-                //
-                // Push the old BP on to the stack, and set BP
-                // so that BP[0] is ArgN.
                 self.stack.push(VCell::BasePointer(self.bp));
                 self.bp = self.stack.get_sp() - 4;
             }
@@ -168,8 +158,10 @@ impl Vm {
                 self.stack.push(self.acc.clone());
             }
             OpCode::Ret => {
-                // Restore the calee's SP given the argument
-                // count.
+                // RET performs the following in order:
+                // * Restore caller's SP
+                // * Restore caller's IP
+                // * Restore caller's BP
                 let n = self
                     .stack
                     .get(self.bp + 1)
@@ -178,7 +170,6 @@ impl Vm {
                     .ok_or(InvalidBytecode)? as usize;
                 *self.stack.get_sp_mut() = self.bp - n;
 
-                // Restore the calee's IP
                 self.ip = self
                     .stack
                     .get(self.bp + 3)
@@ -186,7 +177,6 @@ impl Vm {
                     .as_ip()
                     .ok_or(InvalidBytecode)?;
 
-                // Restore the calee's BP
                 self.bp = self
                     .stack
                     .get(self.bp + 4)
