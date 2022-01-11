@@ -304,15 +304,23 @@ impl Vm {
                 )),
                 cell => Ok(cell),
             },
-            VCell::LexicalEnvSlot(slot) => {
-                trace!("%ep = {}", self.ep);
-                Ok(self
+            VCell::LexicalEnvSlot(slot) => Ok(
+                match self
                     .heap
                     .get_at_index(self.ep)
                     .as_lexical_env()
                     .ok_or(InvalidBytecode)?
-                    .get(slot))
-            }
+                    .get(slot)
+                {
+                    VCell::LexicalEnvPtr(env, slot) => self
+                        .heap
+                        .get_at_index(env)
+                        .as_lexical_env()
+                        .ok_or(InvalidBytecode)?
+                        .get(slot),
+                    cell => cell,
+                },
+            ),
             _ => Err(InvalidBytecode),
         }
     }
@@ -338,15 +346,21 @@ impl Vm {
             VCell::GlobalEnvSlot(slot) => {
                 self.globenv.put_slot(slot, vcell);
             }
-            VCell::LexicalEnvSlot(slot) => {
-                trace!("%ep = {}", self.ep);
-                let lexical_env = self
-                    .heap
-                    .get_at_index(self.ep)
-                    .as_lexical_env()
-                    .ok_or(InvalidBytecode)?;
-                lexical_env.put(slot, vcell);
-            }
+            VCell::LexicalEnvSlot(slot) => match self.heap.get_at_index(self.ep) {
+                VCell::LexicalEnv(env) => {
+                    env.put(slot, vcell);
+                }
+                VCell::LexicalEnvPtr(env, slot) => {
+                    self.heap
+                        .get_at_index(*env)
+                        .as_lexical_env()
+                        .ok_or(InvalidBytecode)?
+                        .put(*slot, vcell);
+                }
+                _ => {
+                    return Err(InvalidBytecode);
+                }
+            },
             _ => return Err(InvalidBytecode),
         }
         Ok(())
@@ -421,8 +435,8 @@ impl Vm {
                 BindingSource::IofArgument(arg) => {
                     lexical_env.put(slot, self.load_arg(arg).clone());
                 }
-                BindingSource::IofEnvironment(_) => {
-                    panic!("not supported");
+                BindingSource::IofEnvironment(iof_slot) => {
+                    lexical_env.put(slot, VCell::LexicalEnvPtr(self.ep, iof_slot));
                 }
                 // Own arguments can't be captured in the environment until the procedure
                 // is applied.

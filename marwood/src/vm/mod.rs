@@ -301,4 +301,14 @@ mod tests {
             "(add-10 20)" => "30"
         ];
     }
+
+    #[test]
+    fn iof_environment_capture() {
+        evals![
+            "(define make-make-adder (lambda (x) (lambda (y) (lambda (z) (+ x y z)))))" => "#<void>",
+            "(define make-adder (make-make-adder 1000))" => "#<void>",
+            "(define add-1000-100 (make-adder 100))" => "#<void>",
+            "(add-1000-100 10)" => "1110"
+        ];
+    }
 }

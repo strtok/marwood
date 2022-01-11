@@ -1,6 +1,5 @@
 use crate::vm::environment::{BindingLocation, EnvironmentMap};
 use crate::vm::vcell::VCell;
-use log::trace;
 
 /// Lambda
 ///
