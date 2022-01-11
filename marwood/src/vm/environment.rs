@@ -14,7 +14,8 @@ use std::collections::{HashMap, HashSet};
 ///   on the VM.
 /// * Lexical environments, represented by the LexicalEnvironment structure. Each
 ///   procedure in Marwood that is a closure contains a lexical environment represented
-///   by LexicalEnvironment.
+///   by LexicalEnvironment. This environment is created by the CLOSURE instruction, which
+///   represents the point in time the (lambda ...) expression is evaluated.
 ///
 /// These data structures differ slightly in that the global environment containns
 /// the notion of a "deep binding" represented by a HashMap along with shallow bindings,
