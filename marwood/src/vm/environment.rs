@@ -1,16 +1,184 @@
 use crate::cell::Cell;
+use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
 use crate::vm::Error;
 use lazy_static::lazy_static;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 /// Environment
 ///
-/// Environment represents a binding of a symbol to a value in the heap.
+/// Marwood's environment is composed of two different types of environments:
+///
+/// * The global environment, represented by a single instance of GlobalEnvironment
+///   on the VM.
+/// * Lexical environments, represented by the LexicalEnvironment structure. Each
+///   procedure in Marwood that is a closure contains a lexical environment represented
+///   by LexicalEnvironment.
+///
+/// These data structures differ slightly in that the global environment containns
+/// the notion of a "deep binding" represented by a HashMap along with shallow bindings,
+/// and LexicalEnvironment only has the notion of shallow bindings because lexical bindings
+/// are known at compile time.
+
+/// Binding Source
+///
+/// Binding is used to specify the source of a binding in a lexical environment.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum BindingSource {
+    /// The symbol is not lexically bound, and should use the global
+    /// environment
+    Global,
+
+    /// The binding is derived from the lambda's own argument
+    Argument(usize),
+
+    /// The binding is inherited from the IOF's Nth argument
+    IofArgument(usize),
+
+    /// The binding is inherited from the Nth slot of the IOF's
+    /// environment
+    IofEnvironment(usize),
+}
+
+/// Binding Location
+///
+/// Binding is used to specify the location of a binding in a lexical environment.
+/// It is used by the compiler during symbol lookup to determine whether or not a
+/// symbol is in the lexical environment, global, or should be fetched directly from
+/// the stack.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum BindingLocation {
+    Argument(usize),
+    Global,
+    Environment(usize),
+}
+
+/// Environment Map
+///
+/// An environment map is a set of instructions on how to build a
+/// lexical environment given an IOF's environment and formal arguments.
+///
+/// This map is used in two places:
+///
+/// * During compilation when evaluating a symbol to determine if it
+///   references a local argument, the lexical environment, or the
+///   global environment.
+///
+/// * During creation of a procedure as a result of runtime execution
+///   of (lambda ...)
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct EnvironmentMap {
+    /// Map
+    ///
+    /// A vector of sym->source mapping, given a location in the IOF
+    /// for a given symbol.
+    map: Vec<(VCell, BindingSource)>,
+}
+
+impl EnvironmentMap {
+    pub fn new() -> EnvironmentMap {
+        EnvironmentMap { map: vec![] }
+    }
+
+    /// New From IOF
+    ///
+    /// Create a new lambda, and populate its environment map
+    /// given the IOF and set oxf free symbols.
+    pub fn new_from_iof(_args: &[VCell], iof: &Lambda, free_symbols: &[VCell]) -> EnvironmentMap {
+        let map = free_symbols
+            .iter()
+            .filter_map(|sym| {
+                if let Some((n, _)) = iof.args.iter().enumerate().find(|(_, it)| *it == sym) {
+                    Some((sym.clone(), BindingSource::IofArgument(n)))
+                } else {
+                    iof.envmap
+                        .get_slot(sym)
+                        .map(|n| (sym.clone(), BindingSource::IofEnvironment(n)))
+                }
+            })
+            .collect::<Vec<(VCell, BindingSource)>>();
+        EnvironmentMap { map }
+    }
+
+    /// Get Slot
+    ///
+    /// Given a symbol, find the slot in the Environment
+    pub fn get_slot(&self, sym: &VCell) -> Option<usize> {
+        self.map
+            .iter()
+            .enumerate()
+            .find(|it| it.1 .0 == *sym)
+            .map(|it| it.0)
+    }
+
+    /// Slots Len
+    ///
+    /// Return the number of slots in the map. This corresponds to how
+    /// many slots a LexicalEnvironment will have.
+    pub fn slots_len(&self) -> usize {
+        self.map.len()
+    }
+
+    /// Map
+    ///
+    /// Return an iterable version of the map for debugging purposes.
+    pub fn get_map(&self) -> &[(VCell, BindingSource)] {
+        &self.map
+    }
+}
+
+impl Default for EnvironmentMap {
+    fn default() -> Self {
+        EnvironmentMap::new()
+    }
+}
+
+/// Lexical Environment
+///
+/// LexicalEnvironment represents a series of shallow binding slots for
+/// a procedure of which are populated during the evaluation of the lambda
+/// procedure and during procedure application.
+#[derive(Debug, PartialEq, Eq)]
+pub struct LexicalEnvironment {
+    slots: RefCell<Vec<VCell>>,
+}
+
+impl LexicalEnvironment {
+    pub fn new(size: usize) -> LexicalEnvironment {
+        LexicalEnvironment {
+            slots: RefCell::new(vec![VCell::undefined(); size]),
+        }
+    }
+
+    pub fn slot_len(&self) -> usize {
+        self.slots.borrow().len()
+    }
+
+    pub fn get(&self, index: usize) -> VCell {
+        self.slots
+            .borrow()
+            .get(index)
+            .expect("slot index out of bounds")
+            .clone()
+    }
+
+    pub fn put(&self, index: usize, vcell: VCell) {
+        *self
+            .slots
+            .borrow_mut()
+            .get_mut(index)
+            .expect("slot index out of bounds") = vcell;
+    }
+}
+
+/// Global Environment
+///
+/// GlobalEnvironment represents a binding of a symbol to a value in the heap.
 /// The environment tracks both deep bindings (sym -> slot), and also a
 /// vector of shallow bindings (slot -> vcell).
-#[derive(Debug)]
-pub struct Environment {
+#[derive(Debug, PartialEq, Eq)]
+pub struct GlobalEnvironment {
     /// Deep bindings is a map of symbol ptr -> slot, and
     /// is used by the compiler to aassociate a symbol at compilation
     /// time with the environment slot.
@@ -21,9 +189,9 @@ pub struct Environment {
     slots: Vec<VCell>,
 }
 
-impl Environment {
-    pub fn new() -> Environment {
-        Environment {
+impl GlobalEnvironment {
+    pub fn new() -> GlobalEnvironment {
+        GlobalEnvironment {
             bindings: HashMap::new(),
             slots: vec![],
         }
@@ -115,7 +283,7 @@ impl Environment {
     }
 }
 
-impl Default for Environment {
+impl Default for GlobalEnvironment {
     fn default() -> Self {
         Self::new()
     }
@@ -271,7 +439,7 @@ mod tests {
 
     #[test]
     fn same_binding_same_slot() {
-        let mut env = Environment::new();
+        let mut env = GlobalEnvironment::new();
         assert_eq!(env.get_binding(50_usize), 0);
         assert_eq!(env.get_binding(100_usize), 1);
         assert_eq!(env.get_binding(50_usize), 0);
@@ -286,7 +454,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn put_slot_panics_if_non_ptr() {
-        let mut env = Environment::new();
+        let mut env = GlobalEnvironment::new();
         assert_eq!(env.get_binding(50_usize), 0);
         env.put_slot(0, VCell::nil());
     }

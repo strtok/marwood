@@ -52,6 +52,7 @@ fn main() {
         let readline = rl.readline_with_initial("> ", (&remaining, ""));
         match readline {
             Ok(line) => {
+                rl.add_history_entry(line.as_str());
                 remaining = parse_and_eval(&mut vm, &line).trim().to_string();
             }
             Err(ReadlineError::Interrupted | ReadlineError::Eof) => break,

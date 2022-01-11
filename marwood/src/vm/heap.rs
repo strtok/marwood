@@ -169,7 +169,10 @@ impl Heap {
             VCell::Acc
             | VCell::BasePointer(_)
             | VCell::BasePointerOffset(_)
-            | VCell::EnvSlot(_)
+            | VCell::GlobalEnvSlot(_)
+            | VCell::LexicalEnv(_)
+            | VCell::LexicalEnvSlot(_)
+            | VCell::LexicalEnvPtr(_, _)
             | VCell::OpCode(_)
             | VCell::InstructionPointer(_, _) => {
                 panic!("cannot convert VCell {} to Cell", vcell)
@@ -213,10 +216,67 @@ impl Heap {
                 VCell::Lambda(ptr) => {
                     self.mark_lambda(&*ptr);
                 }
-                _ => {
-                    break;
+                VCell::Closure(lambda, env) => {
+                    self.mark(lambda);
+                    self.mark(env);
                 }
+                VCell::LexicalEnv(env) => {
+                    let env = env.as_ref();
+                    for it in 0..env.slot_len() {
+                        self.mark_vcell(&env.get(it));
+                    }
+                }
+                VCell::Acc
+                | VCell::BasePointer(_)
+                | VCell::BasePointerOffset(_)
+                | VCell::Bool(_)
+                | VCell::GlobalEnvSlot(_)
+                | VCell::LexicalEnvSlot(_)
+                | VCell::LexicalEnvPtr(_, _)
+                | VCell::FixedNum(_)
+                | VCell::InstructionPointer(_, _)
+                | VCell::Nil
+                | VCell::OpCode(_)
+                | VCell::Symbol(_)
+                | VCell::Undefined
+                | VCell::Void => {}
             }
+        }
+    }
+
+    pub fn mark_vcell(&mut self, vcell: &VCell) {
+        match vcell {
+            VCell::InstructionPointer(lambda, _) => {
+                self.mark(*lambda);
+            }
+            VCell::Lambda(lambda) => self.mark_lambda(lambda.as_ref()),
+            VCell::Closure(lambda, env) => {
+                self.mark(*lambda);
+                self.mark(*env)
+            }
+            VCell::Pair(car, cdr) => {
+                self.mark(*car);
+                self.mark(*cdr);
+            }
+            VCell::Ptr(ptr) => {
+                self.mark(*ptr);
+            }
+            VCell::LexicalEnvPtr(ptr, _) => {
+                self.mark(*ptr);
+            }
+            VCell::Acc
+            | VCell::BasePointer(_)
+            | VCell::BasePointerOffset(_)
+            | VCell::Bool(_)
+            | VCell::GlobalEnvSlot(_)
+            | VCell::FixedNum(_)
+            | VCell::LexicalEnv(_)
+            | VCell::LexicalEnvSlot(_)
+            | VCell::Nil
+            | VCell::OpCode(_)
+            | VCell::Symbol(_)
+            | VCell::Undefined
+            | VCell::Void => {}
         }
     }
 
@@ -224,32 +284,19 @@ impl Heap {
     ///
     /// Iterate the lambda byte code and mark any value that contains a reference type
     pub fn mark_lambda(&mut self, lambda: &Lambda) {
+        // Mark every bytecode cell
         for it in &lambda.bc {
-            match it {
-                VCell::Closure(lambda, _) => {
-                    self.mark(*lambda);
-                }
-                VCell::Pair(car, cdr) => {
-                    self.mark(*car);
-                    self.mark(*cdr);
-                }
-                VCell::Ptr(ptr) => {
-                    self.mark(*ptr);
-                }
-                VCell::Acc
-                | VCell::BasePointer(_)
-                | VCell::BasePointerOffset(_)
-                | VCell::Bool(_)
-                | VCell::EnvSlot(_)
-                | VCell::FixedNum(_)
-                | VCell::InstructionPointer(_, _)
-                | VCell::Lambda(_)
-                | VCell::Nil
-                | VCell::OpCode(_)
-                | VCell::Symbol(_)
-                | VCell::Undefined
-                | VCell::Void => {}
-            }
+            self.mark_vcell(it)
+        }
+
+        // Mark every argument (symbol)
+        for it in &lambda.args {
+            self.mark_vcell(it);
+        }
+
+        // Mark every symbol the envmap refers to
+        for it in lambda.envmap.get_map().iter() {
+            self.mark_vcell(&it.0);
         }
     }
 
@@ -266,7 +313,6 @@ impl Heap {
         for it in 0..self.heap.len() {
             match self.heap_map.get(it) {
                 Some(State::Allocated) => {
-                    trace!("free {} => {}", it, self.heap.get(it).unwrap());
                     self.free(it);
                 }
                 Some(State::Used) => {

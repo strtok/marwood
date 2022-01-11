@@ -1,8 +1,9 @@
 use crate::cell::Cell;
-use crate::vm::lambda::{Binding, Lambda};
+use crate::vm::environment::{free_symbols, BindingLocation};
+use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell;
-use crate::vm::vcell::VCell::BasePointerOffset;
+use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
 use crate::vm::Error::{InvalidArgs, InvalidNumArgs, LambdaMissingExpression};
 use crate::vm::{Error, Vm};
 use log::trace;
@@ -33,7 +34,7 @@ impl Vm {
             Cell::Pair(car, cdr) => match car.deref() {
                 Cell::Symbol(s) if s.eq("define") => self.compile_define(lambda, cdr)?,
                 Cell::Symbol(s) if s.eq("lambda") | s.eq("λ") => {
-                    self.compile_lambda(lambda, cdr)?
+                    self.compile_lambda(lambda, cell)?
                 }
                 Cell::Symbol(s) if s.eq("quote") => self.compile_quote(lambda, car!(cdr))?,
                 Cell::Symbol(s) if s.eq("car") => {
@@ -80,17 +81,23 @@ impl Vm {
     /// `sym` - The symbol to evaluate
     pub fn compile_symbol_lookup(&mut self, lambda: &mut Lambda, sym: &Cell) -> Result<(), Error> {
         let sym_ref = self.heap.put_cell(sym);
-        match lambda.binding(&sym_ref) {
-            Binding::Global => {
+        match lambda.binding_location(&sym_ref) {
+            BindingLocation::Global => {
                 let sym_ref = sym_ref.as_ptr().expect("expected ptr");
                 let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
-                lambda.emit(OpCode::EnvGet);
+                lambda.emit(OpCode::Mov);
                 lambda.emit(env_slot);
+                lambda.emit(VCell::Acc);
             }
-            Binding::Argument(n) => {
+            BindingLocation::Argument(n) => {
                 let arg_offset = 0_i64 - lambda.argc() as i64 + n as i64 + 1;
                 lambda.emit(OpCode::Mov);
                 lambda.emit(BasePointerOffset(arg_offset));
+                lambda.emit(VCell::Acc);
+            }
+            BindingLocation::Environment(n) => {
+                lambda.emit(OpCode::Mov);
+                lambda.emit(LexicalEnvSlot(n));
                 lambda.emit(VCell::Acc);
             }
         }
@@ -121,8 +128,12 @@ impl Vm {
                 InvalidArgs("define".into(), "variable".into(), symbol.to_string())
             })?;
         let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
-        lambda.emit(OpCode::EnvSet);
+        lambda.emit(OpCode::Mov);
+        lambda.emit(VCell::Acc);
         lambda.emit(env_slot);
+        lambda.emit(OpCode::MovImmediate);
+        lambda.emit(VCell::void());
+        lambda.emit(VCell::Acc);
         Ok(())
     }
 
@@ -133,11 +144,15 @@ impl Vm {
     /// # Arguments
     /// `iof_lambda` - The immediate outer function in which to inherit an
     ///                environment from
-    /// `lat` - The arguments to the lambda procedure call.
-    pub fn compile_lambda(&mut self, iof_lambda: &mut Lambda, lat: &Cell) -> Result<(), Error> {
+    /// `cell` - The lambda expression.
+    pub fn compile_lambda(&mut self, iof: &mut Lambda, expr: &Cell) -> Result<(), Error> {
+        let lat = cdr!(expr);
         let formal_args = self.compile_formal_arguments(lat)?;
-        let mut lambda = Lambda::new(formal_args);
-
+        let free_symbols = free_symbols(expr)?
+            .iter()
+            .map(|sym| self.heap.put_cell(sym))
+            .collect::<Vec<VCell>>();
+        let mut lambda = Lambda::new_from_iof(formal_args, iof, &free_symbols);
         lambda.emit(OpCode::Enter);
 
         let mut lat = cdr!(lat);
@@ -151,9 +166,10 @@ impl Vm {
         lambda.emit(OpCode::Ret);
         trace!("lambda: \n{}", self.decompile_text(&lambda));
         let lambda = self.heap.put(lambda);
-        iof_lambda.emit(OpCode::MovImmediate);
-        iof_lambda.emit(lambda);
-        iof_lambda.emit(VCell::Acc);
+        iof.emit(OpCode::MovImmediate);
+        iof.emit(lambda);
+        iof.emit(VCell::Acc);
+        iof.emit(OpCode::ClosureAcc);
         Ok(())
     }
 

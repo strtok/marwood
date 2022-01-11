@@ -8,12 +8,11 @@ use std::collections::HashMap;
 pub enum OpCode {
     Add,
     CallAcc,
+    ClosureAcc,
     Car,
     Cdr,
     Cons,
     Enter,
-    EnvGet,
-    EnvSet,
     Eq,
     Mov,
     MovImmediate,
@@ -90,11 +89,10 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
         static ref SCHEMA: HashMap<OpCode, Schema> = HashMap::from([
             (OpCode::Add, Schema::new("ADD", vec![])),
             (OpCode::CallAcc, Schema::new("CALL", vec![Operand::Acc])),
+            (OpCode::ClosureAcc, Schema::new("CLOSURE", vec![Operand::Acc])),
             (OpCode::Car, Schema::new("CAR", vec![])),
             (OpCode::Cdr, Schema::new("CDR", vec![])),
             (OpCode::Cons, Schema::new("CONS", vec![])),
-            (OpCode::EnvGet, Schema::new("ENVGET", vec![Operand::LoadReference])),
-            (OpCode::EnvSet, Schema::new("ENVSET", vec![Operand::StoreReference])),
             (OpCode::Enter, Schema::new("ENTER", vec![])),
             (OpCode::Eq, Schema::new("EQ", vec![])),
             (OpCode::Mov, Schema::new("MOV", vec![Operand::LoadReference, Operand::StoreReference])),
@@ -136,7 +134,7 @@ impl Vm {
             let values = instruction.values;
             if !operands.is_empty() && !values.is_empty() {
                 text.push_str(&format!(
-                    "{0: <8} {1: <10} {2: <10} //{3: <10}\n",
+                    "{0: <8} {1: <12} {2: <12} //{3: <10}\n",
                     op,
                     operands.get(0).unwrap_or(&"".to_string()),
                     operands.get(1).unwrap_or(&"".to_string()),
@@ -144,7 +142,7 @@ impl Vm {
                 ));
             } else if !operands.is_empty() {
                 text.push_str(&format!(
-                    "{0: <8} {1: <10} {2: <10}\n",
+                    "{0: <8} {1: <12} {2: <12}\n",
                     op,
                     operands.get(0).unwrap_or(&"".to_string()),
                     operands.get(1).unwrap_or(&"".to_string()),
@@ -176,7 +174,7 @@ impl Vm {
                         VCell::Ptr(_) => {
                             values.push(self.heap.get_as_cell(operand).to_string());
                         }
-                        VCell::EnvSlot(slot) => {
+                        VCell::GlobalEnvSlot(slot) => {
                             let ptr = self.globenv.get_slot(*slot);
                             values.push(self.heap.get_as_cell(&ptr).to_string());
                         }

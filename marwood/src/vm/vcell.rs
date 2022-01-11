@@ -1,3 +1,4 @@
+use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use std::fmt;
@@ -6,12 +7,12 @@ use std::rc::Rc;
 /// VCell
 ///
 /// VCell is a 24 byte (3x64bit) type that's used to represent values
-/// in the VM runtime:
+/// in the VM runtime.
 ///
 /// * Primitive list values (bool, fixednum, pairs, nil, etc)
 /// * Opcodes
 /// * References into the heap (Ptr)
-/// * Environment slot references (EnvSlot)
+/// * Global and lexical environment slot references (EnvSlot)
 /// * Other runtime sentinel values, such as Undefined and Void.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum VCell {
@@ -20,7 +21,10 @@ pub enum VCell {
     BasePointerOffset(i64),
     Bool(bool),
     Closure(usize, usize),
-    EnvSlot(usize),
+    GlobalEnvSlot(usize),
+    LexicalEnv(Rc<LexicalEnvironment>),
+    LexicalEnvSlot(usize),
+    LexicalEnvPtr(usize, usize),
     FixedNum(i64),
     InstructionPointer(usize, usize),
     Lambda(Rc<Lambda>),
@@ -55,7 +59,7 @@ impl VCell {
     }
 
     pub fn env_slot<T: Into<usize>>(slot: T) -> VCell {
-        VCell::EnvSlot(slot.into())
+        VCell::GlobalEnvSlot(slot.into())
     }
 
     pub fn symbol<T: Into<String>>(ptr: T) -> VCell {
@@ -79,7 +83,7 @@ impl VCell {
     }
 
     pub fn is_envslot(&self) -> bool {
-        matches!(self, VCell::EnvSlot(_))
+        matches!(self, VCell::GlobalEnvSlot(_))
     }
 
     pub fn is_reference(&self) -> bool {
@@ -108,6 +112,10 @@ impl VCell {
 
     pub fn is_procedure(&self) -> bool {
         self.is_lambda() || self.is_closure()
+    }
+
+    pub fn is_lexical_env(&self) -> bool {
+        matches!(self, VCell::LexicalEnv(_))
     }
 
     pub fn as_opcode(&self) -> Option<OpCode> {
@@ -161,7 +169,14 @@ impl VCell {
 
     pub fn as_env_slot(&self) -> Option<usize> {
         match self {
-            VCell::EnvSlot(slot) => Some(*slot),
+            VCell::GlobalEnvSlot(slot) => Some(*slot),
+            _ => None,
+        }
+    }
+
+    pub fn as_lexical_env(&self) -> Option<&LexicalEnvironment> {
+        match self {
+            VCell::LexicalEnv(env) => Some(&*env),
             _ => None,
         }
     }
@@ -221,11 +236,14 @@ impl fmt::Display for VCell {
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
             VCell::Closure(_, _) => write!(f, "#<closure>"),
-            VCell::EnvSlot(slot) => write!(f, "g[${:02x}]", slot),
+            VCell::GlobalEnvSlot(slot) => write!(f, "genv[${:02x}]", slot),
             VCell::FixedNum(val) => write!(f, "{}", val),
             VCell::InstructionPointer(lambda, ip) => {
-                write!(f, "%ip[${:02x},${:02x}]", *lambda, *ip)
+                write!(f, "%ip[${:02x}][${:02x}]", *lambda, *ip)
             }
+            VCell::LexicalEnv(_) => write!(f, "#<lexical-environment>"),
+            VCell::LexicalEnvSlot(slot) => write!(f, "env[${:02x}]", slot),
+            VCell::LexicalEnvPtr(env, slot) => write!(f, "env[${:02x}][${:02x}]", env, slot),
             VCell::Lambda(_) => write!(f, "#<lambda>"),
             VCell::Nil => write!(f, "()"),
             VCell::OpCode(val) => write!(f, "{:?}", val),

@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::vm::environment::Environment;
+use crate::vm::environment::GlobalEnvironment;
 use crate::vm::heap::Heap;
 use crate::vm::stack::Stack;
 use crate::vm::vcell::VCell;
@@ -21,13 +21,14 @@ const HEAP_SIZE: usize = 1024;
 pub struct Vm {
     /// The heap and global environment
     heap: Heap,
-    globenv: Environment,
+    globenv: GlobalEnvironment,
 
     /// The current program stack
     stack: Stack,
 
     /// Registers
     acc: VCell,
+    ep: usize,
     ip: (usize, usize),
     bp: usize,
 }
@@ -41,7 +42,8 @@ impl Vm {
             heap: Heap::new(HEAP_SIZE),
             ip: (usize::MAX, 0),
             stack: Stack::new(),
-            globenv: Environment::new(),
+            globenv: GlobalEnvironment::new(),
+            ep: usize::MAX,
             acc: VCell::undefined(),
             bp: 0,
         }
@@ -288,6 +290,15 @@ mod tests {
             "(define proc (lambda () add))" => "#<void>",
             "(define add (lambda (x y) (+ x y)))" => "#<void>",
             "((proc) 1 2)" => "3"
+        ];
+    }
+
+    #[test]
+    fn iof_argument_capture() {
+        evals![
+            "(define make-adder (lambda (x) (lambda (y) (+ x y))))" => "#<void>",
+            "(define add-10 (make-adder 10))" => "#<void>",
+            "(add-10 20)" => "30"
         ];
     }
 }
