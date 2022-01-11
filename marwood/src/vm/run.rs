@@ -373,10 +373,9 @@ impl Vm {
     /// Load an argument from the current stack frame given the argument
     /// index.
     fn load_arg(&self, index: usize) -> &VCell {
-        let arg_count = self.stack.get(self.bp + 1).unwrap().as_fixed_num().unwrap();
+        let arg_count = self.stack.get(self.bp + 1).unwrap().as_fixed_num().unwrap() as usize;
         let offset = self.bp;
-        let offset = offset + (0_i64 - arg_count as i64 + index as i64 + 1) as usize;
-        trace!("arg offset: {}", offset);
+        let offset = (offset - arg_count) + index + 1;
         self.stack.get(offset).expect("invalid argument offset")
     }
 
