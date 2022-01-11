@@ -36,7 +36,6 @@ impl Lambda {
     /// given the IOF and set of free symbols.
     pub fn new_from_iof(args: Vec<VCell>, iof: &Lambda, free_symbols: &[VCell]) -> Lambda {
         let envmap = EnvironmentMap::new_from_iof(&args, iof, free_symbols);
-        trace!("map: {:?}", envmap);
         Lambda {
             args,
             envmap,
