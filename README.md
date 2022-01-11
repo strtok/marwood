@@ -188,6 +188,7 @@ of the `add` procedure.
 | CAR                          | Move the car of the pair in ACC into ACC. Errors if ACC Is not a pair.                                                |
 | CDR                          | Move the cdr of the pair in ACC into ACC. Errors if ACC is not a pair.                                                |
 | CONS                         | Box a pair, storing a reference in ACC. The car of the pair is taken from ACC, and the cdr from the top of the stack. |
+| CLOSURE                      | Create a lexical environment.                                                                                         |
 | ENVGET &lt;SLOT&gt;          | Store the value in environment slot SLOT in ACC                                                                       |
 | ENVSET &lt;SLOT&gt;          | Set the value in environment slot SLOT to the value in ACC                                                            |
 | ENTER                        | Setup the currently executing procedure's stack frame                                                                 |
