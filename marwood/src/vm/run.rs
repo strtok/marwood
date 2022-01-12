@@ -2,11 +2,10 @@ use crate::cell::Cell;
 use crate::vm::environment::{BindingSource, EnvironmentMap, LexicalEnvironment};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
-use crate::vm::run::RuntimeError::{
-    ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, InvalidNumArgs,
-    InvalidProcedure, InvalidStackIndex, VariableNotBound,
-};
 use crate::vm::vcell::VCell;
+use crate::vm::Error::{
+    ExpectedType, InvalidArgs, InvalidBytecode, InvalidNumArgs, InvalidProcedure, VariableNotBound,
+};
 use crate::vm::{Error, Vm};
 use log::trace;
 use std::rc::Rc;
@@ -21,7 +20,7 @@ impl Vm {
             match self.run_one() {
                 Ok(true) => break,
                 Ok(false) => continue,
-                Err(e) => return Err(e.into_error(self)),
+                Err(e) => return Err(e),
             }
         }
         let cell = self.heap.get_as_cell(&self.acc);
@@ -32,7 +31,7 @@ impl Vm {
     /// Execute one instruction, returning either a bool or runtime error.
     /// If the bool is set true, it indicates a HALT was encountered and
     /// execution should cease.
-    fn run_one(&mut self) -> Result<bool, RuntimeError> {
+    fn run_one(&mut self) -> Result<bool, Error> {
         self.trace_instruction();
         let op_code = self.read_opcode()?;
         match op_code {
@@ -47,10 +46,18 @@ impl Vm {
                 let y = self.pop_stack()?;
                 let y = self.heap.get(&y);
                 let x = x.as_fixed_num().ok_or_else(|| {
-                    InvalidArgs(proc_name.to_string(), "number".to_string(), x.clone())
+                    InvalidArgs(
+                        proc_name.to_string(),
+                        "number".to_string(),
+                        self.heap.get_as_cell(&x).to_string(),
+                    )
                 })?;
                 let y = y.as_fixed_num().ok_or_else(|| {
-                    InvalidArgs(proc_name.to_string(), "number".to_string(), y.clone())
+                    InvalidArgs(
+                        proc_name.to_string(),
+                        "number".to_string(),
+                        self.heap.get_as_cell(&y).to_string(),
+                    )
                 })?;
                 match op_code {
                     OpCode::Add => self.acc = self.heap.put(VCell::fixed_num(x + y)),
@@ -69,7 +76,7 @@ impl Vm {
                     VCell::Closure(lambda, _) => lambda,
                     VCell::Lambda(_) => self.acc.as_ptr().unwrap(),
                     other => {
-                        return Err(InvalidProcedure(other));
+                        return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
                     }
                 };
                 self.stack.push(VCell::Ptr(self.ep));
@@ -127,14 +134,12 @@ impl Vm {
                 let (lambda, lexical_env) = match self.heap.get(&self.acc) {
                     VCell::Closure(lambda, lexical_env) => (lambda, lexical_env),
                     VCell::Lambda(_) => (self.acc.as_ptr().unwrap(), self.ep),
-                    other => {
-                        return Err(InvalidProcedure(other));
+                    _ => {
+                        return Err(InvalidBytecode);
                     }
                 };
                 let lambda = self.heap.get_at_index(lambda);
-                let lambda = lambda
-                    .as_lambda()
-                    .ok_or_else(|| InvalidProcedure(lambda.clone()))?;
+                let lambda = lambda.as_lambda().ok_or(InvalidBytecode)?;
                 if self
                     .stack
                     .get_offset(-2)?
@@ -142,7 +147,7 @@ impl Vm {
                     .ok_or(InvalidBytecode)? as usize
                     != lambda.args.len()
                 {
-                    return Err(InvalidNumArgs);
+                    return Err(InvalidNumArgs("procedure".into()));
                 }
 
                 self.stack.push(VCell::BasePointer(self.bp));
@@ -244,7 +249,7 @@ impl Vm {
     /// Pop Stack
     ///
     /// Pop a value off the stack. Error if the stack is empty.
-    fn pop_stack(&mut self) -> Result<VCell, RuntimeError> {
+    fn pop_stack(&mut self) -> Result<VCell, Error> {
         self.stack.pop().map(|it| it.clone())
     }
 
@@ -267,7 +272,7 @@ impl Vm {
     ///
     /// Read an argument vcell from program[ip], increment ip and
     /// return the value.
-    fn read_operand(&mut self) -> Result<VCell, RuntimeError> {
+    fn read_operand(&mut self) -> Result<VCell, Error> {
         let operand = self
             .lambda()
             .get(self.ip.1)
@@ -282,7 +287,7 @@ impl Vm {
     ///
     /// Read an argument and return the value that it references.
     /// If the operand is not a reference type, return InvalidBytecode
-    fn load_operand(&mut self) -> Result<VCell, RuntimeError> {
+    fn load_operand(&mut self) -> Result<VCell, Error> {
         match self.read_operand()? {
             VCell::Acc => Ok(self.acc.clone()),
             VCell::Ptr(ptr) => Ok(self.heap.get_at_index(ptr).clone()),
@@ -320,7 +325,7 @@ impl Vm {
     ///
     /// Read an operand and use it as a destination to store the
     /// given vcell.
-    fn store_operand(&mut self, vcell: VCell) -> Result<(), RuntimeError> {
+    fn store_operand(&mut self, vcell: VCell) -> Result<(), Error> {
         match self.read_operand()? {
             VCell::Acc => {
                 self.acc = vcell;
@@ -358,7 +363,7 @@ impl Vm {
     ///
     /// Read an op code from program[ip], increment ip and
     /// return the opcode.
-    fn read_opcode(&mut self) -> Result<OpCode, RuntimeError> {
+    fn read_opcode(&mut self) -> Result<OpCode, Error> {
         let op = self
             .lambda()
             .get(self.ip.1)
@@ -468,54 +473,12 @@ impl Vm {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum RuntimeError {
-    ExpectedPair(VCell),
-    InvalidArgs(String, String, VCell),
-    InvalidBytecode,
-    InvalidNumArgs,
-    InvalidProcedure(VCell),
-    InvalidStackIndex(usize),
-    ExpectedStackValue,
-    VariableNotBound(String),
+fn car<T: AsRef<VCell>>(vcell: T) -> Result<VCell, Error> {
+    vcell.as_ref().as_car().ok_or(ExpectedType("pair"))
 }
 
-impl RuntimeError {
-    /// Into Error
-    ///
-    /// Convert a runtime error into a vm::Error, converting any runtime values
-    /// (e.g. ptrs to heap values) to printable forms -- This function requires
-    /// read only access to the Vm in order to access the heap.
-    fn into_error(self, vm: &Vm) -> Error {
-        match self {
-            ExpectedPair(vcell) => Error::ExpectedPair(vm.heap.get_as_cell(&vcell).to_string()),
-            InvalidArgs(proc, expected, got) => {
-                Error::InvalidArgs(proc, expected, vm.heap.get_as_cell(&got).to_string())
-            }
-            InvalidBytecode => Error::InvalidBytecode,
-            InvalidNumArgs => Error::InvalidNumArgs("procedure".into()),
-            InvalidProcedure(vcell) => {
-                Error::InvalidProcedure(vm.heap.get_as_cell(&vcell).to_string())
-            }
-            InvalidStackIndex(index) => Error::InvalidStackIndex(index),
-            ExpectedStackValue => Error::ExpectedStackValue,
-            VariableNotBound(sym) => Error::VariableNotBound(sym),
-        }
-    }
-}
-
-fn car<T: AsRef<VCell>>(vcell: T) -> Result<VCell, RuntimeError> {
-    vcell
-        .as_ref()
-        .as_car()
-        .ok_or_else(|| ExpectedPair(vcell.as_ref().clone()))
-}
-
-fn cdr<T: AsRef<VCell>>(vcell: T) -> Result<VCell, RuntimeError> {
-    vcell
-        .as_ref()
-        .as_cdr()
-        .ok_or_else(|| ExpectedPair(vcell.as_ref().clone()))
+fn cdr<T: AsRef<VCell>>(vcell: T) -> Result<VCell, Error> {
+    vcell.as_ref().as_cdr().ok_or(ExpectedType("pair"))
 }
 
 #[cfg(test)]

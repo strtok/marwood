@@ -74,8 +74,11 @@ impl Default for Vm {
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum Error {
+    #[error("expected {0}")]
+    ExpectedType(&'static str),
+
     #[error("expected pair, but found {0}")]
-    ExpectedPair(String),
+    ExpectedPairButFound(String),
 
     #[error("invalid argument for {0}: expected {1}, but got {2}")]
     InvalidArgs(String, String, String),
@@ -114,7 +117,8 @@ mod tests {
     use crate::lex;
     use crate::parse;
     use crate::vm::Error::{
-        ExpectedPair, InvalidArgs, InvalidNumArgs, InvalidProcedure, UnquotedNil, VariableNotBound,
+        ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidProcedure, UnquotedNil,
+        VariableNotBound,
     };
 
     macro_rules! evals {
@@ -171,8 +175,8 @@ mod tests {
             "(car '(1 2 3))" => "1",
             "(cdr '(1 2 3))" => "(2 3)"
         ];
-        fails!["(car 1)" => ExpectedPair("1".into()),
-               "(cdr 1)" => ExpectedPair("1".into())
+        fails!["(car 1)" => Error::ExpectedType("pair".into()),
+               "(cdr 1)" => Error::ExpectedType("pair".into())
         ];
     }
 
@@ -183,7 +187,7 @@ mod tests {
             "(cons '(1 2) '(3 4))" => "((1 2) . (3 4))",
             "(cons 1 (cons 2 (cons 3 '())))" => "(1 2 3)"
         ];
-        fails!["(cons 1)" => ExpectedPair("()".into()),
+        fails!["(cons 1)" => ExpectedPairButFound("()".into()),
                "(cons 1 2 3)" => InvalidNumArgs("cons".into())
         ];
     }

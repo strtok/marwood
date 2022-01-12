@@ -11,13 +11,17 @@ use std::ops::Deref;
 
 macro_rules! car {
     ($cell:expr) => {{
-        $cell.car().ok_or(Error::ExpectedPair($cell.to_string()))?
+        $cell
+            .car()
+            .ok_or(Error::ExpectedPairButFound($cell.to_string()))?
     }};
 }
 
 macro_rules! cdr {
     ($cell:expr) => {{
-        $cell.cdr().ok_or(Error::ExpectedPair($cell.to_string()))?
+        $cell
+            .cdr()
+            .ok_or(Error::ExpectedPairButFound($cell.to_string()))?
     }};
 }
 

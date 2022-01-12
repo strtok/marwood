@@ -1,6 +1,6 @@
-use crate::vm::run::RuntimeError;
-use crate::vm::run::RuntimeError::InvalidStackIndex;
 use crate::vm::vcell::VCell;
+use crate::vm::Error;
+use crate::vm::Error::InvalidStackIndex;
 use log::trace;
 use std::fmt::Display;
 
@@ -39,7 +39,7 @@ impl Stack {
     ///
     /// This supports absolute stack addressing modes, such as those
     /// needed for BP[offset]
-    pub fn get(&self, index: usize) -> Result<&VCell, RuntimeError> {
+    pub fn get(&self, index: usize) -> Result<&VCell, Error> {
         self.stack.get(index).ok_or(InvalidStackIndex(index))
     }
 
@@ -49,7 +49,7 @@ impl Stack {
     ///
     /// This supports absolute stack addressing modes, such as those
     /// needed for BP[offset]
-    pub fn get_mut(&mut self, index: usize) -> Result<&mut VCell, RuntimeError> {
+    pub fn get_mut(&mut self, index: usize) -> Result<&mut VCell, Error> {
         self.stack.get_mut(index).ok_or(InvalidStackIndex(index))
     }
 
@@ -64,7 +64,7 @@ impl Stack {
     /// # Arguments
     /// `offset` - The offset from the top of the stack to access, where an offset
     /// of 0 is the top oif the stack.
-    pub fn get_offset(&self, offset: i64) -> Result<&VCell, RuntimeError> {
+    pub fn get_offset(&self, offset: i64) -> Result<&VCell, Error> {
         let index = (self.sp as i64 + offset) as usize;
         self.stack.get(index).ok_or(InvalidStackIndex(index))
     }
@@ -72,7 +72,7 @@ impl Stack {
     /// Get Offset Mut
     ///
     /// Identical to get(), but returns a mut stack value.
-    pub fn get_offset_mut(&mut self, offset: i64) -> Result<&mut VCell, RuntimeError> {
+    pub fn get_offset_mut(&mut self, offset: i64) -> Result<&mut VCell, Error> {
         let index = (self.sp as i64 + offset) as usize;
         self.stack.get_mut(index).ok_or(InvalidStackIndex(index))
     }
@@ -125,7 +125,7 @@ impl Stack {
 
     /// Pop the top of the stack, returning a Option<VCell> that is
     /// Some(&VCell), or None if the stack was empty.
-    pub fn pop(&mut self) -> Result<&VCell, RuntimeError> {
+    pub fn pop(&mut self) -> Result<&VCell, Error> {
         return if self.sp > 0 {
             self.sp -= 1;
             self.stack
