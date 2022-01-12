@@ -75,7 +75,7 @@ impl Vm {
                 // * MOV %acc %ip
                 let lambda = match self.heap.get(&self.acc) {
                     VCell::Closure(lambda, _) => lambda,
-                    VCell::Lambda(_) => self.acc.as_ptr().unwrap(),
+                    VCell::Lambda(_) => self.acc.as_ptr()?,
                     other => {
                         return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
                     }
@@ -93,13 +93,12 @@ impl Vm {
                 //   the Lambda
                 // * Creating a Closure object on the heap that references the Environment+Lambda
                 let lambda_ptr = self.acc.as_ptr()?;
-                let lambda = self.heap.get_at_index(lambda_ptr);
-                let lambda = lambda.as_lambda()?;
+                let lambda = self.heap.get_at_index(lambda_ptr).as_lambda()?;
 
                 // Build the lexical environment
-                let lexical_env = self.build_lexical_environment(&lambda.envmap);
+                let lexical_env = self.build_lexical_environment(&lambda.envmap)?;
                 let lexical_env = VCell::LexicalEnv(Rc::new(lexical_env));
-                let lexical_env_ptr = self.heap.put(lexical_env).as_ptr().unwrap();
+                let lexical_env_ptr = self.heap.put(lexical_env).as_ptr()?;
 
                 // Build a Closure object on the heap
                 let closure_ptr = self.heap.put(VCell::Closure(lambda_ptr, lexical_env_ptr));
@@ -148,7 +147,7 @@ impl Vm {
                 // -3: ArgN...
                 let (lambda, lexical_env) = match self.heap.get(&self.acc) {
                     VCell::Closure(lambda, lexical_env) => (lambda, lexical_env),
-                    VCell::Lambda(_) => (self.acc.as_ptr().unwrap(), self.ep),
+                    VCell::Lambda(_) => (self.acc.as_ptr()?, self.ep),
                     _ => {
                         return Err(InvalidBytecode);
                     }
@@ -340,8 +339,8 @@ impl Vm {
             .get(self.ip.1)
             .cloned()
             .filter(|it| it.is_opcode())
-            .map(|it| it.as_opcode().unwrap())
-            .ok_or(InvalidBytecode);
+            .map(|it| it.as_opcode())
+            .ok_or(InvalidBytecode)?;
         self.ip.1 += 1;
         op
     }
@@ -350,11 +349,11 @@ impl Vm {
     ///
     /// Load an argument from the current stack frame given the argument
     /// index.
-    fn load_arg(&self, index: usize) -> &VCell {
-        let arg_count = self.stack.get(self.bp + 1).unwrap().as_fixed_num().unwrap() as usize;
+    fn load_arg(&self, index: usize) -> Result<&VCell, Error> {
+        let arg_count = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
         let offset = self.bp;
         let offset = (offset - arg_count) + index + 1;
-        self.stack.get(offset).expect("invalid argument offset")
+        self.stack.get(offset)
     }
 
     /// Run GC
@@ -387,15 +386,15 @@ impl Vm {
     ///
     /// # Arguments
     /// `envmap` - The EnvironmentMap used to build the lexical environment
-    fn build_lexical_environment(&self, envmap: &EnvironmentMap) -> LexicalEnvironment {
+    fn build_lexical_environment(
+        &self,
+        envmap: &EnvironmentMap,
+    ) -> Result<LexicalEnvironment, Error> {
         let lexical_env = LexicalEnvironment::new(envmap.slots_len());
-        envmap
-            .get_map()
-            .iter()
-            .enumerate()
-            .for_each(|(slot, it)| match it.1 {
+        for (slot, it) in envmap.get_map().iter().enumerate() {
+            match it.1 {
                 BindingSource::IofArgument(arg) => {
-                    lexical_env.put(slot, self.load_arg(arg).clone());
+                    lexical_env.put(slot, self.load_arg(arg)?.clone());
                 }
                 BindingSource::IofEnvironment(iof_slot) => {
                     lexical_env.put(slot, VCell::LexicalEnvPtr(self.ep, iof_slot));
@@ -403,8 +402,9 @@ impl Vm {
                 // Own arguments can't be captured in the environment until the procedure
                 // is applied.
                 BindingSource::Global | BindingSource::Argument(_) => {}
-            });
-        lexical_env
+            }
+        }
+        Ok(lexical_env)
     }
 
     #[allow(dead_code)]
