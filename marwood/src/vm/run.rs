@@ -33,6 +33,7 @@ impl Vm {
     /// If the bool is set true, it indicates a HALT was encountered and
     /// execution should cease.
     fn run_one(&mut self) -> Result<bool, RuntimeError> {
+        self.trace_instruction();
         let op_code = self.read_opcode()?;
         match op_code {
             OpCode::Add | OpCode::Sub | OpCode::Mul => {
@@ -424,8 +425,6 @@ impl Vm {
     /// # Arguments
     /// `envmap` - The EnvironmentMap used to build the lexical environment
     fn build_lexical_environment(&self, envmap: &EnvironmentMap) -> LexicalEnvironment {
-        trace!("creating lexical environment with EnvironmentMap:");
-        self.trace_environment_map(envmap);
         let lexical_env = LexicalEnvironment::new(envmap.slots_len());
         envmap
             .get_map()
@@ -442,21 +441,43 @@ impl Vm {
                 // is applied.
                 BindingSource::Global | BindingSource::Argument(_) => {}
             });
-        trace!("lexical environment:");
-        self.trace_lexical_environment(&lexical_env);
         lexical_env
     }
 
+    #[allow(dead_code)]
     fn trace_environment_map(&self, envmap: &EnvironmentMap) {
         envmap.get_map().iter().for_each(|it| {
             trace!("{} => {:?}", self.get_str_bound_to(it.0.clone()), it.1);
         })
     }
 
+    #[allow(dead_code)]
     fn trace_lexical_environment(&self, env: &LexicalEnvironment) {
         for it in 0..env.slot_len() {
             trace!("{} => {}", it, env.get(it));
         }
+    }
+
+    fn trace_instruction(&self) {
+        trace!(
+            "{:<60} {:>30}",
+            format!(
+                "{}",
+                self.decompile_one(
+                    &mut self.heap.get_at_index(self.ip.0).as_lambda().unwrap().bc[self.ip.1..]
+                        .iter()
+                        .peekable()
+                )
+                .unwrap()
+            ),
+            format!(
+                "{} %sp[{}] {} $ep[{}]",
+                VCell::InstructionPointer(self.ip.0, self.ip.1),
+                VCell::Ptr(self.stack.get_sp()),
+                VCell::BasePointer(self.bp),
+                VCell::Ptr(self.ep)
+            )
+        );
     }
 }
 

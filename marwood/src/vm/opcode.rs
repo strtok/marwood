@@ -1,8 +1,11 @@
 use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
-use crate::vm::Vm;
+use crate::vm::Error::InvalidBytecode;
+use crate::vm::{Error, Vm};
 use lazy_static::lazy_static;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+use std::iter::Peekable;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum OpCode {
@@ -109,62 +112,82 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
     &SCHEMA
 }
 
-struct DecompiledInstruction {
+#[derive(Debug)]
+pub struct DecompiledInstruction {
     op: &'static str,
     operands: Vec<(VCell, Operand)>,
     values: Vec<String>,
 }
 
+impl Display for DecompiledInstruction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let op = self.op;
+        let operands = self
+            .operands
+            .iter()
+            .map(|it| match it.1 {
+                Operand::StoreReference | Operand::LoadReference => match it.0 {
+                    VCell::Acc => it.0.to_string(),
+                    _ => format!("[{}]", it.0.to_string()),
+                },
+                _ => it.0.to_string(),
+            })
+            .collect::<Vec<_>>();
+        let values = &self.values;
+        if !operands.is_empty() && !values.is_empty() {
+            write!(
+                f,
+                "{0: <8} {1: <12} {2: <12} //{3: <10}",
+                op,
+                operands.get(0).unwrap_or(&"".to_string()),
+                operands.get(1).unwrap_or(&"".to_string()),
+                values.join(" ")
+            )
+        } else if !operands.is_empty() {
+            write!(
+                f,
+                "{0: <8} {1: <12} {2: <12}",
+                op,
+                operands.get(0).unwrap_or(&"".to_string()),
+                operands.get(1).unwrap_or(&"".to_string()),
+            )
+        } else {
+            write!(f, "{}", op)
+        }
+    }
+}
+
 impl Vm {
     pub fn decompile_text(&self, lambda: &Lambda) -> String {
         let mut text = String::new();
-        for instruction in self.decompile(lambda) {
-            let op = instruction.op;
-            let operands = instruction
-                .operands
-                .iter()
-                .map(|it| match it.1 {
-                    Operand::StoreReference | Operand::LoadReference => match it.0 {
-                        VCell::Acc => it.0.to_string(),
-                        _ => format!("[{}]", it.0.to_string()),
-                    },
-                    _ => it.0.to_string(),
-                })
-                .collect::<Vec<_>>();
-            let values = instruction.values;
-            if !operands.is_empty() && !values.is_empty() {
-                text.push_str(&format!(
-                    "{0: <8} {1: <12} {2: <12} //{3: <10}\n",
-                    op,
-                    operands.get(0).unwrap_or(&"".to_string()),
-                    operands.get(1).unwrap_or(&"".to_string()),
-                    values.join(" ")
-                ));
-            } else if !operands.is_empty() {
-                text.push_str(&format!(
-                    "{0: <8} {1: <12} {2: <12}\n",
-                    op,
-                    operands.get(0).unwrap_or(&"".to_string()),
-                    operands.get(1).unwrap_or(&"".to_string()),
-                ));
-            } else {
-                text.push_str(&format!("{}\n", op));
-            }
+        for instruction in self.decompile(lambda).unwrap() {
+            text.push_str(&format!("{}\n", instruction));
         }
         text
     }
 
-    fn decompile(&self, lambda: &Lambda) -> Vec<DecompiledInstruction> {
-        let mut cur = lambda.bc.iter();
+    pub fn decompile(&self, lambda: &Lambda) -> Result<Vec<DecompiledInstruction>, Error> {
+        let mut cur = lambda.bc.iter().peekable();
         let mut instructions = vec![];
-        while let Some(VCell::OpCode(opcode)) = cur.next() {
+        while cur.peek().is_some() {
+            instructions.push(self.decompile_one(&mut cur)?);
+        }
+
+        Ok(instructions)
+    }
+
+    pub fn decompile_one<'a, T: Iterator<Item = &'a VCell>>(
+        &self,
+        iter: &mut Peekable<T>,
+    ) -> Result<DecompiledInstruction, Error> {
+        if let Some(VCell::OpCode(opcode)) = iter.next() {
             let schema = schema().get(opcode).expect("unknown opcode");
             let mut operands = vec![];
             let mut values = vec![];
             for it in &schema.operands {
                 let operand = match it {
                     Operand::Acc => &VCell::Acc,
-                    _ => cur.next().expect("expected operand"),
+                    _ => iter.next().expect("expected operand"),
                 };
 
                 operands.push((operand.clone(), it.clone()));
@@ -182,14 +205,14 @@ impl Vm {
                     }
                 }
             }
-            instructions.push(DecompiledInstruction {
+            Ok(DecompiledInstruction {
                 op: schema.name,
                 operands,
                 values,
             })
+        } else {
+            Err(InvalidBytecode)
         }
-
-        instructions
     }
 }
 
