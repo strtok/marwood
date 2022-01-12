@@ -100,6 +100,9 @@ pub enum Error {
 
     #[error("variable {0} not bound")]
     VariableNotBound(String),
+
+    #[error("invalid syntax: () must be quoted")]
+    UnquotedNil,
 }
 
 #[cfg(test)]
@@ -108,7 +111,7 @@ mod tests {
     use crate::lex;
     use crate::parse;
     use crate::vm::Error::{
-        ExpectedPair, InvalidArgs, InvalidNumArgs, InvalidProcedure, VariableNotBound,
+        ExpectedPair, InvalidArgs, InvalidNumArgs, InvalidProcedure, UnquotedNil, VariableNotBound,
     };
 
     macro_rules! evals {
@@ -141,11 +144,11 @@ mod tests {
            "-10" => "-10",
            "#t" => "#t",
            "#f" => "#f",
-           "'()" => "()",
-           "()" => "()"
+           "'()" => "()"
         ];
 
-        fails!["foo" => VariableNotBound("foo".into())];
+        fails!["foo" => VariableNotBound("foo".into()),
+               "()" => UnquotedNil];
     }
 
     #[test]

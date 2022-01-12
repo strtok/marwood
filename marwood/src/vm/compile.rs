@@ -4,7 +4,7 @@ use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
-use crate::vm::Error::{InvalidArgs, InvalidNumArgs, LambdaMissingExpression};
+use crate::vm::Error::{InvalidArgs, InvalidNumArgs, LambdaMissingExpression, UnquotedNil};
 use crate::vm::{Error, Vm};
 use log::trace;
 use std::ops::Deref;
@@ -32,44 +32,33 @@ impl Vm {
     pub fn compile_expression(&mut self, lambda: &mut Lambda, cell: &Cell) -> Result<(), Error> {
         match cell {
             Cell::Pair(car, cdr) => match car.deref() {
-                Cell::Symbol(s) if s.eq("define") => self.compile_define(lambda, cdr)?,
-                Cell::Symbol(s) if s.eq("lambda") | s.eq("λ") => {
-                    self.compile_lambda(lambda, cell)?
-                }
-                Cell::Symbol(s) if s.eq("quote") => self.compile_quote(lambda, car!(cdr))?,
+                Cell::Symbol(s) if s.eq("define") => self.compile_define(lambda, cdr),
+                Cell::Symbol(s) if s.eq("lambda") | s.eq("λ") => self.compile_lambda(lambda, cell),
+                Cell::Symbol(s) if s.eq("quote") => self.compile_quote(lambda, car!(cdr)),
                 Cell::Symbol(s) if s.eq("car") => {
-                    self.compile_unary(OpCode::Car, "car", lambda, cdr)?
+                    self.compile_unary(OpCode::Car, "car", lambda, cdr)
                 }
                 Cell::Symbol(s) if s.eq("cdr") => {
-                    self.compile_unary(OpCode::Cdr, "cdr", lambda, cdr)?
+                    self.compile_unary(OpCode::Cdr, "cdr", lambda, cdr)
                 }
                 Cell::Symbol(s) if s.eq("cons") => {
-                    self.compile_arg2(OpCode::Cons, "cons", lambda, cdr)?
+                    self.compile_arg2(OpCode::Cons, "cons", lambda, cdr)
                 }
-                Cell::Symbol(s) if s.eq("eq?") => {
-                    self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr)?
-                }
-                Cell::Symbol(s) if s.eq("+") => {
-                    self.compile_var_arg(OpCode::Add, "+", lambda, cdr)?
-                }
-                Cell::Symbol(s) if s.eq("-") => {
-                    self.compile_var_arg(OpCode::Sub, "-", lambda, cdr)?
-                }
-                Cell::Symbol(s) if s.eq("*") => {
-                    self.compile_var_arg(OpCode::Mul, "*", lambda, cdr)?
-                }
-                _ => self.compile_procedure_application(lambda, car, cdr)?,
+                Cell::Symbol(s) if s.eq("eq?") => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr),
+                Cell::Symbol(s) if s.eq("+") => self.compile_var_arg(OpCode::Add, "+", lambda, cdr),
+                Cell::Symbol(s) if s.eq("-") => self.compile_var_arg(OpCode::Sub, "-", lambda, cdr),
+                Cell::Symbol(s) if s.eq("*") => self.compile_var_arg(OpCode::Mul, "*", lambda, cdr),
+                _ => self.compile_procedure_application(lambda, car, cdr),
             },
-            Cell::Symbol(_) => self.compile_symbol_lookup(lambda, cell)?,
+            Cell::Symbol(_) => self.compile_symbol_lookup(lambda, cell),
+            Cell::Nil => Err(UnquotedNil),
             Cell::Number(_)
             | Cell::Bool(_)
-            | Cell::Nil
             | Cell::Void
             | Cell::Undefined
             | Cell::Closure
-            | Cell::Lambda => self.compile_quote(lambda, cell)?,
-        };
-        Ok(())
+            | Cell::Lambda => self.compile_quote(lambda, cell),
+        }
     }
 
     /// Compile Symbol Eval
