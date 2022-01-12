@@ -40,9 +40,7 @@ impl Stack {
     /// This supports absolute stack addressing modes, such as those
     /// needed for BP[offset]
     pub fn get(&self, index: usize) -> Result<&VCell, RuntimeError> {
-        self.stack
-            .get(index)
-            .ok_or_else(|| InvalidStackIndex(index))
+        self.stack.get(index).ok_or(InvalidStackIndex(index))
     }
 
     /// Get Mut
@@ -52,9 +50,7 @@ impl Stack {
     /// This supports absolute stack addressing modes, such as those
     /// needed for BP[offset]
     pub fn get_mut(&mut self, index: usize) -> Result<&mut VCell, RuntimeError> {
-        self.stack
-            .get_mut(index)
-            .ok_or_else(|| InvalidStackIndex(index))
+        self.stack.get_mut(index).ok_or(InvalidStackIndex(index))
     }
 
     /// Get Offset
@@ -70,9 +66,7 @@ impl Stack {
     /// of 0 is the top oif the stack.
     pub fn get_offset(&self, offset: i64) -> Result<&VCell, RuntimeError> {
         let index = (self.sp as i64 + offset) as usize;
-        self.stack
-            .get(index)
-            .ok_or_else(|| InvalidStackIndex(index))
+        self.stack.get(index).ok_or(InvalidStackIndex(index))
     }
 
     /// Get Offset Mut
@@ -80,9 +74,7 @@ impl Stack {
     /// Identical to get(), but returns a mut stack value.
     pub fn get_offset_mut(&mut self, offset: i64) -> Result<&mut VCell, RuntimeError> {
         let index = (self.sp as i64 + offset) as usize;
-        self.stack
-            .get_mut(index)
-            .ok_or_else(|| InvalidStackIndex(index))
+        self.stack.get_mut(index).ok_or(InvalidStackIndex(index))
     }
 
     /// Sp
