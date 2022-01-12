@@ -10,7 +10,6 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct Heap {
-    chunk_size: usize,
     free_list: Vec<usize>,
     heap: Vec<VCell>,
     heap_map: gc::Map,
@@ -24,7 +23,6 @@ impl Heap {
     /// chunk of free vcells.
     pub fn new(chunk_size: usize) -> Heap {
         Heap {
-            chunk_size,
             heap: vec![VCell::undefined(); chunk_size],
             free_list: (0..chunk_size).rev().into_iter().collect(),
             heap_map: gc::Map::new(chunk_size),
