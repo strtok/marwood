@@ -175,8 +175,8 @@ mod tests {
             "(car '(1 2 3))" => "1",
             "(cdr '(1 2 3))" => "(2 3)"
         ];
-        fails!["(car 1)" => Error::ExpectedType("pair".into()),
-               "(cdr 1)" => Error::ExpectedType("pair".into())
+        fails!["(car 1)" => ExpectedPairButFound("1".into()),
+               "(cdr 1)" => ExpectedPairButFound("1".into())
         ];
     }
 

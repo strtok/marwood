@@ -4,7 +4,8 @@ use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell;
 use crate::vm::Error::{
-    ExpectedType, InvalidArgs, InvalidBytecode, InvalidNumArgs, InvalidProcedure, VariableNotBound,
+    ExpectedPairButFound, ExpectedType, InvalidArgs, InvalidBytecode, InvalidNumArgs,
+    InvalidProcedure, VariableNotBound,
 };
 use crate::vm::{Error, Vm};
 use log::trace;
@@ -106,11 +107,25 @@ impl Vm {
             }
             OpCode::Car => {
                 let arg = self.heap.get(&self.acc);
-                self.acc = car(arg)?;
+                match car(&arg) {
+                    Ok(vcell) => self.acc = vcell,
+                    Err(_) => {
+                        return Err(ExpectedPairButFound(
+                            self.heap.get_as_cell(&arg).to_string(),
+                        ));
+                    }
+                }
             }
             OpCode::Cdr => {
                 let arg = self.heap.get(&self.acc);
-                self.acc = cdr(arg)?;
+                match cdr(&arg) {
+                    Ok(vcell) => self.acc = vcell,
+                    Err(_) => {
+                        return Err(ExpectedPairButFound(
+                            self.heap.get_as_cell(&arg).to_string(),
+                        ));
+                    }
+                }
             }
             OpCode::Cons => {
                 let car = self.acc.clone().as_ptr().ok_or(InvalidBytecode)?;
