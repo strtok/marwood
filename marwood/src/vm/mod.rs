@@ -89,6 +89,9 @@ pub enum Error {
     #[error("call of non-procedure: {0}")]
     InvalidProcedure(String),
 
+    #[error("invalid stack index: {0}")]
+    InvalidStackIndex(usize),
+
     #[error("lambda require at least one expression")]
     LambdaMissingExpression,
 

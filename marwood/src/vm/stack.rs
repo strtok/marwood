@@ -1,3 +1,5 @@
+use crate::vm::run::RuntimeError;
+use crate::vm::run::RuntimeError::InvalidStackIndex;
 use crate::vm::vcell::VCell;
 use log::trace;
 use std::fmt::Display;
@@ -37,8 +39,10 @@ impl Stack {
     ///
     /// This supports absolute stack addressing modes, such as those
     /// needed for BP[offset]
-    pub fn get(&self, index: usize) -> Option<&VCell> {
-        self.stack.get(index)
+    pub fn get(&self, index: usize) -> Result<&VCell, RuntimeError> {
+        self.stack
+            .get(index)
+            .ok_or_else(|| InvalidStackIndex(index))
     }
 
     /// Get Mut
@@ -47,8 +51,10 @@ impl Stack {
     ///
     /// This supports absolute stack addressing modes, such as those
     /// needed for BP[offset]
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut VCell> {
-        self.stack.get_mut(index)
+    pub fn get_mut(&mut self, index: usize) -> Result<&mut VCell, RuntimeError> {
+        self.stack
+            .get_mut(index)
+            .ok_or_else(|| InvalidStackIndex(index))
     }
 
     /// Get Offset
@@ -62,17 +68,21 @@ impl Stack {
     /// # Arguments
     /// `offset` - The offset from the top of the stack to access, where an offset
     /// of 0 is the top oif the stack.
-    pub fn get_offset(&self, offset: i64) -> Option<&VCell> {
-        let slot = (self.sp as i64 + offset) as usize;
-        self.stack.get(slot)
+    pub fn get_offset(&self, offset: i64) -> Result<&VCell, RuntimeError> {
+        let index = (self.sp as i64 + offset) as usize;
+        self.stack
+            .get(index)
+            .ok_or_else(|| InvalidStackIndex(index))
     }
 
     /// Get Offset Mut
     ///
     /// Identical to get(), but returns a mut stack value.
-    pub fn get_offset_mut(&mut self, offset: i64) -> Option<&mut VCell> {
-        let slot = (self.sp as i64 + offset) as usize;
-        self.stack.get_mut(slot)
+    pub fn get_offset_mut(&mut self, offset: i64) -> Result<&mut VCell, RuntimeError> {
+        let index = (self.sp as i64 + offset) as usize;
+        self.stack
+            .get_mut(index)
+            .ok_or_else(|| InvalidStackIndex(index))
     }
 
     /// Sp
@@ -123,12 +133,14 @@ impl Stack {
 
     /// Pop the top of the stack, returning a Option<VCell> that is
     /// Some(&VCell), or None if the stack was empty.
-    pub fn pop(&mut self) -> Option<&VCell> {
+    pub fn pop(&mut self) -> Result<&VCell, RuntimeError> {
         return if self.sp > 0 {
             self.sp -= 1;
-            self.stack.get(self.sp + 1)
+            self.stack
+                .get(self.sp + 1)
+                .ok_or_else(|| InvalidStackIndex(self.sp + 1))
         } else {
-            None
+            Err(InvalidStackIndex(0))
         };
     }
 
@@ -169,12 +181,12 @@ mod tests {
         stack.push(VCell::FixedNum(0));
         stack.push(VCell::FixedNum(1));
         stack.push(VCell::FixedNum(2));
-        assert_eq!(stack.get_offset(2), Some(&VCell::Undefined));
-        assert_eq!(stack.get_offset(1), Some(&VCell::Undefined));
-        assert_eq!(stack.get_offset(0), Some(&VCell::FixedNum(2)));
-        assert_eq!(stack.get_offset(-1), Some(&VCell::FixedNum(1)));
-        assert_eq!(stack.get_offset(-2), Some(&VCell::FixedNum(0)));
-        assert_eq!(stack.get_offset(-3), Some(&VCell::Undefined));
+        assert_eq!(stack.get_offset(2), Ok(&VCell::Undefined));
+        assert_eq!(stack.get_offset(1), Ok(&VCell::Undefined));
+        assert_eq!(stack.get_offset(0), Ok(&VCell::FixedNum(2)));
+        assert_eq!(stack.get_offset(-1), Ok(&VCell::FixedNum(1)));
+        assert_eq!(stack.get_offset(-2), Ok(&VCell::FixedNum(0)));
+        assert_eq!(stack.get_offset(-3), Ok(&VCell::Undefined));
     }
 
     #[test]
@@ -182,8 +194,8 @@ mod tests {
         let mut stack = Stack::new();
         stack.push(VCell::FixedNum(1));
         stack.push(VCell::FixedNum(2));
-        assert_eq!(stack.pop(), Some(&VCell::FixedNum(2)));
-        assert_eq!(stack.pop(), Some(&VCell::FixedNum(1)));
-        assert_eq!(stack.pop(), None);
+        assert_eq!(stack.pop(), Ok(&VCell::FixedNum(2)));
+        assert_eq!(stack.pop(), Ok(&VCell::FixedNum(1)));
+        assert_eq!(stack.pop(), Err(InvalidStackIndex(0)));
     }
 }

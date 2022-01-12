@@ -4,7 +4,7 @@ use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::run::RuntimeError::{
     ExpectedPair, ExpectedStackValue, InvalidArgs, InvalidBytecode, InvalidNumArgs,
-    InvalidProcedure, VariableNotBound,
+    InvalidProcedure, InvalidStackIndex, VariableNotBound,
 };
 use crate::vm::vcell::VCell;
 use crate::vm::{Error, Vm};
@@ -137,8 +137,7 @@ impl Vm {
                     .ok_or_else(|| InvalidProcedure(lambda.clone()))?;
                 if self
                     .stack
-                    .get_offset(-2)
-                    .ok_or(InvalidBytecode)?
+                    .get_offset(-2)?
                     .as_fixed_num()
                     .ok_or(InvalidBytecode)? as usize
                     != lambda.args.len()
@@ -176,8 +175,7 @@ impl Vm {
             OpCode::Ret => {
                 let n = self
                     .stack
-                    .get(self.bp + 1)
-                    .ok_or(InvalidBytecode)?
+                    .get(self.bp + 1)?
                     .as_fixed_num()
                     .ok_or(InvalidBytecode)? as usize;
 
@@ -187,24 +185,21 @@ impl Vm {
                 // Restore %ep
                 self.ep = self
                     .stack
-                    .get(self.bp + 2)
-                    .ok_or(InvalidBytecode)?
+                    .get(self.bp + 2)?
                     .as_ptr()
                     .ok_or(InvalidBytecode)?;
 
                 // Restore %ip
                 self.ip = self
                     .stack
-                    .get(self.bp + 3)
-                    .ok_or(InvalidBytecode)?
+                    .get(self.bp + 3)?
                     .as_ip()
                     .ok_or(InvalidBytecode)?;
 
                 // Restore %bp
                 self.bp = self
                     .stack
-                    .get(self.bp + 4)
-                    .ok_or(InvalidBytecode)?
+                    .get(self.bp + 4)?
                     .as_bp()
                     .ok_or(InvalidBytecode)?;
             }
@@ -250,10 +245,7 @@ impl Vm {
     ///
     /// Pop a value off the stack. Error if the stack is empty.
     fn pop_stack(&mut self) -> Result<VCell, RuntimeError> {
-        self.stack
-            .pop()
-            .ok_or(ExpectedStackValue)
-            .map(|it| it.clone())
+        self.stack.pop().map(|it| it.clone())
     }
 
     /// Lambda
@@ -294,11 +286,9 @@ impl Vm {
         match self.read_operand()? {
             VCell::Acc => Ok(self.acc.clone()),
             VCell::Ptr(ptr) => Ok(self.heap.get_at_index(ptr).clone()),
-            VCell::BasePointerOffset(offset) => Ok(self
-                .stack
-                .get((self.bp as i64 + offset) as usize)
-                .ok_or(InvalidBytecode)?
-                .clone()),
+            VCell::BasePointerOffset(offset) => {
+                Ok(self.stack.get((self.bp as i64 + offset) as usize)?.clone())
+            }
             VCell::GlobalEnvSlot(slot) => match self.globenv.get_slot(slot) {
                 VCell::Undefined => Err(VariableNotBound(
                     self.get_str_bound_to(VCell::env_slot(slot)),
@@ -339,10 +329,7 @@ impl Vm {
                 *self.heap.get_at_index_mut(ptr) = vcell;
             }
             VCell::BasePointerOffset(offset) => {
-                *self
-                    .stack
-                    .get_offset_mut((self.bp as i64) + offset)
-                    .ok_or(InvalidBytecode)? = vcell;
+                *self.stack.get_offset_mut((self.bp as i64) + offset)? = vcell;
             }
             VCell::GlobalEnvSlot(slot) => {
                 self.globenv.put_slot(slot, vcell);
@@ -488,6 +475,7 @@ pub enum RuntimeError {
     InvalidBytecode,
     InvalidNumArgs,
     InvalidProcedure(VCell),
+    InvalidStackIndex(usize),
     ExpectedStackValue,
     VariableNotBound(String),
 }
@@ -509,6 +497,7 @@ impl RuntimeError {
             InvalidProcedure(vcell) => {
                 Error::InvalidProcedure(vm.heap.get_as_cell(&vcell).to_string())
             }
+            InvalidStackIndex(index) => Error::InvalidStackIndex(index),
             ExpectedStackValue => Error::ExpectedStackValue,
             VariableNotBound(sym) => Error::VariableNotBound(sym),
         }
