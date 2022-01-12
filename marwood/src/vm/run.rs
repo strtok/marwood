@@ -4,8 +4,8 @@ use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell;
 use crate::vm::Error::{
-    ExpectedPairButFound, ExpectedType, InvalidArgs, InvalidBytecode, InvalidNumArgs,
-    InvalidProcedure, VariableNotBound,
+    ExpectedPairButFound, InvalidArgs, InvalidBytecode, InvalidNumArgs, InvalidProcedure,
+    VariableNotBound,
 };
 use crate::vm::{Error, Vm};
 use log::trace;
@@ -46,14 +46,14 @@ impl Vm {
                 let x = self.heap.get(&self.acc);
                 let y = self.pop_stack()?;
                 let y = self.heap.get(&y);
-                let x = x.as_fixed_num().ok_or_else(|| {
+                let x = x.as_fixed_num().map_err(|_| {
                     InvalidArgs(
                         proc_name.to_string(),
                         "number".to_string(),
                         self.heap.get_as_cell(&x).to_string(),
                     )
                 })?;
-                let y = y.as_fixed_num().ok_or_else(|| {
+                let y = y.as_fixed_num().map_err(|_| {
                     InvalidArgs(
                         proc_name.to_string(),
                         "number".to_string(),
@@ -92,9 +92,9 @@ impl Vm {
                 // * Creating an Environment on the heap, given the EnvironmentMap in
                 //   the Lambda
                 // * Creating a Closure object on the heap that references the Environment+Lambda
-                let lambda_ptr = self.acc.as_ptr().ok_or(InvalidBytecode)?;
+                let lambda_ptr = self.acc.as_ptr()?;
                 let lambda = self.heap.get_at_index(lambda_ptr);
-                let lambda = lambda.as_lambda().ok_or(InvalidBytecode)?;
+                let lambda = lambda.as_lambda()?;
 
                 // Build the lexical environment
                 let lexical_env = self.build_lexical_environment(&lambda.envmap);
@@ -128,8 +128,8 @@ impl Vm {
                 }
             }
             OpCode::Cons => {
-                let car = self.acc.clone().as_ptr().ok_or(InvalidBytecode)?;
-                let cdr = self.pop_stack()?.as_ptr().ok_or(InvalidBytecode)?;
+                let car = self.acc.clone().as_ptr()?;
+                let cdr = self.pop_stack()?.as_ptr()?;
                 self.acc = self.heap.put(VCell::Pair(car, cdr));
             }
             OpCode::Enter => {
@@ -154,14 +154,8 @@ impl Vm {
                     }
                 };
                 let lambda = self.heap.get_at_index(lambda);
-                let lambda = lambda.as_lambda().ok_or(InvalidBytecode)?;
-                if self
-                    .stack
-                    .get_offset(-2)?
-                    .as_fixed_num()
-                    .ok_or(InvalidBytecode)? as usize
-                    != lambda.args.len()
-                {
+                let lambda = lambda.as_lambda()?;
+                if self.stack.get_offset(-2)?.as_fixed_num()? as usize != lambda.args.len() {
                     return Err(InvalidNumArgs("procedure".into()));
                 }
 
@@ -193,35 +187,12 @@ impl Vm {
                 self.stack.push(self.acc.clone());
             }
             OpCode::Ret => {
-                let n = self
-                    .stack
-                    .get(self.bp + 1)?
-                    .as_fixed_num()
-                    .ok_or(InvalidBytecode)? as usize;
+                let n = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
 
-                // Restore %sp
                 *self.stack.get_sp_mut() = self.bp - n;
-
-                // Restore %ep
-                self.ep = self
-                    .stack
-                    .get(self.bp + 2)?
-                    .as_ptr()
-                    .ok_or(InvalidBytecode)?;
-
-                // Restore %ip
-                self.ip = self
-                    .stack
-                    .get(self.bp + 3)?
-                    .as_ip()
-                    .ok_or(InvalidBytecode)?;
-
-                // Restore %bp
-                self.bp = self
-                    .stack
-                    .get(self.bp + 4)?
-                    .as_bp()
-                    .ok_or(InvalidBytecode)?;
+                self.ep = self.stack.get(self.bp + 2)?.as_ptr()?;
+                self.ip = self.stack.get(self.bp + 3)?.as_ip()?;
+                self.bp = self.stack.get(self.bp + 4)?.as_bp()?;
             }
             OpCode::Halt => return Ok(true),
         }
@@ -275,12 +246,7 @@ impl Vm {
         self.heap
             .get_at_index(self.ip.0)
             .as_lambda()
-            .unwrap_or_else(|| {
-                panic!(
-                    "expected %ip to be a lambda, but found {}",
-                    self.heap.get_at_index(self.ip.0)
-                )
-            })
+            .expect("%ip is not a procedure")
     }
 
     /// Read Arg
@@ -316,19 +282,10 @@ impl Vm {
                 cell => Ok(cell),
             },
             VCell::LexicalEnvSlot(slot) => Ok(
-                match self
-                    .heap
-                    .get_at_index(self.ep)
-                    .as_lexical_env()
-                    .ok_or(InvalidBytecode)?
-                    .get(slot)
-                {
-                    VCell::LexicalEnvPtr(env, slot) => self
-                        .heap
-                        .get_at_index(env)
-                        .as_lexical_env()
-                        .ok_or(InvalidBytecode)?
-                        .get(slot),
+                match self.heap.get_at_index(self.ep).as_lexical_env()?.get(slot) {
+                    VCell::LexicalEnvPtr(env, slot) => {
+                        self.heap.get_at_index(env).as_lexical_env()?.get(slot)
+                    }
                     cell => cell,
                 },
             ),
@@ -361,8 +318,7 @@ impl Vm {
                 VCell::LexicalEnvPtr(env, slot) => {
                     self.heap
                         .get_at_index(*env)
-                        .as_lexical_env()
-                        .ok_or(InvalidBytecode)?
+                        .as_lexical_env()?
                         .put(*slot, vcell);
                 }
                 _ => {
@@ -417,7 +373,7 @@ impl Vm {
 
         self.globenv
             .iter_slots()
-            .filter_map(|it| it.as_ptr())
+            .filter_map(|it| it.as_ptr().ok())
             .for_each(|it| self.heap.mark(it));
 
         self.heap.mark(self.ip.0);
@@ -489,11 +445,13 @@ impl Vm {
 }
 
 fn car<T: AsRef<VCell>>(vcell: T) -> Result<VCell, Error> {
-    vcell.as_ref().as_car().ok_or(ExpectedType("pair"))
+    let vcell = vcell.as_ref();
+    vcell.as_car()
 }
 
 fn cdr<T: AsRef<VCell>>(vcell: T) -> Result<VCell, Error> {
-    vcell.as_ref().as_cdr().ok_or(ExpectedType("pair"))
+    let vcell = vcell.as_ref();
+    vcell.as_cdr()
 }
 
 #[cfg(test)]

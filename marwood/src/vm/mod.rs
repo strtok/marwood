@@ -75,10 +75,13 @@ impl Default for Vm {
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum Error {
     #[error("expected {0}")]
-    ExpectedType(&'static str),
+    ExpectedType(&'static str, &'static str),
 
     #[error("expected pair, but found {0}")]
     ExpectedPairButFound(String),
+
+    #[error("expected stack value")]
+    ExpectedStackValue,
 
     #[error("invalid argument for {0}: expected {1}, but got {2}")]
     InvalidArgs(String, String, String),
@@ -97,9 +100,6 @@ pub enum Error {
 
     #[error("lambda require at least one expression")]
     LambdaMissingExpression,
-
-    #[error("expected stack value")]
-    ExpectedStackValue,
 
     #[error("unknown procedure {0}")]
     UnknownProcedure(String),

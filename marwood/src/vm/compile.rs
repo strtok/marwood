@@ -116,10 +116,7 @@ impl Vm {
                 symbol.to_string(),
             ));
         }
-        let sym_ref =
-            self.heap.put_cell(symbol).as_ptr().ok_or_else(|| {
-                InvalidArgs("define".into(), "variable".into(), symbol.to_string())
-            })?;
+        let sym_ref = self.heap.put_cell(symbol).as_ptr()?;
         let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
         lambda.emit(OpCode::Mov);
         lambda.emit(VCell::Acc);

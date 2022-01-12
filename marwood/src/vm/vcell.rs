@@ -1,6 +1,8 @@
 use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
+use crate::vm::Error;
+use crate::vm::Error::ExpectedType;
 use std::fmt;
 use std::rc::Rc;
 
@@ -37,7 +39,55 @@ pub enum VCell {
     Void,
 }
 
+pub const ACC_TYPE_TEXT: &str = "#<acc>";
+pub const BASE_POINTER_TYPE_TEXT: &str = "#<base-pointer>";
+pub const BASE_POINTER_OFFSET_TYPE_TEXT: &str = "#<base-pointer-offset>";
+pub const BOOL_TYPE_TEXT: &str = "#<bool>";
+pub const CLOSURE_TYPE_TEXT: &str = "#<closure>";
+pub const GLOBAL_ENV_SLOT_TYPE_TEXT: &str = "#<global-environment-slot>";
+pub const LEXICAL_ENV_TYPE_TEXT: &str = "#<lexical-environment>";
+pub const LEXICAL_ENV_TYPE_SLOT: &str = "#<lexical-environment-slot>";
+pub const LEXICAL_ENV_POINTER_TYPE_TEXT: &str = "#<lexical-environment-pointer>";
+pub const FIXEDNUM_TYPE_TEXT: &str = "#<fixednum>";
+pub const INSTRUCTION_POINTER_TYPE_TEXT: &str = "#<instruction-pointer>";
+pub const LAMBDA_TYPE_TEXT: &str = "#<lambda>";
+pub const NIL_TYPE_TEXT: &str = "#<nil>";
+pub const OPCODE_TYPE_TEXT: &str = "#<opcode>";
+pub const PAIR_TYPE_TEXT: &str = "#<pair>";
+pub const PTR_TYPE_TEXT: &str = "#<ptr>";
+pub const SYMBOL_TYPE_TEXT: &str = "#<symbol>";
+pub const UNDEFINED_TYPE_TEXT: &str = "#<undefined>";
+pub const VOID_TYPE_TEXT: &str = "#<void>";
+
 impl VCell {
+    /// TYPE_TEXT Text
+    ///
+    /// TYPE_TEXT text is only used during error paths to print
+    /// the TYPE_TEXT of a VCell
+    pub fn type_text(&self) -> &'static str {
+        match self {
+            VCell::Acc => ACC_TYPE_TEXT,
+            VCell::BasePointer(_) => BASE_POINTER_TYPE_TEXT,
+            VCell::BasePointerOffset(_) => BASE_POINTER_OFFSET_TYPE_TEXT,
+            VCell::Bool(_) => BOOL_TYPE_TEXT,
+            VCell::Closure(_, _) => CLOSURE_TYPE_TEXT,
+            VCell::GlobalEnvSlot(_) => GLOBAL_ENV_SLOT_TYPE_TEXT,
+            VCell::LexicalEnv(_) => LEXICAL_ENV_TYPE_TEXT,
+            VCell::LexicalEnvSlot(_) => LEXICAL_ENV_TYPE_SLOT,
+            VCell::LexicalEnvPtr(_, _) => LEXICAL_ENV_POINTER_TYPE_TEXT,
+            VCell::FixedNum(_) => FIXEDNUM_TYPE_TEXT,
+            VCell::InstructionPointer(_, _) => INSTRUCTION_POINTER_TYPE_TEXT,
+            VCell::Lambda(_) => LAMBDA_TYPE_TEXT,
+            VCell::Nil => NIL_TYPE_TEXT,
+            VCell::OpCode(_) => OPCODE_TYPE_TEXT,
+            VCell::Pair(_, _) => PAIR_TYPE_TEXT,
+            VCell::Ptr(_) => PTR_TYPE_TEXT,
+            VCell::Symbol(_) => SYMBOL_TYPE_TEXT,
+            VCell::Undefined => UNDEFINED_TYPE_TEXT,
+            VCell::Void => VOID_TYPE_TEXT,
+        }
+    }
+
     pub fn undefined() -> VCell {
         VCell::Undefined
     }
@@ -118,87 +168,93 @@ impl VCell {
         matches!(self, VCell::LexicalEnv(_))
     }
 
-    pub fn as_opcode(&self) -> Option<OpCode> {
+    pub fn as_opcode(&self) -> Result<OpCode, Error> {
         match self {
-            VCell::OpCode(op) => Some(op.clone()),
-            _ => None,
+            VCell::OpCode(op) => Ok(op.clone()),
+            _ => Err(ExpectedType(OPCODE_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_car(&self) -> Option<VCell> {
+    pub fn as_car(&self) -> Result<VCell, Error> {
         match self {
-            VCell::Pair(car, _) => Some(VCell::Ptr(*car)),
-            _ => None,
+            VCell::Pair(car, _) => Ok(VCell::Ptr(*car)),
+            _ => Err(ExpectedType(PAIR_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_cdr(&self) -> Option<VCell> {
+    pub fn as_cdr(&self) -> Result<VCell, Error> {
         match self {
-            VCell::Pair(_, cdr) => Some(VCell::Ptr(*cdr)),
-            _ => None,
+            VCell::Pair(_, cdr) => Ok(VCell::Ptr(*cdr)),
+            _ => Err(ExpectedType(PAIR_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_fixed_num(&self) -> Option<i64> {
+    pub fn as_fixed_num(&self) -> Result<i64, Error> {
         match self {
-            VCell::FixedNum(val) => Some(*val),
-            _ => None,
+            VCell::FixedNum(val) => Ok(*val),
+            _ => Err(ExpectedType(FIXEDNUM_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_symbol(&self) -> Option<&str> {
+    pub fn as_symbol(&self) -> Result<&str, Error> {
         match self {
-            VCell::Symbol(s) => Some(&*s),
-            _ => None,
+            VCell::Symbol(s) => Ok(&*s),
+            _ => Err(ExpectedType(SYMBOL_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_lambda(&self) -> Option<&Lambda> {
+    pub fn as_lambda(&self) -> Result<&Lambda, Error> {
         match self {
-            VCell::Lambda(lambda) => Some(&*lambda),
-            _ => None,
+            VCell::Lambda(lambda) => Ok(&*lambda),
+            _ => Err(ExpectedType(LAMBDA_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_ptr(&self) -> Option<usize> {
+    pub fn as_ptr(&self) -> Result<usize, Error> {
         match self {
-            VCell::Ptr(ptr) => Some(*ptr),
-            _ => None,
+            VCell::Ptr(ptr) => Ok(*ptr),
+            _ => Err(ExpectedType(PTR_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_env_slot(&self) -> Option<usize> {
+    pub fn as_env_slot(&self) -> Result<usize, Error> {
         match self {
-            VCell::GlobalEnvSlot(slot) => Some(*slot),
-            _ => None,
+            VCell::GlobalEnvSlot(slot) => Ok(*slot),
+            _ => Err(ExpectedType(LEXICAL_ENV_TYPE_SLOT, self.type_text())),
         }
     }
 
-    pub fn as_lexical_env(&self) -> Option<&LexicalEnvironment> {
+    pub fn as_lexical_env(&self) -> Result<&LexicalEnvironment, Error> {
         match self {
-            VCell::LexicalEnv(env) => Some(&*env),
-            _ => None,
+            VCell::LexicalEnv(env) => Ok(&*env),
+            _ => Err(ExpectedType(LEXICAL_ENV_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_ip(&self) -> Option<(usize, usize)> {
+    pub fn as_ip(&self) -> Result<(usize, usize), Error> {
         match self {
-            VCell::InstructionPointer(lambda, ip) => Some((*lambda, *ip)),
-            _ => None,
+            VCell::InstructionPointer(lambda, ip) => Ok((*lambda, *ip)),
+            _ => Err(ExpectedType(
+                INSTRUCTION_POINTER_TYPE_TEXT,
+                self.type_text(),
+            )),
         }
     }
 
-    pub fn as_bp(&self) -> Option<usize> {
+    pub fn as_bp(&self) -> Result<usize, Error> {
         match self {
-            VCell::BasePointer(bp) => Some(*bp),
-            _ => None,
+            VCell::BasePointer(bp) => Ok(*bp),
+            _ => Err(ExpectedType(BASE_POINTER_TYPE_TEXT, self.type_text())),
         }
     }
 
-    pub fn as_bp_offset(&self) -> Option<i64> {
+    pub fn as_bp_offset(&self) -> Result<i64, Error> {
         match self {
-            VCell::BasePointerOffset(offset) => Some(*offset),
-            _ => None,
+            VCell::BasePointerOffset(offset) => Ok(*offset),
+            _ => Err(ExpectedType(
+                BASE_POINTER_OFFSET_TYPE_TEXT,
+                self.type_text(),
+            )),
         }
     }
 }
