@@ -311,4 +311,12 @@ mod tests {
             "(add-1000-100 10)" => "1110"
         ];
     }
+
+    #[test]
+    fn iof_environment_capture_with_first_class_procedure() {
+        evals![
+            "(define make-adder-adder (lambda (adder num) (lambda (n) (+ ((adder num) n)))))" => "#<void>",
+            "((make-adder-adder (lambda (i) (lambda (j) (+ i j))) 100) 1000)" => "1100"
+        ];
+    }
 }

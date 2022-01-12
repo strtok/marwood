@@ -351,8 +351,15 @@ fn find_free_symbols_in_proc<'a>(
     if car.is_quote() {
         return Ok(());
     }
-    if !car.is_primitive_symbol() && !env.contains(car) {
+
+    if car.is_symbol() && !car.is_primitive_symbol() && !env.contains(car) {
         free.insert(car);
+    }
+
+    // This is a special case where the procedure being applied is a procedure
+    // e.g. ((proc) 1 2)
+    if car.is_pair() {
+        find_free_symbols(car, env, free)?;
     }
 
     let mut lat = match car {
@@ -514,6 +521,12 @@ mod tests {
             free_symbols(&parse!["(lambda (x) (+ x y) z)"]),
             Ok(HashSet::from([&cell!["y"], &cell!["z"]]))
         );
+
+        assert_eq!(
+            free_symbols(&parse!("(lambda (n) (+ ((adder num) n)))")),
+            Ok(HashSet::from([&cell!["adder"], &cell!["num"]]))
+        );
+
         assert!(free_symbols(&parse!["(lambda)"]).is_err());
         assert!(free_symbols(&parse!["(lambda (10) (+ x y))"]).is_err());
         assert!(free_symbols(&parse!["(lambda (a 10) (+ x y))"]).is_err());
