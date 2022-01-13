@@ -258,6 +258,7 @@ mod tests {
 
         evals![
             "(null? '())" => "#t",
+            "(null? (cdr '(apples)))" => "#t",
             "(null? #f)" => "#f"
         ];
 
