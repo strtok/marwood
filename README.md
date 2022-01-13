@@ -48,6 +48,11 @@ bindings (environment slot references) for the runtime.
 
 ## Lexical Environment
 
+Marwood maintains a per-procedure lexical environment represented by a vector of 
+shallow bindings. At compile time, Marwood computes the exact mapping of bindings inherited 
+by a procedures immediate-outer-function (IOF), building an EnvironmentMap that instructs 
+the runtime of what bindings to inherit from the IOF's Environment and Stack.
+
 ## Procedure Application
 
 Marwood uses the stack to pass each operand of a procedure being applied to

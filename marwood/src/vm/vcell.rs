@@ -288,7 +288,7 @@ impl fmt::Display for VCell {
         match self {
             VCell::Acc => write!(f, "%acc"),
             VCell::BasePointer(bp) => write!(f, "%bp[${:02x}]", bp),
-            VCell::BasePointerOffset(offset) => write!(f, "%bp[{:+02x}]", *offset),
+            VCell::BasePointerOffset(offset) => write!(f, "%bp[{:+}]", *offset),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
             VCell::Closure(_, _) => write!(f, "#<closure>"),
