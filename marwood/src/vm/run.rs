@@ -29,6 +29,8 @@ impl Vm {
         Ok(cell)
     }
 
+    /// Run One
+    ///
     /// Execute one instruction, returning either a bool or runtime error.
     /// If the bool is set true, it indicates a HALT was encountered and
     /// execution should cease.
@@ -36,6 +38,132 @@ impl Vm {
         self.trace_instruction();
         let op_code = self.read_opcode()?;
         match op_code {
+            // Virtual Machine Instructions
+            //
+            // The instructions in this section are abstract virtual machine instructions
+            // that provide support for the scheme VM. Operations such as stack manipulation,
+            // loading and storing via MOV, and HALT.
+            OpCode::Mov => {
+                let vcell = self.load_operand()?;
+                self.store_operand(vcell)?;
+            }
+            OpCode::MovImmediate => {
+                let vcell = self.read_operand()?;
+                self.store_operand(vcell)?;
+            }
+            OpCode::Push => {
+                let vcell = self.load_operand()?;
+                self.stack.push(vcell);
+            }
+            OpCode::PushImmediate => {
+                let vcell = self.read_operand()?;
+                self.stack.push(vcell);
+            }
+            OpCode::PushAcc => {
+                self.stack.push(self.acc.clone());
+            }
+            OpCode::Halt => return Ok(true),
+            // Procedure Application
+            //
+            // The opcodes CLOSURE, CALL, ENTER and RET are related to creation and application
+            // of procedures.
+            //
+            // * CLOSURE creates a Closure object, which ties together a Lambda and LexicalEnvironment
+            // * CALL applies a procedure, setting up the call frame from the caller's point of view
+            // * ENTER is the first instruction of a procedure, and finishes setting up a call frame
+            //   from the procedure's point of view
+            //
+            //
+            OpCode::ClosureAcc => {
+                let lambda_ptr = self.acc.as_ptr()?;
+                let lambda = self.heap.get_at_index(lambda_ptr).as_lambda()?;
+
+                // Build the lexical environment
+                let lexical_env = self.build_lexical_environment(&lambda.envmap)?;
+                let lexical_env = VCell::LexicalEnv(Rc::new(lexical_env));
+                let lexical_env_ptr = self.heap.put(lexical_env).as_ptr()?;
+
+                // Build a Closure object on the heap
+                let closure_ptr = self.heap.put(VCell::Closure(lambda_ptr, lexical_env_ptr));
+                self.acc = closure_ptr;
+            }
+            OpCode::CallAcc => {
+                let lambda = match self.heap.get(&self.acc) {
+                    VCell::Closure(lambda, _) => lambda,
+                    VCell::Lambda(_) => self.acc.as_ptr()?,
+                    other => {
+                        return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
+                    }
+                };
+                self.stack.push(VCell::Ptr(self.ep));
+                self.stack
+                    .push(VCell::InstructionPointer(self.ip.0, self.ip.1));
+                self.ip.0 = lambda;
+                self.ip.1 = 0;
+            }
+            OpCode::Enter => {
+                let (lambda, lexical_env) = match self.heap.get(&self.acc) {
+                    VCell::Closure(lambda, lexical_env) => (lambda, lexical_env),
+                    VCell::Lambda(_) => (self.acc.as_ptr()?, self.ep),
+                    _ => {
+                        return Err(InvalidBytecode);
+                    }
+                };
+                let lambda = self.heap.get_at_index(lambda);
+                let lambda = lambda.as_lambda()?;
+                if self.stack.get_offset(-2)?.as_fixed_num()? as usize != lambda.args.len() {
+                    return Err(InvalidNumArgs("procedure".into()));
+                }
+
+                self.stack.push(VCell::BasePointer(self.bp));
+                self.bp = self.stack.get_sp() - 4;
+                self.ep = lexical_env;
+            }
+            OpCode::Ret => {
+                let n = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
+
+                *self.stack.get_sp_mut() = self.bp - n;
+                self.ep = self.stack.get(self.bp + 2)?.as_ptr()?;
+                self.ip = self.stack.get(self.bp + 3)?.as_ip()?;
+                self.bp = self.stack.get(self.bp + 4)?.as_bp()?;
+            }
+            // Lists
+            //
+            // The opcodes in this section provide primitive instructions for manipulating lists,
+            // such as the primitives for `car`, `cdr` and `cons`
+            //
+            OpCode::Car => {
+                let arg = self.heap.get(&self.acc);
+                match car(&arg) {
+                    Ok(vcell) => self.acc = vcell,
+                    Err(_) => {
+                        return Err(ExpectedPairButFound(
+                            self.heap.get_as_cell(&arg).to_string(),
+                        ));
+                    }
+                }
+            }
+            OpCode::Cdr => {
+                let arg = self.heap.get(&self.acc);
+                match cdr(&arg) {
+                    Ok(vcell) => self.acc = vcell,
+                    Err(_) => {
+                        return Err(ExpectedPairButFound(
+                            self.heap.get_as_cell(&arg).to_string(),
+                        ));
+                    }
+                }
+            }
+            OpCode::Cons => {
+                let car = self.acc.clone().as_ptr()?;
+                let cdr = self.pop_stack()?.as_ptr()?;
+                self.acc = self.heap.put(VCell::Pair(car, cdr));
+            }
+            // Numbers
+            //
+            // The opcodes in this section provide primitives for monipulating numbers,
+            // including primitives for addition, substraction, etc.
+            //
             OpCode::Add | OpCode::Sub | OpCode::Mul => {
                 let proc_name = match op_code {
                     OpCode::Add => "+",
@@ -67,133 +195,14 @@ impl Vm {
                     _ => return Err(InvalidBytecode),
                 };
             }
-            OpCode::CallAcc => {
-                // CALL does the following in order:
-                // * Error if %acc is not a procedure
-                // * PUSH %ep
-                // * PUSH %ip
-                // * MOV %acc %ip
-                let lambda = match self.heap.get(&self.acc) {
-                    VCell::Closure(lambda, _) => lambda,
-                    VCell::Lambda(_) => self.acc.as_ptr()?,
-                    other => {
-                        return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
-                    }
-                };
-                self.stack.push(VCell::Ptr(self.ep));
-                self.stack
-                    .push(VCell::InstructionPointer(self.ip.0, self.ip.1));
-                self.ip.0 = lambda;
-                self.ip.1 = 0;
-            }
-            OpCode::ClosureAcc => {
-                // CLOSURE converts the lambda in ACC into a closure by:
-                // * Error if %acc is not a lambda on the heap
-                // * Creating an Environment on the heap, given the EnvironmentMap in
-                //   the Lambda
-                // * Creating a Closure object on the heap that references the Environment+Lambda
-                let lambda_ptr = self.acc.as_ptr()?;
-                let lambda = self.heap.get_at_index(lambda_ptr).as_lambda()?;
-
-                // Build the lexical environment
-                let lexical_env = self.build_lexical_environment(&lambda.envmap)?;
-                let lexical_env = VCell::LexicalEnv(Rc::new(lexical_env));
-                let lexical_env_ptr = self.heap.put(lexical_env).as_ptr()?;
-
-                // Build a Closure object on the heap
-                let closure_ptr = self.heap.put(VCell::Closure(lambda_ptr, lexical_env_ptr));
-                self.acc = closure_ptr;
-            }
-            OpCode::Car => {
-                let arg = self.heap.get(&self.acc);
-                match car(&arg) {
-                    Ok(vcell) => self.acc = vcell,
-                    Err(_) => {
-                        return Err(ExpectedPairButFound(
-                            self.heap.get_as_cell(&arg).to_string(),
-                        ));
-                    }
-                }
-            }
-            OpCode::Cdr => {
-                let arg = self.heap.get(&self.acc);
-                match cdr(&arg) {
-                    Ok(vcell) => self.acc = vcell,
-                    Err(_) => {
-                        return Err(ExpectedPairButFound(
-                            self.heap.get_as_cell(&arg).to_string(),
-                        ));
-                    }
-                }
-            }
-            OpCode::Cons => {
-                let car = self.acc.clone().as_ptr()?;
-                let cdr = self.pop_stack()?.as_ptr()?;
-                self.acc = self.heap.put(VCell::Pair(car, cdr));
-            }
-            OpCode::Enter => {
-                // ENTER performs the following in order:
-                // * Error if SP[-2] does not match the lambda's expected arg count
-                // * PUSH %bp
-                // * MOV %sp[-4] %bp
-                // * Set %ep to the closure's lexical environment, or the previous
-                //   frame's lexical environment if there is no closure.
-                //
-                // Before ENTER Is executed, the stack should be as follows from CALL:
-                //
-                //  0: Return IP
-                // -1: Last Frame EP
-                // -2: Number of arguments passed by calee
-                // -3: ArgN...
-                let (lambda, lexical_env) = match self.heap.get(&self.acc) {
-                    VCell::Closure(lambda, lexical_env) => (lambda, lexical_env),
-                    VCell::Lambda(_) => (self.acc.as_ptr()?, self.ep),
-                    _ => {
-                        return Err(InvalidBytecode);
-                    }
-                };
-                let lambda = self.heap.get_at_index(lambda);
-                let lambda = lambda.as_lambda()?;
-                if self.stack.get_offset(-2)?.as_fixed_num()? as usize != lambda.args.len() {
-                    return Err(InvalidNumArgs("procedure".into()));
-                }
-
-                self.stack.push(VCell::BasePointer(self.bp));
-                self.bp = self.stack.get_sp() - 4;
-                self.ep = lexical_env;
-            }
+            // Equivalence Predicate
+            //
+            // These opcodes provide equivlance predicates between two objects.
+            //
             OpCode::Eq => {
                 let arg = self.pop_stack()?;
                 self.acc = self.heap.put(self.acc == arg);
             }
-            OpCode::Mov => {
-                let vcell = self.load_operand()?;
-                self.store_operand(vcell)?;
-            }
-            OpCode::MovImmediate => {
-                let vcell = self.read_operand()?;
-                self.store_operand(vcell)?;
-            }
-            OpCode::Push => {
-                let vcell = self.load_operand()?;
-                self.stack.push(vcell);
-            }
-            OpCode::PushImmediate => {
-                let vcell = self.read_operand()?;
-                self.stack.push(vcell);
-            }
-            OpCode::PushAcc => {
-                self.stack.push(self.acc.clone());
-            }
-            OpCode::Ret => {
-                let n = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
-
-                *self.stack.get_sp_mut() = self.bp - n;
-                self.ep = self.stack.get(self.bp + 2)?.as_ptr()?;
-                self.ip = self.stack.get(self.bp + 3)?.as_ip()?;
-                self.bp = self.stack.get(self.bp + 4)?.as_bp()?;
-            }
-            OpCode::Halt => return Ok(true),
         }
 
         Ok(false)
