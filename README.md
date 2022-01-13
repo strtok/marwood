@@ -190,9 +190,11 @@ of the `add` procedure.
 | Opcode                       | Description                                                                                                           |
 |------------------------------|-----------------------------------------------------------------------------------------------------------------------|
 | ADD                          | Perform addition on the values in ACC and the the top of the stack and store the result in ACC                        |
+| BOOLEAN?                     | Set %acc #t if %acc is a boolean                                                                                      |
 | CALL %acc                    | Given the arguments for the procedure in %acc have been pushed on the stack, jump to the procedure in %acc.           |
 | CAR                          | Move the car of the pair in ACC into ACC. Errors if ACC Is not a pair.                                                |
 | CDR                          | Move the cdr of the pair in ACC into ACC. Errors if ACC is not a pair.                                                |
+| CHAR?                        | Set %acc #t if %acc is a char                                                                                         |
 | CONS                         | Box a pair, storing a reference in ACC. The car of the pair is taken from ACC, and the cdr from the top of the stack. |
 | CLOSURE %acc                 | Create a lexical environment as a result of evaluating a (lambda ...) expression.                                     |
 | ENVGET &lt;SLOT&gt;          | Store the value in environment slot SLOT in ACC                                                                       |
@@ -200,11 +202,20 @@ of the `add` procedure.
 | ENTER                        | Setup the currently executing procedure's stack frame                                                                 |
 | EQ                           | Sets ACC to true if ACC == arg[0], otherwise false. This instruction mirrors the eq? procedure in scheme.             |
 | HALT                         | Halt program, returning the result contained within ACC                                                               |
+| LIST?                        | Set %acc #t if %acc is a proper list                                                                                  |
 | MOV &lt;SRC&gt; &lt;DEST&gt; | Move the value from SRC into DEST                                                                                     |
 | MUL                          | Perform multiplication on the values in ACC and the the top of the stack and store the result in ACC                  |
+| NOT                          | Set %acc to !%acc. If %acc is not a boolean type, set %acc to #f.                                                     |
+| NULL?                        | Set %acc #t if %acc is '()                                                                                            |
+| NUMBER?                      | Set %acc #t if %acc is a number type                                                                                  |
+| PORT?                        | Set %acc #t if %acc is a port                                                                                         |
 | PUSH                         | Push the value in ACC on to the stack                                                                                 |
+| PROCEDURE?                   | Set %acc #t if %acc is a procedure                                                                                    |
 | RET                          | Return from a procedure entered via CALL                                                                              |
 | SUB                          | Perform subtraction on the values in ACC and the the top of the stack and store the result in ACC                     |
+| STRING?                      | Set %acc #t if %acc is a string                                                                                       |
+| SYMBOL?                      | Set %acc #t if %acc is a symbol                                                                                       |
+| VECTOR?                      | Set %acc #t if %acc is a vector                                                                                       |
 
 # License
 Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
