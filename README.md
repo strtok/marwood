@@ -95,12 +95,12 @@ CALL will perform the following:
 Here's an example of an immediate-outer-function's (IOF) application of the `add` procedure:
 
 ```
-    MOV      $05        %acc       //10
+    MOV      $07          %acc         //10
     PUSH     %acc
-    MOV      $01        %acc       //20
+    MOV      $08          %acc         //20
     PUSH     %acc
-    PUSH     2                     //n=2 args
-    ENVGET   [g$00]                //#<procedure>
+    PUSH     2
+    MOV      [genv[$00]]  %acc         //#<procedure>
     CALL     %acc
     HALT
 ```
@@ -136,12 +136,12 @@ as seen below.
 Here's the instructions for the example `add` procedure:
 
 ```
-    ENTER
-    MOV      [%bp[-1]]  %acc
-    PUSH     %acc
-    MOV      [%bp[+0]]  %acc
-    ADD
-    RET
+ENTER
+MOV      [%bp[-1]]    %acc
+PUSH     %acc
+MOV      [%bp[+0]]    %acc
+ADD
+RET
 ```
 
 And the stack after ENTER has finished executing:
