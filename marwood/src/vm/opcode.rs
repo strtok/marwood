@@ -9,23 +9,43 @@ use std::iter::Peekable;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum OpCode {
-    Add,
+    // VM Primitives
+    Mov,
+    MovImmediate,
+    Push,
+    PushAcc,
+    PushImmediate,
+    Halt,
+
+    // Procedures
     CallAcc,
     ClosureAcc,
+    Enter,
+    Ret,
+
+    //Lists
     Car,
     Cdr,
     Cons,
-    Enter,
-    Eq,
-    Mov,
-    MovImmediate,
+
+    //Numbers
+    Add,
     Mul,
-    Halt,
-    Push,
-    PushImmediate,
-    PushAcc,
-    Ret,
     Sub,
+
+    // Predicates
+    Eq,
+    IsBoolean,
+    IsChar,
+    IsList,
+    IsNumber,
+    IsNull,
+    IsPair,
+    IsPort,
+    IsProcedure,
+    IsString,
+    IsSymbol,
+    IsVector,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -98,6 +118,17 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::Cons, Schema::new("CONS", vec![])),
             (OpCode::Enter, Schema::new("ENTER", vec![])),
             (OpCode::Eq, Schema::new("EQ", vec![])),
+            (OpCode::IsBoolean, Schema::new("BOOLEAN?", vec![Operand::Acc])),
+            (OpCode::IsChar, Schema::new("CHAR?", vec![Operand::Acc])),
+            (OpCode::IsList, Schema::new("LIST?", vec![Operand::Acc])),
+            (OpCode::IsNumber, Schema::new("NUMBER?", vec![Operand::Acc])),
+            (OpCode::IsNull, Schema::new("NULL?", vec![Operand::Acc])),
+            (OpCode::IsPair, Schema::new("PAIR?", vec![Operand::Acc])),
+            (OpCode::IsPort, Schema::new("PORT?", vec![Operand::Acc])),
+            (OpCode::IsProcedure, Schema::new("PROCEDURE?", vec![Operand::Acc])),
+            (OpCode::IsString, Schema::new("STRING?", vec![Operand::Acc])),
+            (OpCode::IsSymbol, Schema::new("SYMBOL?", vec![Operand::Acc])),
+            (OpCode::IsVector, Schema::new("VECTOR?", vec![Operand::Acc])),
             (OpCode::Mov, Schema::new("MOV", vec![Operand::LoadReference, Operand::StoreReference])),
             (OpCode::MovImmediate, Schema::new("MOV", vec![Operand::Immediate, Operand::StoreReference])),
             (OpCode::Mul, Schema::new("MUL", vec![])),

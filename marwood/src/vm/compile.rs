@@ -36,22 +36,30 @@ impl Vm {
     pub fn compile_expression(&mut self, lambda: &mut Lambda, cell: &Cell) -> Result<(), Error> {
         match cell {
             Cell::Pair(car, cdr) => match car.deref() {
-                Cell::Symbol(s) if s.eq("define") => self.compile_define(lambda, cdr),
-                Cell::Symbol(s) if s.eq("lambda") | s.eq("λ") => self.compile_lambda(lambda, cell),
-                Cell::Symbol(s) if s.eq("quote") => self.compile_quote(lambda, car!(cdr)),
-                Cell::Symbol(s) if s.eq("car") => {
-                    self.compile_unary(OpCode::Car, "car", lambda, cdr)
-                }
-                Cell::Symbol(s) if s.eq("cdr") => {
-                    self.compile_unary(OpCode::Cdr, "cdr", lambda, cdr)
-                }
-                Cell::Symbol(s) if s.eq("cons") => {
-                    self.compile_arg2(OpCode::Cons, "cons", lambda, cdr)
-                }
-                Cell::Symbol(s) if s.eq("eq?") => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr),
-                Cell::Symbol(s) if s.eq("+") => self.compile_var_arg(OpCode::Add, "+", lambda, cdr),
-                Cell::Symbol(s) if s.eq("-") => self.compile_var_arg(OpCode::Sub, "-", lambda, cdr),
-                Cell::Symbol(s) if s.eq("*") => self.compile_var_arg(OpCode::Mul, "*", lambda, cdr),
+                Cell::Symbol(proc) => match proc.as_str() {
+                    "define" => self.compile_define(lambda, cdr),
+                    "lambda" | "λ" => self.compile_lambda(lambda, cell),
+                    "quote" => self.compile_quote(lambda, car!(cdr)),
+                    "car" => self.compile_unary(OpCode::Car, "car", lambda, cdr),
+                    "cdr" => self.compile_unary(OpCode::Cdr, "cdr", lambda, cdr),
+                    "cons" => self.compile_arg2(OpCode::Cons, "cons", lambda, cdr),
+                    "eq?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr),
+                    "+" => self.compile_var_arg(OpCode::Add, "+", lambda, cdr),
+                    "-" => self.compile_var_arg(OpCode::Sub, "-", lambda, cdr),
+                    "*" => self.compile_var_arg(OpCode::Mul, "*", lambda, cdr),
+                    "boolean?" => self.compile_unary(OpCode::IsBoolean, proc, lambda, cdr),
+                    "char?" => self.compile_unary(OpCode::IsChar, proc, lambda, cdr),
+                    "list?" => self.compile_unary(OpCode::IsList, proc, lambda, cdr),
+                    "number?" => self.compile_unary(OpCode::IsNumber, proc, lambda, cdr),
+                    "null?" => self.compile_unary(OpCode::IsNull, proc, lambda, cdr),
+                    "pair?" => self.compile_unary(OpCode::IsPair, proc, lambda, cdr),
+                    "port?" => self.compile_unary(OpCode::IsPort, proc, lambda, cdr),
+                    "procedure?" => self.compile_unary(OpCode::IsProcedure, proc, lambda, cdr),
+                    "string?" => self.compile_unary(OpCode::IsString, proc, lambda, cdr),
+                    "symbol?" => self.compile_unary(OpCode::IsSymbol, proc, lambda, cdr),
+                    "vector?" => self.compile_unary(OpCode::IsVector, proc, lambda, cdr),
+                    _ => self.compile_procedure_application(lambda, car, cdr),
+                },
                 _ => self.compile_procedure_application(lambda, car, cdr),
             },
             Cell::Symbol(_) => self.compile_symbol_lookup(lambda, cell),

@@ -124,8 +124,24 @@ impl VCell {
         VCell::Nil
     }
 
+    pub fn is_boolean(&self) -> bool {
+        matches!(self, VCell::Bool(_))
+    }
+
+    pub fn is_fixednum(&self) -> bool {
+        matches!(self, VCell::FixedNum(_))
+    }
+
+    pub fn is_number(&self) -> bool {
+        self.is_fixednum()
+    }
+
     pub fn is_pair(&self) -> bool {
         matches!(self, VCell::Pair(_, _))
+    }
+
+    pub fn is_symbol(&self) -> bool {
+        matches!(self, VCell::Symbol(_))
     }
 
     pub fn is_ptr(&self) -> bool {

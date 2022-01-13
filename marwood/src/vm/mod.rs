@@ -236,6 +236,53 @@ mod tests {
     }
 
     #[test]
+    fn unary_predicate() {
+        evals![
+            "(number? 10)" => "#t",
+            "(number? '10)" => "#t",
+            "(number? 'apples)" => "#f"
+        ];
+
+        evals![
+            "(boolean? #t)" => "#t",
+            "(boolean? #f)" => "#t",
+            "(boolean? '#t)" => "#t",
+            "(boolean? '#f)" => "#t",
+            "(boolean? 10)" => "#f"
+        ];
+
+        evals![
+            "(symbol? 'apples)" => "#t",
+            "(symbol? 10)" => "#f"
+        ];
+
+        evals![
+            "(null? '())" => "#t",
+            "(null? #f)" => "#f"
+        ];
+
+        evals![
+            "(procedure? (lambda (x) x))" => "#t",
+            "(define identity (lambda (x) x))" => "#<void>",
+            "(procedure? identity)" => "#t"
+        ];
+
+        evals![
+            "(pair? '(1 2 3))" => "#t",
+            "(pair? '(1. 2))" => "#t",
+            "(pair? (cons 1 2))" => "#t",
+            "(pair? 'apples)" => "#f"
+        ];
+
+        evals![
+            "(list? '())" => "#t",
+            "(list? '(1 2))" => "#t",
+            "(list? '(1 3 4))" => "#t",
+            "(list? '(1 2 . 3))" => "#f"
+        ]
+    }
+
+    #[test]
     fn gc_cleans_intern_map() {
         evals![
             "'foo" => "foo",

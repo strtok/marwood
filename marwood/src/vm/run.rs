@@ -195,13 +195,59 @@ impl Vm {
                     _ => return Err(InvalidBytecode),
                 };
             }
-            // Equivalence Predicate
+            // Predicates
             //
-            // These opcodes provide equivlance predicates between two objects.
-            //
+            // These opcodes provide predicates for a single object, or for equievalence of
+            // objects. Predicates always evaluate to #t or #f
             OpCode::Eq => {
                 let arg = self.pop_stack()?;
                 self.acc = self.heap.put(self.acc == arg);
+            }
+            OpCode::IsBoolean => {
+                let arg = self.heap.get(&self.acc);
+                self.acc = self.heap.put(arg.is_boolean());
+            }
+            OpCode::IsChar => {
+                self.acc = self.heap.put(false);
+            }
+            OpCode::IsList => {
+                let mut lat = self.heap.get(&self.acc);
+                loop {
+                    if !lat.is_pair() {
+                        self.acc = self.heap.put(lat.is_nil());
+                        break;
+                    }
+                    lat = self.heap.get(&lat.as_cdr()?);
+                }
+            }
+            OpCode::IsNull => {
+                let arg = self.heap.get(&self.acc);
+                self.acc = self.heap.put(arg.is_nil());
+            }
+            OpCode::IsNumber => {
+                let arg = self.heap.get(&self.acc);
+                self.acc = self.heap.put(arg.is_number());
+            }
+            OpCode::IsPair => {
+                let arg = self.heap.get(&self.acc);
+                self.acc = self.heap.put(arg.is_pair());
+            }
+            OpCode::IsPort => {
+                self.acc = self.heap.put(false);
+            }
+            OpCode::IsProcedure => {
+                let arg = self.heap.get(&self.acc);
+                self.acc = self.heap.put(arg.is_procedure());
+            }
+            OpCode::IsString => {
+                self.acc = self.heap.put(false);
+            }
+            OpCode::IsSymbol => {
+                let arg = self.heap.get(&self.acc);
+                self.acc = self.heap.put(arg.is_symbol());
+            }
+            OpCode::IsVector => {
+                self.acc = self.heap.put(false);
             }
         }
 
