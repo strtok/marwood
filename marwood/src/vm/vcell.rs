@@ -305,7 +305,7 @@ impl fmt::Display for VCell {
             VCell::OpCode(val) => write!(f, "{:?}", val),
             VCell::Pair(car, cdr) => write!(f, "(${:02x} . ${:02x})", car, cdr),
             VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
-            VCell::Symbol(s) => write!(f, "sym\"{}\"", *s),
+            VCell::Symbol(s) => write!(f, "{}", *s),
             VCell::Undefined => write!(f, "undefined"),
             VCell::Void => write!(f, "#<void>"),
         }
