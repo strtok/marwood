@@ -249,6 +249,12 @@ impl Vm {
             OpCode::IsVector => {
                 self.acc = self.heap.put(false);
             }
+            OpCode::Not => {
+                self.acc = match self.heap.get(&self.acc) {
+                    VCell::Bool(val) => self.heap.put(!val),
+                    _ => self.heap.put(false),
+                };
+            }
         }
 
         Ok(false)

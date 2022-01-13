@@ -236,6 +236,15 @@ mod tests {
     }
 
     #[test]
+    fn not() {
+        evals![
+          "(not #t)" => "#f",
+          "(not #f)" => "#t",
+          "(not 'apples)" => "#f"
+        ];
+    }
+
+    #[test]
     fn unary_predicate() {
         evals![
             "(number? 10)" => "#t",

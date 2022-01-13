@@ -46,6 +46,7 @@ pub enum OpCode {
     IsString,
     IsSymbol,
     IsVector,
+    Not,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -118,6 +119,7 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::Cons, Schema::new("CONS", vec![])),
             (OpCode::Enter, Schema::new("ENTER", vec![])),
             (OpCode::Eq, Schema::new("EQ", vec![])),
+            (OpCode::Halt, Schema::new("HALT", vec![])),
             (OpCode::IsBoolean, Schema::new("BOOLEAN?", vec![Operand::Acc])),
             (OpCode::IsChar, Schema::new("CHAR?", vec![Operand::Acc])),
             (OpCode::IsList, Schema::new("LIST?", vec![Operand::Acc])),
@@ -132,7 +134,7 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::Mov, Schema::new("MOV", vec![Operand::LoadReference, Operand::StoreReference])),
             (OpCode::MovImmediate, Schema::new("MOV", vec![Operand::Immediate, Operand::StoreReference])),
             (OpCode::Mul, Schema::new("MUL", vec![])),
-            (OpCode::Halt, Schema::new("HALT", vec![])),
+            (OpCode::Not, Schema::new("NOT", vec![Operand::Acc])),
             (OpCode::Push, Schema::new("PUSH", vec![Operand::LoadReference])),
             (OpCode::PushImmediate, Schema::new("PUSH", vec![Operand::Immediate])),
             (OpCode::PushAcc, Schema::new("PUSH", vec![Operand::Acc])),
