@@ -16,9 +16,12 @@ fn main() {
     vm.eval(&parse!("(define add-1000 (make-adder 1000))"))
         .unwrap();
 
-    for it in 0..10 {
+    for it in 0..5 {
         match vm.eval(&list!["add-1000", it]) {
-            Ok(result) => assert_eq!(result, cell![1000 + it]),
+            Ok(result) => {
+                println!("{} => {}", it, result);
+                assert_eq!(result, cell![1000 + it])
+            }
             Err(e) => error!("error: {}", e),
         }
     }

@@ -13,6 +13,38 @@ Marwood is a [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) imple
 * a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
 * a WASM target repl using [xterm-js-rs](https://github.com/segeljakt/xterm-js-rs) auto deployed to [github pages](https://strtok.github.io/marwood/)
 
+# Example
+
+The adder example creates a procedure called `make-adder`, which given an argument 
+x returns a procedure that adds its own argument y to x.
+
+This example may be executed with `cargo run --example adder`.
+
+Here's the scheme that will execute in the VM given the rust example:
+```scheme
+(define make-adder (lambda (x) (lambda (y) (+ x y))))
+(define add-1000 (make-adder 1000))
+(add-1000 0)
+(add-1000 1)
+(add-1000 2)
+(add-1000 3)
+(add-1000 4)
+```
+And the rust code to execute the scheme above in marwood:
+```rust
+let mut vm = Vm::new();
+
+vm.eval(&parse!("(define make-adder (lambda (x) (lambda (y) (+ x y))))")).unwrap();
+vm.eval(&parse!("(define add-1000 (make-adder 1000))")).unwrap();
+
+for it in 0..5 {
+    match vm.eval(&list!["add-1000", it]) {
+        Ok(result) => assert_eq!(result, cell![1000 + it]),
+        Err(e) => error!("error: {}", e),
+    }
+}
+```
+
 # Design
 
 ## VCells
