@@ -206,7 +206,7 @@ impl Vm {
             }
             // Predicates
             //
-            // These opcodes provide predicates for a single object, or for equievalence of
+            // These opcodes provide predicates for a single object, or for equivalence of
             // objects. Predicates always evaluate to #t or #f
             OpCode::Eq => {
                 let arg = self.pop_stack()?;
