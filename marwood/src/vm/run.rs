@@ -210,7 +210,7 @@ impl Vm {
             // objects. Predicates always evaluate to #t or #f
             OpCode::Eq => {
                 let arg = self.pop_stack()?;
-                self.acc = self.heap.put(self.acc == arg);
+                self.acc = self.heap.put(self.eqv(&self.acc, &arg)?);
             }
             OpCode::IsBoolean => {
                 let arg = self.heap.get(&self.acc);

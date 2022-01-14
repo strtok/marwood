@@ -5,6 +5,7 @@ use crate::vm::stack::Stack;
 use crate::vm::vcell::VCell;
 use log::trace;
 
+pub mod compare;
 pub mod compile;
 pub mod environment;
 pub mod gc;
@@ -215,7 +216,7 @@ mod tests {
     }
 
     #[test]
-    fn eq() {
+    fn eqv() {
         evals![
             "(define foo '(1 2 3))" => "#<void>",
             "(define bar '(1 2 3))" => "#<void>",
@@ -223,14 +224,15 @@ mod tests {
             "(eq? foo bar)" => "#f",
             "(eq? bar baz)" => "#f",
             "(eq? foo baz)" => "#t",
-            "(eq? (cdr foo) (cdr baz))" => "#t"
+            "(eq? (cdr foo) (cdr baz))" => "#t",
+            "(eq? (cons foo bar) (cons foo bar))" => "#t"
         ];
 
         evals![
-            "(eq? 0 0)" => "#f",
-            "(eq? '() '())" => "#f",
-            "(eq? #f #f)" => "#f",
-            "(eq? #t #t)" => "#f",
+            "(eq? 0 0)" => "#t",
+            "(eq? '() '())" => "#t",
+            "(eq? #f #f)" => "#t",
+            "(eq? #t #t)" => "#t",
             "(eq? 'foo 'foo)" => "#t"
         ];
     }
