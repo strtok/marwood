@@ -203,6 +203,8 @@ of the `add` procedure.
 | EQ                           | Sets ACC to true if ACC == arg[0], otherwise false. This instruction mirrors the eq? procedure in scheme.             |
 | HALT                         | Halt program, returning the result contained within ACC                                                               |
 | LIST?                        | Set %acc #t if %acc is a proper list                                                                                  |
+| JNT &lt;OFFSET&gt;           | Set %ip to OFFSET if %acc is #f                                                                                       |
+| JMP &lt;OFFSET&gt;           | Set %ip to OFFSET                                                                                                     |
 | MOV &lt;SRC&gt; &lt;DEST&gt; | Move the value from SRC into DEST                                                                                     |
 | MUL                          | Perform multiplication on the values in ACC and the the top of the stack and store the result in ACC                  |
 | NOT                          | Set %acc to !%acc. If %acc is not a boolean type, set %acc to #f.                                                     |

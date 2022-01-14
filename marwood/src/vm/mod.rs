@@ -293,6 +293,16 @@ mod tests {
     }
 
     #[test]
+    fn if_expressions() {
+        evals![
+            "(if (list? '(1 2 3)) 'yep 'nope)" => "yep",
+            "(if (list? #t) 'yep 'nope)" => "nope",
+            "(if (list? '(1 2 3)) 'yep)" => "yep",
+            "(if (list? #t) 'yep)" => "#<void>"
+        ];
+    }
+
+    #[test]
     fn gc_cleans_intern_map() {
         evals![
             "'foo" => "foo",

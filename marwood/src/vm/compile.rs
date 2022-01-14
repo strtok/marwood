@@ -40,6 +40,7 @@ impl Vm {
                     "define" => self.compile_define(lambda, cdr),
                     "lambda" | "λ" => self.compile_lambda(lambda, cell),
                     "quote" => self.compile_quote(lambda, car!(cdr)),
+                    "if" => self.compile_if(lambda, cdr),
                     "car" => self.compile_unary(OpCode::Car, "car", lambda, cdr),
                     "cdr" => self.compile_unary(OpCode::Cdr, "cdr", lambda, cdr),
                     "cons" => self.compile_arg2(OpCode::Cons, "cons", lambda, cdr),
@@ -63,7 +64,7 @@ impl Vm {
                 },
                 _ => self.compile_procedure_application(lambda, car, cdr),
             },
-            Cell::Symbol(_) => self.compile_symbol_lookup(lambda, cell),
+            Cell::Symbol(_) => self.compile_symbol_expression(lambda, cell),
             Cell::Nil => Err(UnquotedNil),
             Cell::Number(_)
             | Cell::Bool(_)
@@ -74,14 +75,18 @@ impl Vm {
         }
     }
 
-    /// Compile Symbol Eval
+    /// Compile Symbol Expression
     ///
-    /// Given the symbol in sym, compile to a ENVGET instruction to fetch
-    /// the value bound to the symbol.
+    /// Given the symbol in sym, evaluate a load from the global environment
+    /// or lexical environment, given the binding location returned by lambda.
     ///
     /// `lambda` - The lambda to emit bytecode to
     /// `sym` - The symbol to evaluate
-    pub fn compile_symbol_lookup(&mut self, lambda: &mut Lambda, sym: &Cell) -> Result<(), Error> {
+    pub fn compile_symbol_expression(
+        &mut self,
+        lambda: &mut Lambda,
+        sym: &Cell,
+    ) -> Result<(), Error> {
         let sym_ref = self.heap.put_cell(sym);
         match lambda.binding_location(&sym_ref) {
             BindingLocation::Global => {
@@ -257,6 +262,62 @@ impl Vm {
         // Evaluate the procedure to call, and emit a CALL instruction
         self.compile_expression(lambda, proc)?;
         lambda.emit(OpCode::CallAcc);
+        Ok(())
+    }
+
+    /// Compile If
+    ///
+    /// Compile an if conditional, which is either one of the following forms:
+    ///
+    /// * (if ⟨test⟩ ⟨consequent⟩ ⟨alternate⟩)
+    /// * (if ⟨test⟩ ⟨consequent⟩)
+    ///
+    /// If has a few special rules:
+    /// * The consequent and alternate expressions may only be evaluated if their
+    ///   branch is chosen.
+    /// * If test yields false without an alternate, the result is unspecified. Marwood
+    ///   will evaluate the `if` expression to #<void>
+    pub fn compile_if(&mut self, lambda: &mut Lambda, lat: &Cell) -> Result<(), Error> {
+        if lat.is_nil() || !lat.is_list() {
+            return Err(InvalidArgs("if".into(), "test".into(), lat.to_string()));
+        }
+        let (test, consequent, alternate) = match lat.collect_vec().as_slice() {
+            [test, consequent] => (*test, *consequent, None),
+            [test, consequent, alternate] => (*test, *consequent, Some(*alternate)),
+            _ => {
+                return Err(InvalidNumArgs("if".into()));
+            }
+        };
+
+        // Evaluate test
+        self.compile_expression(lambda, test)?;
+
+        // JMP if %acc is #f
+        lambda.emit(OpCode::Jnt);
+        let jnt_operand = lambda.bc.len();
+        lambda.emit(VCell::Ptr(0xCAFEBEEF));
+
+        // Compile the consequent and update the JMP offset to be
+        // the bytecode directly after the consequent. The consequent's
+        // final instruction is a JMP to the end of the alternate.
+        self.compile_expression(lambda, consequent)?;
+        lambda.emit(OpCode::Jmp);
+        let jmp_operand = lambda.bc.len();
+        lambda.emit(VCell::Ptr(0xCAFEBEEF));
+        *lambda.bc.get_mut(jnt_operand).unwrap() = VCell::ptr(lambda.bc.len());
+
+        // Compile the alternate, or if there is no alternate then evaluate to #<void>
+        match alternate {
+            Some(alternate) => {
+                self.compile_expression(lambda, alternate)?;
+            }
+            None => {
+                lambda.emit(OpCode::MovImmediate);
+                lambda.emit(VCell::Void);
+                lambda.emit(VCell::Acc);
+            }
+        }
+        *lambda.bc.get_mut(jmp_operand).unwrap() = VCell::ptr(lambda.bc.len());
         Ok(())
     }
 

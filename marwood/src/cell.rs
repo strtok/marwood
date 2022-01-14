@@ -89,6 +89,10 @@ impl Cell {
         IntoIter { next: self }
     }
 
+    pub fn collect_vec(&self) -> Vec<&Cell> {
+        self.iter().collect::<Vec<_>>()
+    }
+
     pub fn is_nil(&self) -> bool {
         matches!(self, Cell::Nil)
     }
@@ -99,6 +103,21 @@ impl Cell {
 
     pub fn is_symbol(&self) -> bool {
         matches!(self, Cell::Symbol(_))
+    }
+
+    pub fn is_list(&self) -> bool {
+        if self.is_pair() {
+            let mut lat = self.cdr().unwrap();
+            loop {
+                if !lat.is_pair() {
+                    return lat.is_nil();
+                } else {
+                    lat = lat.cdr().unwrap();
+                }
+            }
+        } else {
+            false
+        }
     }
 
     pub fn car(&self) -> Option<&Cell> {
@@ -378,8 +397,14 @@ mod tests {
     }
 
     #[test]
+    fn proper_list() {
+        assert!(list![1, 2, 3].is_list());
+    }
+
+    #[test]
     fn improper_list() {
         let improper_list = Cell::new_improper_list(vec![cell![1], cell![2]].into_iter(), cell![3]);
+        assert!(!improper_list.is_list());
         assert_eq!(improper_list, cons!(cell!(1), cons!(cell!(2), cell!(3))));
         assert_eq!(format!("{}", improper_list), "(1 2 . 3)");
     }

@@ -10,6 +10,8 @@ use std::iter::Peekable;
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum OpCode {
     // VM Primitives
+    Jmp,
+    Jnt,
     Mov,
     MovImmediate,
     Push,
@@ -131,6 +133,8 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::IsString, Schema::new("STRING?", vec![Operand::Acc])),
             (OpCode::IsSymbol, Schema::new("SYMBOL?", vec![Operand::Acc])),
             (OpCode::IsVector, Schema::new("VECTOR?", vec![Operand::Acc])),
+            (OpCode::Jmp, Schema::new("JMP", vec![Operand::Immediate])),
+            (OpCode::Jnt, Schema::new("JNT", vec![Operand::Immediate])),
             (OpCode::Mov, Schema::new("MOV", vec![Operand::LoadReference, Operand::StoreReference])),
             (OpCode::MovImmediate, Schema::new("MOV", vec![Operand::Immediate, Operand::StoreReference])),
             (OpCode::Mul, Schema::new("MUL", vec![])),

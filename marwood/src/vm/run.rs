@@ -43,6 +43,15 @@ impl Vm {
             // The instructions in this section are abstract virtual machine instructions
             // that provide support for the scheme VM. Operations such as stack manipulation,
             // loading and storing via MOV, and HALT.
+            OpCode::Jmp => {
+                self.ip.1 = self.read_operand()?.as_ptr()?;
+            }
+            OpCode::Jnt => {
+                let offset = self.read_operand()?.as_ptr()?;
+                if let VCell::Bool(false) = self.heap.get(&self.acc) {
+                    self.ip.1 = offset;
+                }
+            }
             OpCode::Mov => {
                 let vcell = self.load_operand()?;
                 self.store_operand(vcell)?;
@@ -495,7 +504,8 @@ impl Vm {
                 .unwrap()
             ),
             format!(
-                "{} %sp[{}] {} $ep[{}]",
+                "%acc={} {} %sp[{}] {} $ep[{}]",
+                self.acc,
                 VCell::InstructionPointer(self.ip.0, self.ip.1),
                 VCell::Ptr(self.stack.get_sp()),
                 VCell::BasePointer(self.bp),
