@@ -10,5 +10,5 @@ edition = "2021"
 marwood = { path = "../marwood" }
 log = "*"
 pretty_env_logger = "0.4.0"
-rustyline = "9.0.0"
-rustyline-derive = "0.5.0"
+rustyline = "9.1.2"
+rustyline-derive = "0.6.0"

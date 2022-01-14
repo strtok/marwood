@@ -9,6 +9,7 @@ use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Editor, Result};
 use rustyline_derive::{Completer, Helper, Hinter};
+use std::borrow::Cow::Owned;
 
 #[derive(Completer, Helper, Hinter)]
 struct InputValidator {
@@ -30,11 +31,16 @@ impl Validator for InputValidator {
 
 impl Highlighter for InputValidator {
     fn highlight<'l>(&self, line: &'l str, pos: usize) -> std::borrow::Cow<'l, str> {
-        self.highlighter.highlight(line, pos)
+        Owned(
+            self.highlighter
+                .highlight(line, pos)
+                .replace("[1;34m", "[4m"),
+        )
     }
 
     fn highlight_char(&self, line: &str, pos: usize) -> bool {
-        self.highlighter.highlight_char(line, pos)
+        self.highlighter.highlight_char(line, pos + 1);
+        true
     }
 }
 
