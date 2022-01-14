@@ -430,7 +430,29 @@ impl Cell {
     pub fn is_primitive_symbol(&self) -> bool {
         lazy_static! {
             static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> = HashSet::from([
-                "car", "cdr", "cons", "define", "eq?", "eqv?", "lambda", "quote", "+", "-", "*"
+                "car",
+                "cdr",
+                "cons",
+                "define",
+                "eq?",
+                "eqv?",
+                "lambda",
+                "quote",
+                "+",
+                "-",
+                "*",
+                "if",
+                "not",
+                "boolean?",
+                "char?",
+                "list?",
+                "null?",
+                "pair?",
+                "port?",
+                "procedure?",
+                "string?",
+                "symbol?",
+                "vector?"
             ]);
         }
         match self {
