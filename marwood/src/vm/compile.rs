@@ -37,8 +37,8 @@ impl Vm {
         match cell {
             Cell::Pair(car, cdr) => match car.deref() {
                 Cell::Symbol(proc) => match proc.as_str() {
-                    "define" => self.compile_define(lambda, cdr),
-                    "lambda" | "λ" => self.compile_lambda(lambda, cell),
+                    "define" => self.compile_define(lambda, cell),
+                    "lambda" | "λ" => self.compile_lambda(lambda, cell, false),
                     "quote" => self.compile_quote(lambda, car!(cdr)),
                     "if" => self.compile_if(lambda, cdr),
                     "car" => self.compile_unary(OpCode::Car, "car", lambda, cdr),
@@ -114,23 +114,45 @@ impl Vm {
 
     /// Compile Define
     ///
-    /// (define variable expression)
+    /// A definition should be in one of the following forms:
+    ///
+    /// * (define ⟨variable⟩ ⟨expression⟩)
+    /// * (define (⟨variable⟩ ⟨formals⟩) ⟨body⟩)
+    /// * (define (⟨variable⟩ . ⟨formal⟩) ⟨body⟩)
+    ///
     /// `lambda` - The lambda to emit bytecode to
-    /// `lat` - (variable expression)    
-    pub fn compile_define(&mut self, lambda: &mut Lambda, lat: &Cell) -> Result<(), Error> {
-        if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
+    /// `expr` - (define variable expression)    
+    pub fn compile_define(&mut self, lambda: &mut Lambda, expr: &Cell) -> Result<(), Error> {
+        let lat = cdr!(expr);
+
+        // A define must have at least 2 arguments
+        if lat.is_nil() || cdr!(lat).is_nil() {
             return Err(InvalidNumArgs("define".into()));
         }
 
-        self.compile_expression(lambda, car!(cdr!(lat)))?;
-        let symbol = car!(lat);
-        if !symbol.is_symbol() {
-            return Err(InvalidArgs(
-                "define".into(),
-                "variable".into(),
-                symbol.to_string(),
-            ));
-        }
+        // Extract the symbol given the form, and at the same time compile the
+        // expression or lambda so that its result will be in %acc for the define.
+        let symbol = match car!(lat) {
+            Cell::Symbol(_) => {
+                if !cdr!(cdr!(lat)).is_nil() {
+                    return Err(InvalidNumArgs("define".into()));
+                }
+                self.compile_expression(lambda, car!(cdr!(lat)))?;
+                car!(lat)
+            }
+            Cell::Pair(_, _) => {
+                self.compile_lambda(lambda, expr, true)?;
+                car!(car!(lat))
+            }
+            _ => {
+                return Err(InvalidArgs(
+                    "define".into(),
+                    "symbol or (variable formals)".into(),
+                    car!(lat).to_string(),
+                ));
+            }
+        };
+
         let sym_ref = self.heap.put_cell(symbol).as_ptr()?;
         let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
         lambda.emit(OpCode::Mov);
@@ -144,30 +166,67 @@ impl Vm {
 
     /// Compile Lambda
     ///
-    /// Compile a lambda expression (lambda (arg0 arg1 ...) expr1 expr2 ...)
+    /// A lambda should be the following form:
+    ///     
+    /// (lambda ⟨formals⟩ ⟨body⟩)
+    ///   or
+    /// (define ⟨variable formals⟩ ⟨body⟩)
+    ///
+    /// Where formals is one of the following:
+    ///
+    /// * (var1 var2 ...): A fixed number of arguments
+    /// * var: A variable number of arguments, allocated in a new list bound to var.
+    /// * (var1 var2 . rest): A fixed number of arguments, any additional arguments bound
+    ///   to a new list bound to rest.
     ///
     /// # Arguments
     /// `iof_lambda` - The immediate outer function in which to inherit an
     ///                environment from
-    /// `cell` - The lambda expression.
-    pub fn compile_lambda(&mut self, iof: &mut Lambda, expr: &Cell) -> Result<(), Error> {
+    /// `expr` - The full lambda expression, i.e. (lambda ...). This function takes the
+    /// full expression so that free_symbols() considers this lambda when building
+    /// an "environment".
+    /// `is_define_special` - Is this a define special form?
+    pub fn compile_lambda(
+        &mut self,
+        iof: &mut Lambda,
+        expr: &Cell,
+        is_define_special: bool,
+    ) -> Result<(), Error> {
         let lat = cdr!(expr);
-        let formal_args = self.compile_formal_arguments(lat)?;
+        if lat.is_nil() {
+            return Err(InvalidNumArgs("procedure".into()));
+        }
+
+        // The position of formal args and body differ slightly
+        // on whether this was a define special form or a lambda
+        let (formal_args, body) = match is_define_special {
+            true => (cdr!(car!(lat)), cdr!(lat)),
+            false => (car!(lat), cdr!(lat)),
+        };
+
+        // Compile formal args into a list of symbols
+        let (formal_args, is_vararg) = self.compile_formal_arguments(formal_args)?;
         let free_symbols = free_symbols(expr)?
             .iter()
             .map(|sym| self.heap.put_cell(sym))
             .collect::<Vec<VCell>>();
-        let mut lambda = Lambda::new_from_iof(formal_args, iof, &free_symbols);
+
+        let mut lambda = Lambda::new_from_iof(formal_args, iof, &free_symbols, is_vararg);
+        if lambda.is_vararg {
+            lambda.emit(OpCode::EntCol);
+        }
         lambda.emit(OpCode::Enter);
 
-        let mut lat = cdr!(lat);
-        if lat.is_nil() {
+        // Compile each body expression in sequence
+        let mut body = body;
+        if body.is_nil() {
             return Err(LambdaMissingExpression);
         }
-        while lat.is_pair() {
-            self.compile_expression(&mut lambda, car!(lat))?;
-            lat = cdr!(lat);
+        while body.is_pair() {
+            self.compile_expression(&mut lambda, car!(body))?;
+            body = cdr!(body);
         }
+
         lambda.emit(OpCode::Ret);
         trace!("lambda: \n{}", self.decompile_text(&lambda));
         let lambda = self.heap.put(lambda);
@@ -184,39 +243,39 @@ impl Vm {
     /// on the heap, and return a vector of symbol pointers for each argument.
     ///
     /// # Arguments
-    /// `lat` - the remainder of the lambda call, where car(lat) is the formal
-    ///         argument list.
-    pub fn compile_formal_arguments(&mut self, lat: &Cell) -> Result<Vec<VCell>, Error> {
-        let mut args = match lat.car() {
-            Some(Cell::Nil) => return Ok(vec![]),
-            Some(cell) if cell.is_pair() => Ok(cell),
-            Some(cell) => Err(InvalidArgs(
-                "lambda".into(),
-                "formal argument list".into(),
-                cell.to_string(),
-            )),
-            _ => Err(InvalidArgs(
-                "lambda".into(),
-                "formal argument list".into(),
-                lat.to_string(),
-            )),
-        }?;
-
+    /// `formal_args` - the formal arguments of the lambda or define
+    ///
+    /// # Returns
+    /// (symbols, vararg) where vec is a vector of symbols, and vararg is true
+    /// if a vararg form was encountered.
+    pub fn compile_formal_arguments(
+        &mut self,
+        formal_args: &Cell,
+    ) -> Result<(Vec<VCell>, bool), Error> {
+        if formal_args.is_nil() {
+            return Ok((vec![], false));
+        }
         let mut symbols = vec![];
-        while args.is_pair() {
-            let arg = car!(args);
-            if !arg.is_symbol() {
+        let mut lat = formal_args;
+        while lat.is_pair() {
+            let symbol = car!(lat);
+            if !symbol.is_symbol() {
                 return Err(InvalidArgs(
-                    "lambda".into(),
+                    "procedure".into(),
                     "symbol".into(),
-                    arg.to_string(),
+                    symbol.to_string(),
                 ));
             }
-            symbols.push(self.heap.put_cell(arg));
-            args = cdr!(args);
+            symbols.push(self.heap.put_cell(symbol));
+            lat = cdr!(lat);
         }
 
-        Ok(symbols)
+        if lat.is_symbol() {
+            symbols.push(self.heap.put_cell(lat));
+            Ok((symbols, true))
+        } else {
+            Ok((symbols, false))
+        }
     }
 
     /// Compile Procedure Application

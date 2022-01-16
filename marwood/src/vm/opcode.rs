@@ -23,6 +23,7 @@ pub enum OpCode {
     CallAcc,
     ClosureAcc,
     Enter,
+    EntCol,
     Ret,
 
     //Lists
@@ -120,6 +121,7 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::Cdr, Schema::new("CDR", vec![])),
             (OpCode::Cons, Schema::new("CONS", vec![])),
             (OpCode::Enter, Schema::new("ENTER", vec![])),
+            (OpCode::EntCol, Schema::new("ENTCOL", vec![])),
             (OpCode::Eq, Schema::new("EQ", vec![])),
             (OpCode::Halt, Schema::new("HALT", vec![])),
             (OpCode::IsBoolean, Schema::new("BOOLEAN?", vec![Operand::Acc])),

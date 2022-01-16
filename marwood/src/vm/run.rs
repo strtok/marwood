@@ -128,6 +128,45 @@ impl Vm {
                 self.bp = self.stack.get_sp() - 4;
                 self.ep = lexical_env;
             }
+            OpCode::EntCol => {
+                // ENTCOL converts the optional arguments of a vararg procedure into a list.
+                // This requires popping off every optional argument, forming a list on the heap,
+                // and placing the list at the top of the argument stack.
+                let req_argc = self.lambda().args.len() - 1;
+                let argc = self.stack.get_offset(-2)?.as_fixed_num()? as usize;
+                if argc < req_argc {
+                    return Err(InvalidNumArgs("procedure".into()));
+                }
+
+                // If there's exactly one vararg, then we can convert it in place
+                if argc == req_argc + 1 {
+                    let arg = self.stack.get_offset(-3)?.clone();
+                    let nil = self.heap.put(VCell::Nil);
+                    *self.stack.get_offset_mut(-3)? =
+                        self.heap.put(VCell::Pair(arg.as_ptr()?, nil.as_ptr()?));
+                } else {
+                    // Save the frame data that CALL put on the stack
+                    let saved_ep = self.stack.pop()?.clone();
+                    let saved_ip = self.stack.pop()?.clone();
+                    let _ = self.stack.pop()?.clone();
+
+                    // Pop each optional arg into a list
+                    let varargc = argc - req_argc;
+                    let mut varargs = self.heap.put(VCell::Nil).as_ptr()?;
+                    for _ in 0..varargc {
+                        let arg = self.stack.pop()?.clone();
+                        let pair = VCell::Pair(arg.as_ptr()?, varargs);
+                        varargs = self.heap.put(pair).as_ptr()?;
+                    }
+
+                    // Push the list on the stack, a new argc, and restore the caller's
+                    // frame
+                    self.stack.push(VCell::ptr(varargs));
+                    self.stack.push(VCell::FixedNum((req_argc + 1) as i64));
+                    self.stack.push(saved_ip);
+                    self.stack.push(saved_ep);
+                }
+            }
             OpCode::Ret => {
                 let n = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
 

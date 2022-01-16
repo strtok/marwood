@@ -290,4 +290,37 @@ mod integration_test {
             "((make-adder-adder (lambda (i) (lambda (j) (+ i j))) 100) 1000)" => "1100"
         ];
     }
+
+    #[test]
+    fn define_special_forms() {
+        evals![
+            "(define (make-adder x) (lambda (y) (+ x y)))" => "#<void>",
+            "(define add-10 (make-adder 10))" => "#<void>",
+            "(add-10 20)" => "30"
+        ];
+    }
+
+    #[test]
+    fn vararg() {
+        evals![
+            "((lambda l l))" => "()",
+            "((lambda l l) 10)" => "(10)",
+            "((lambda l l) 10 20)" => "(10 20)"
+        ];
+
+        evals![
+            "(define (list . a) a)" => "#<void>",
+            "(list)" => "()",
+            "(list 10)" => "(10)",
+            "(list 10 20)" => "(10 20)"
+        ];
+
+        evals![
+            "((lambda (x . y) (cons x y)) 10)" => "(10 . ())",
+            "((lambda (x . y) (cons x y)) 10 20)" => "(10 . (20))",
+            "((lambda (x y . z) (cons (+ x y) z)) 10 20)" => "(30 . ())",
+            "((lambda (x y . z) (cons (+ x y) z)) 10 20 30)" => "(30 . (30))",
+            "((lambda (x y . z) (cons (+ x y) z)) 10 20 30 40)" => "(30 . (30 40))"
+        ];
+    }
 }

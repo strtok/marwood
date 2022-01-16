@@ -9,6 +9,7 @@ use crate::vm::vcell::VCell;
 pub struct Lambda {
     pub envmap: EnvironmentMap,
     pub args: Vec<VCell>,
+    pub is_vararg: bool,
     pub bc: Vec<VCell>,
 }
 
@@ -25,6 +26,7 @@ impl Lambda {
         Lambda {
             envmap: EnvironmentMap::new(),
             args,
+            is_vararg: false,
             bc: vec![],
         }
     }
@@ -33,10 +35,16 @@ impl Lambda {
     ///
     /// Create a new lambda, and populate its environment map
     /// given the IOF and set of free symbols.
-    pub fn new_from_iof(args: Vec<VCell>, iof: &Lambda, free_symbols: &[VCell]) -> Lambda {
+    pub fn new_from_iof(
+        args: Vec<VCell>,
+        iof: &Lambda,
+        free_symbols: &[VCell],
+        is_vararg: bool,
+    ) -> Lambda {
         let envmap = EnvironmentMap::new_from_iof(&args, iof, free_symbols);
         Lambda {
             args,
+            is_vararg,
             envmap,
             bc: vec![],
         }
@@ -91,6 +99,7 @@ impl From<Vec<VCell>> for Lambda {
         Lambda {
             envmap: EnvironmentMap::new(),
             args: vec![],
+            is_vararg: false,
             bc,
         }
     }

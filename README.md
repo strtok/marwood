@@ -194,6 +194,25 @@ And the stack after ENTER has finished executing:
     +----------------------------+
 ```
 
+### ENTCOL
+
+The ENTCOL instruction precedes the ENTER instruction for procedures with variable number of arguments, 
+which are in the form:
+
+```scheme
+(lambda rest body)
+(lambda (<required arguments> . rest) body)
+(define (variable <required arguments> . rest) body)
+```
+
+ENTCOL rebuilds the top of the caller's frame in this order:
+
+* the caller's %ip, %ep and argc are popped off the stack and saved
+* every optional argument is popped off the stack and added to a newly formed list
+* the list is pushed in the argument position that corresponds to it
+* a new correct arg is pushed on the stack followed by the caller's saved
+  %ip and %ep
+
 ### RET
 
 The RET instruction performs the following in order:
