@@ -22,8 +22,11 @@ This example may be executed with `cargo run --example adder`.
 
 Here's the scheme that will execute in the VM given the rust example:
 ```scheme
-(define make-adder (lambda (x) (lambda (y) (+ x y))))
-(define add-1000 (make-adder 1000))
+(define make-adder 
+    (lambda (x) 
+        (lambda (y) (+ x y))))
+(define add-1000 
+    (make-adder 1000))
 (add-1000 0)
 (add-1000 1)
 (add-1000 2)
