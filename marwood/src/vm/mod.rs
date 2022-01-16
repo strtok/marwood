@@ -1,4 +1,6 @@
 use crate::cell::Cell;
+use crate::lex;
+use crate::parse::parse;
 use crate::vm::environment::GlobalEnvironment;
 use crate::vm::heap::Heap;
 use crate::vm::stack::Stack;
@@ -39,7 +41,7 @@ impl Vm {
     ///
     /// Return a new Vm
     pub fn new() -> Vm {
-        Vm {
+        let mut vm = Vm {
             heap: Heap::new(HEAP_SIZE),
             ip: (usize::MAX, 0),
             stack: Stack::new(),
@@ -47,6 +49,21 @@ impl Vm {
             ep: usize::MAX,
             acc: VCell::undefined(),
             bp: 0,
+        };
+        vm.load_prelude();
+        vm
+    }
+
+    /// Load Prelude
+    ///
+    /// Read and compile prelude.scm
+    pub fn load_prelude(&mut self) {
+        let prelude_text = include_str!("prelude.scm");
+        let prelude_tokens = lex::scan(include_str!("prelude.scm")).expect("invalid prelude");
+        let mut it = prelude_tokens.iter().peekable();
+        while it.peek().is_some() {
+            let ast = parse(prelude_text, &mut it).expect("invalid prelude");
+            self.eval(&ast).expect("invalid prelude");
         }
     }
 

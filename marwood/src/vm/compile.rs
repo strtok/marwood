@@ -45,7 +45,7 @@ impl Vm {
                     "cdr" => self.compile_unary(OpCode::Cdr, "cdr", lambda, cdr),
                     "cons" => self.compile_arg2(OpCode::Cons, "cons", lambda, cdr),
                     "eq?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr),
-                    "eqv?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr),
+                    "eqv?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr)
                     "not" => self.compile_unary(OpCode::Not, "not", lambda, cdr),
                     "+" => self.compile_var_arg(OpCode::Add, "+", lambda, cdr),
                     "-" => self.compile_var_arg(OpCode::Sub, "-", lambda, cdr),
