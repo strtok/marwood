@@ -128,8 +128,16 @@ impl Vm {
                 self.bp = self.stack.get_sp() - 4;
                 self.ep = lexical_env;
             }
-            OpCode::EntCol => {
-                // ENTCOL converts the optional arguments of a vararg procedure into a list.
+            OpCode::Ret => {
+                let n = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
+
+                *self.stack.get_sp_mut() = self.bp - n;
+                self.ep = self.stack.get(self.bp + 2)?.as_ptr()?;
+                self.ip = self.stack.get(self.bp + 3)?.as_ip()?;
+                self.bp = self.stack.get(self.bp + 4)?.as_bp()?;
+            }
+            OpCode::VarArg => {
+                // VARARG converts the optional arguments of a vararg procedure into a list.
                 // This requires popping off every optional argument, forming a list on the heap,
                 // and placing the list at the top of the argument stack.
                 let req_argc = self.lambda().args.len() - 1;
@@ -166,14 +174,6 @@ impl Vm {
                     self.stack.push(saved_ip);
                     self.stack.push(saved_ep);
                 }
-            }
-            OpCode::Ret => {
-                let n = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
-
-                *self.stack.get_sp_mut() = self.bp - n;
-                self.ep = self.stack.get(self.bp + 2)?.as_ptr()?;
-                self.ip = self.stack.get(self.bp + 3)?.as_ip()?;
-                self.bp = self.stack.get(self.bp + 4)?.as_bp()?;
             }
             // Lists
             //

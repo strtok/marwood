@@ -194,9 +194,9 @@ And the stack after ENTER has finished executing:
     +----------------------------+
 ```
 
-### ENTCOL
+### VARARG
 
-The ENTCOL instruction precedes the ENTER instruction for procedures with variable number of arguments, 
+The VARARG instruction precedes the ENTER instruction for procedures with variable number of arguments, 
 which are in the form:
 
 ```scheme
@@ -205,7 +205,7 @@ which are in the form:
 (define (variable <required arguments> . rest) body)
 ```
 
-ENTCOL rebuilds the top of the caller's frame in this order:
+VARARG rebuilds the top of the caller's frame in this order:
 
 * the caller's %ip, %ep and argc are popped off the stack and saved
 * every optional argument is popped off the stack and added to a newly formed list

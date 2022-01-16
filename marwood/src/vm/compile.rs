@@ -213,7 +213,7 @@ impl Vm {
 
         let mut lambda = Lambda::new_from_iof(formal_args, iof, &free_symbols, is_vararg);
         if lambda.is_vararg {
-            lambda.emit(OpCode::EntCol);
+            lambda.emit(OpCode::VarArg);
         }
         lambda.emit(OpCode::Enter);
 
