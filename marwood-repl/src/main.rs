@@ -1,3 +1,4 @@
+use crate::syntax::ReplHighlighter;
 use log::trace;
 use marwood::cell::Cell;
 use marwood::lex::{scan, Token};
@@ -5,15 +6,17 @@ use marwood::parse;
 use marwood::parse::parse;
 use marwood::vm::Vm;
 use rustyline::error::ReadlineError;
-use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
+use rustyline::highlight::Highlighter;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Editor, Result};
 use rustyline_derive::{Completer, Helper, Hinter};
 use std::borrow::Cow::Owned;
 
+mod syntax;
+
 #[derive(Completer, Helper, Hinter)]
 struct InputValidator {
-    highlighter: MatchingBracketHighlighter,
+    highlighter: ReplHighlighter,
 }
 
 impl Validator for InputValidator {
@@ -39,15 +42,14 @@ impl Highlighter for InputValidator {
     }
 
     fn highlight_char(&self, line: &str, pos: usize) -> bool {
-        self.highlighter.highlight_char(line, pos + 1);
-        true
+        self.highlighter.highlight_check(line, pos + 1)
     }
 }
 
 fn main() {
     pretty_env_logger::init();
     let validator = InputValidator {
-        highlighter: MatchingBracketHighlighter::new(),
+        highlighter: ReplHighlighter::new(),
     };
     let mut rl = Editor::new();
     rl.set_helper(Some(validator));
