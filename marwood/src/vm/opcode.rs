@@ -275,7 +275,7 @@ mod tests {
                 ]))
                 .as_ptr()
                 .unwrap();
-
+            vm.ip.1 = 0;
             assert!(vm.run().is_ok());
             assert_eq!(vm.acc, ptr);
         }
@@ -293,6 +293,7 @@ mod tests {
                 ]))
                 .as_ptr()
                 .unwrap();
+            vm.ip.1 = 0;
             assert!(vm.run().is_ok());
             assert_eq!(vm.acc, VCell::Bool(true));
         }
