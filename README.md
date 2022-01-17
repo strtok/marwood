@@ -11,7 +11,7 @@ Marwood is a [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) imple
 * a scheme r5rs compiler & 64 bit virtual machine composed of 3x64bit cells
 * mark & sweep garbage collection
 * a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
-* a WASM target repl using [xterm-js-rs](https://github.com/segeljakt/xterm-js-rs) auto deployed to [github pages](https://strtok.github.io/marwood/)
+* a WASM repl at [repl.marwood.io](https://repl.marwood.io).
 
 # Example
 
