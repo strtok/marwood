@@ -172,7 +172,9 @@ impl Cell {
             ]);
         }
         match self {
-            Cell::Symbol(sym) => PRIMITIVE_SYMBOLS.contains(sym.as_str()),
+            Cell::Symbol(sym) => {
+                PRIMITIVE_SYMBOLS.contains(sym.as_str()) || self.is_syntactic_keyword()
+            }
             _ => false,
         }
     }

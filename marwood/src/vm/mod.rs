@@ -116,6 +116,9 @@ pub enum Error {
     #[error("invalid stack index: {0}")]
     InvalidStackIndex(usize),
 
+    #[error("invalid use of syntactic keyword {0}")]
+    InvalidSyntactic(String),
+
     #[error("lambda require at least one expression")]
     LambdaMissingExpression,
 

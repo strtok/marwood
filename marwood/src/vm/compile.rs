@@ -4,7 +4,9 @@ use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
-use crate::vm::Error::{InvalidArgs, InvalidNumArgs, LambdaMissingExpression, UnquotedNil};
+use crate::vm::Error::{
+    InvalidArgs, InvalidNumArgs, InvalidSyntactic, LambdaMissingExpression, UnquotedNil,
+};
 use crate::vm::{Error, Vm};
 use log::trace;
 use std::ops::Deref;
@@ -118,6 +120,9 @@ impl Vm {
         lambda: &mut Lambda,
         sym: &Cell,
     ) -> Result<(), Error> {
+        if sym.is_syntactic_keyword() {
+            return Err(InvalidSyntactic(sym.to_string()));
+        }
         let sym_ref = self.heap.put_cell(sym);
         match lambda.binding_location(&sym_ref) {
             BindingLocation::Global => {
@@ -182,6 +187,10 @@ impl Vm {
                 ));
             }
         };
+
+        if symbol.is_syntactic_keyword() {
+            return Err(InvalidSyntactic(symbol.to_string()));
+        }
 
         let sym_ref = self.heap.put_cell(symbol).as_ptr()?;
         let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
@@ -296,11 +305,17 @@ impl Vm {
                     symbol.to_string(),
                 ));
             }
+            if symbol.is_syntactic_keyword() {
+                return Err(InvalidSyntactic(symbol.to_string()));
+            }
             symbols.push(self.heap.put_cell(symbol));
             rest = cdr!(rest);
         }
 
         if rest.is_symbol() {
+            if rest.is_syntactic_keyword() {
+                return Err(InvalidSyntactic(rest.to_string()));
+            }
             symbols.push(self.heap.put_cell(rest));
             Ok((symbols, true))
         } else {

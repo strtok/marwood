@@ -9,8 +9,8 @@ mod integration_test {
     use crate::lex;
     use crate::parse;
     use crate::vm::Error::{
-        ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidProcedure, UnquotedNil,
-        VariableNotBound,
+        ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidProcedure, InvalidSyntactic,
+        UnquotedNil, VariableNotBound,
     };
     use crate::vm::Vm;
 
@@ -340,5 +340,12 @@ mod integration_test {
                "(nth '(1 2 3 4 5) 4)" => "5",
                "(nth '(1 2 3 4 5) 5)" => "()"
         ];
+    }
+
+    #[test]
+    fn disallow_aliasing_syntactic_symbol() {
+        fails!["(define if 42)" => InvalidSyntactic("if".into())];
+        fails!["(define my-if if)" => InvalidSyntactic("if".into())];
+        fails!["(lambda (if) 42)" => InvalidSyntactic("if".into())];
     }
 }
