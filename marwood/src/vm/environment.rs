@@ -2,7 +2,6 @@ use crate::cell::Cell;
 use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
 use crate::vm::Error;
-use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
@@ -402,64 +401,6 @@ fn find_free_symbols_in_proc<'a>(
     }
 
     Ok(())
-}
-
-impl Cell {
-    pub fn is_quote(&self) -> bool {
-        self.is_symbol_str("quote")
-    }
-
-    pub fn is_lambda(&self) -> bool {
-        self.is_symbol_str("lambda")
-    }
-
-    pub fn is_symbol_str(&self, s: &'static str) -> bool {
-        match self.as_symbol() {
-            Some(sym) => sym == s,
-            _ => false,
-        }
-    }
-
-    /// Is Primitive Symbol
-    ///
-    /// Return true if the given cell is a primitive symbol (e.g. a built-in
-    /// procedure)
-    ///
-    /// # Arguments
-    /// `cell`
-    pub fn is_primitive_symbol(&self) -> bool {
-        lazy_static! {
-            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> = HashSet::from([
-                "car",
-                "cdr",
-                "cons",
-                "define",
-                "eq?",
-                "eqv?",
-                "lambda",
-                "quote",
-                "+",
-                "-",
-                "*",
-                "if",
-                "not",
-                "boolean?",
-                "char?",
-                "list?",
-                "null?",
-                "pair?",
-                "port?",
-                "procedure?",
-                "string?",
-                "symbol?",
-                "vector?"
-            ]);
-        }
-        match self {
-            Cell::Symbol(sym) => PRIMITIVE_SYMBOLS.contains(sym.as_str()),
-            _ => false,
-        }
-    }
 }
 
 #[cfg(test)]

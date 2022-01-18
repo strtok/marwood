@@ -1,5 +1,6 @@
 use ::lazy_static::lazy_static;
 use std::borrow::Borrow;
+use std::collections::HashSet;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::DerefMut;
 
@@ -117,6 +118,98 @@ impl Cell {
             }
         } else {
             false
+        }
+    }
+
+    pub fn is_quote(&self) -> bool {
+        self.is_symbol_str("quote")
+    }
+
+    pub fn is_lambda(&self) -> bool {
+        self.is_symbol_str("lambda")
+    }
+
+    pub fn is_symbol_str(&self, s: &'static str) -> bool {
+        match self.as_symbol() {
+            Some(sym) => sym == s,
+            _ => false,
+        }
+    }
+
+    /// Is Primitive Symbol
+    ///
+    /// Return true if the given cell is a primitive symbol (e.g. a built-in
+    /// procedure)
+    ///
+    /// # Arguments
+    /// `cell`
+    pub fn is_primitive_symbol(&self) -> bool {
+        lazy_static! {
+            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> = HashSet::from([
+                "car",
+                "cdr",
+                "cons",
+                "define",
+                "eq?",
+                "eqv?",
+                "lambda",
+                "quote",
+                "+",
+                "-",
+                "*",
+                "if",
+                "not",
+                "boolean?",
+                "char?",
+                "list?",
+                "null?",
+                "pair?",
+                "port?",
+                "procedure?",
+                "string?",
+                "symbol?",
+                "vector?"
+            ]);
+        }
+        match self {
+            Cell::Symbol(sym) => PRIMITIVE_SYMBOLS.contains(sym.as_str()),
+            _ => false,
+        }
+    }
+
+    /// Is Syntactic Keyword
+    ///
+    /// Return true if the given cell is a syntactic keyword.
+    ///
+    /// # Arguments
+    /// `cell`
+    pub fn is_syntactic_keyword(&self) -> bool {
+        lazy_static! {
+            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> = HashSet::from([
+                "begin!",
+                "case",
+                "define",
+                "delay",
+                "do",
+                "else",
+                "lambda",
+                "if",
+                "cond",
+                "and",
+                "or",
+                "let",
+                "let*",
+                "letrec",
+                "quasiquote",
+                "quote",
+                "unquote",
+                "unquote-splicnig",
+                "set!",
+            ]);
+        }
+        match self {
+            Cell::Symbol(sym) => PRIMITIVE_SYMBOLS.contains(sym.as_str()),
+            _ => false,
         }
     }
 
