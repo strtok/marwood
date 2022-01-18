@@ -281,6 +281,13 @@ mod integration_test {
             "(define add-1000-100 (make-adder 100))" => "#<void>",
             "(add-1000-100 10)" => "1110"
         ];
+
+        evals![
+            "(define (make-make-adder x) (lambda (y) (lambda (z) (+ x y z))))" => "#<void>",
+            "(define make-adder (make-make-adder 1000))" => "#<void>",
+            "(define add-1000-100 (make-adder 100))" => "#<void>",
+            "(add-1000-100 10)" => "1110"
+        ];
     }
 
     #[test]
@@ -321,6 +328,17 @@ mod integration_test {
             "((lambda (x y . z) (cons (+ x y) z)) 10 20)" => "(30 . ())",
             "((lambda (x y . z) (cons (+ x y) z)) 10 20 30)" => "(30 . (30))",
             "((lambda (x y . z) (cons (+ x y) z)) 10 20 30 40)" => "(30 . (30 40))"
+        ];
+    }
+
+    #[test]
+    fn tail_recursive() {
+        evals![r#"(define (nth l n)
+                    (if (null? l) '()
+                        (if (eq? n 0) (car l)
+                            (nth (cdr l) (- n 1)))))"# => "#<void>",
+               "(nth '(1 2 3 4 5) 4)" => "5",
+               "(nth '(1 2 3 4 5) 5)" => "()"
         ];
     }
 }

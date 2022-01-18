@@ -24,6 +24,7 @@ pub enum OpCode {
     ClosureAcc,
     Enter,
     Ret,
+    TCallAcc,
     VarArg,
 
     //Lists
@@ -145,6 +146,7 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::PushAcc, Schema::new("PUSH", vec![Operand::Acc])),
             (OpCode::Ret, Schema::new("RET", vec![])),
             (OpCode::Sub, Schema::new("SUB", vec![])),
+            (OpCode::TCallAcc, Schema::new("TCALL", vec![Operand::Acc])),
             (OpCode::VarArg, Schema::new("VARARG", vec![]))
         ]);
     }

@@ -107,12 +107,12 @@ impl Cell {
 
     pub fn is_list(&self) -> bool {
         if self.is_pair() {
-            let mut lat = self.cdr().unwrap();
+            let mut rest = self.cdr().unwrap();
             loop {
-                if !lat.is_pair() {
-                    return lat.is_nil();
+                if !rest.is_pair() {
+                    return rest.is_nil();
                 } else {
-                    lat = lat.cdr().unwrap();
+                    rest = rest.cdr().unwrap();
                 }
             }
         } else {

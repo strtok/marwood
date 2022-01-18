@@ -362,7 +362,7 @@ fn find_free_symbols_in_proc<'a>(
         find_free_symbols(car, env, free)?;
     }
 
-    let mut lat = match car {
+    let mut rest = match car {
         Cell::Symbol(sym) => match sym.as_str() {
             "define" => cdr
                 .cdr()
@@ -391,14 +391,14 @@ fn find_free_symbols_in_proc<'a>(
         _ => cdr,
     };
 
-    while lat.is_pair() {
-        find_free_symbols(lat.car().unwrap(), env, free)?;
-        lat = lat.cdr().unwrap();
+    while rest.is_pair() {
+        find_free_symbols(rest.car().unwrap(), env, free)?;
+        rest = rest.cdr().unwrap();
     }
 
     // improper list
-    if !lat.is_nil() {
-        find_free_symbols(lat, env, free)?;
+    if !rest.is_nil() {
+        find_free_symbols(rest, env, free)?;
     }
 
     Ok(())

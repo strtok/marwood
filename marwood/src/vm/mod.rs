@@ -76,7 +76,7 @@ impl Vm {
     /// `cell` - An expression to evaluate
     pub fn eval(&mut self, cell: &Cell) -> Result<Cell, Error> {
         let lambda = self.compile(cell)?;
-        trace!("emit: \n{}", self.decompile_text(&lambda));
+        trace!("entry: \n{}", self.decompile_text(&lambda));
         let lambda = self.heap.put(lambda);
         self.ip.0 = lambda.as_ptr().unwrap();
         self.ip.1 = 0;

@@ -155,6 +155,20 @@ After the CALL instruction, the stack should appear as follows:
     +----------------------------+
 ```
 
+### TCALL
+
+TCALL is the tail call optimized version of CALL. It is emitted by the compiler if
+a procedure application is in the tail position. TCALL performs a tailcall by 
+copying the just pushed procedure arguments to the argument slots used in the 
+base of the current frame.
+
+If the argument count is exactly the same, then TCALL will copy the just 
+pushed arguments into their corresponding positions in the base of the 
+current call frame.
+
+If the argument count differs, TCALL rewrites the current stack frame with 
+the just pushed arguments.
+
 ### ENTER
 
 The procedure's byte code will immediately execute the ENTER instruction to
@@ -272,6 +286,7 @@ of the `add` procedure.
 | SUB                          | Perform subtraction on the values in ACC and the the top of the stack and store the result in ACC                     |
 | STRING?                      | Set %acc #t if %acc is a string                                                                                       |
 | SYMBOL?                      | Set %acc #t if %acc is a symbol                                                                                       |
+| TCALL %acc                   | Identical to a CALL instruction, except that a tail optimizing CALL is performed.                                     |
 | VECTOR?                      | Set %acc #t if %acc is a vector                                                                                       |
 
 # License

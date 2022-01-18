@@ -17,13 +17,20 @@ impl Vm {
     /// Run the virtual machine until it encounters a HALT instruction,
     /// and return the value contained within the ACC register as a Cell
     pub fn run(&mut self) -> Result<Cell, Error> {
+        let mut cycles = 0;
+        self.stack.clear();
         loop {
+            cycles += 1;
+            if cycles % 256 == 0 {
+                self.run_gc();
+            }
             match self.run_one() {
                 Ok(true) => break,
                 Ok(false) => continue,
                 Err(e) => return Err(e),
             }
         }
+        trace!("cycles: {}", cycles);
         let cell = self.heap.get_as_cell(&self.acc);
         self.run_gc();
         Ok(cell)
@@ -109,6 +116,48 @@ impl Vm {
                     .push(VCell::InstructionPointer(self.ip.0, self.ip.1));
                 self.ip.0 = lambda;
                 self.ip.1 = 0;
+            }
+            OpCode::TCallAcc => {
+                let lambda = match self.heap.get(&self.acc) {
+                    VCell::Closure(lambda, _) => lambda,
+                    VCell::Lambda(_) => self.acc.as_ptr()?,
+                    other => {
+                        return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
+                    }
+                };
+
+                let argc = self.stack.get_offset(0)?.as_fixed_num()? as usize;
+                let frame_argc = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
+
+                if argc == frame_argc {
+                    let saved_bp = self.stack.get(self.bp + 4)?.clone();
+                    for it in 0..argc {
+                        let val = self.stack.get_offset(-1_i64 - it as i64)?.clone();
+                        *self.stack.get_mut(self.bp - it)? = val;
+                    }
+                    *self.stack.get_sp_mut() = self.bp + 3;
+                    self.bp = saved_bp.as_bp()?;
+                    self.ip.0 = lambda;
+                    self.ip.1 = 0;
+                } else {
+                    let saved_sp = self.stack.get_sp();
+                    let saved_ep = self.stack.get(self.bp + 2)?.clone();
+                    let saved_ip = self.stack.get(self.bp + 3)?.clone();
+                    let saved_bp = self.stack.get(self.bp + 4)?.clone();
+
+                    *self.stack.get_sp_mut() = self.bp - frame_argc;
+                    for it in (0..argc).rev() {
+                        let val = self.stack.get(saved_sp - it - 1)?.clone();
+                        self.stack.push(val);
+                    }
+
+                    self.stack.push(VCell::FixedNum(argc as i64));
+                    self.stack.push(saved_ep);
+                    self.stack.push(saved_ip);
+                    self.bp = saved_bp.as_bp()?;
+                    self.ip.0 = lambda;
+                    self.ip.1 = 0;
+                }
             }
             OpCode::Enter => {
                 let (lambda, lexical_env) = match self.heap.get(&self.acc) {
@@ -259,13 +308,13 @@ impl Vm {
                 self.acc = self.heap.put(false);
             }
             OpCode::IsList => {
-                let mut lat = self.heap.get(&self.acc);
+                let mut rest = self.heap.get(&self.acc);
                 loop {
-                    if !lat.is_pair() {
-                        self.acc = self.heap.put(lat.is_nil());
+                    if !rest.is_pair() {
+                        self.acc = self.heap.put(rest.is_nil());
                         break;
                     }
-                    lat = self.heap.get(&lat.as_cdr()?);
+                    rest = self.heap.get(&rest.as_cdr()?);
                 }
             }
             OpCode::IsNull => {
@@ -484,6 +533,8 @@ impl Vm {
             .filter_map(|it| it.as_ptr().ok())
             .for_each(|it| self.heap.mark(it));
 
+        self.stack.iter().for_each(|it| self.heap.mark_vcell(it));
+        self.heap.mark_vcell(&self.acc);
         self.heap.mark(self.ip.0);
         self.heap.sweep();
     }

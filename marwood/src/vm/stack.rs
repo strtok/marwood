@@ -33,6 +33,22 @@ impl Stack {
         }
     }
 
+    /// Clear
+    ///
+    /// Clear clears any old stack values so that they're no longer
+    /// participating in garbage collection.
+    pub fn clear(&mut self) {
+        let size = self.stack.len();
+        self.stack = vec![VCell::undefined(); size];
+    }
+
+    /// Iter
+    ///
+    /// Return an iterator to the stack vector
+    pub fn iter(&self) -> impl Iterator<Item = &VCell> {
+        self.stack.iter()
+    }
+
     /// Get
     ///
     /// Get a VC at the given stack location.

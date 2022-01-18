@@ -26,53 +26,83 @@ macro_rules! cdr {
 }
 
 impl Vm {
-    pub fn compile(&mut self, cell: &Cell) -> Result<Lambda, Error> {
-        let mut lambda = Lambda::new(vec![]);
-        self.compile_expression(&mut lambda, cell)?;
-        lambda.emit(OpCode::Halt);
-        Ok(lambda)
+    /// Compile
+    ///
+    /// Compile compiles a single top level expression, returning a Lambda that represents
+    /// the top level expression of an Error if compilation failed.
+    ///
+    /// `expr` - The expression to compile.
+    pub fn compile(&mut self, expr: &Cell) -> Result<Lambda, Error> {
+        let mut entry_lambda = Lambda::new(vec![]);
+        let mut lambda = Lambda::new_from_iof(vec![], &entry_lambda, &[], false);
+        lambda.emit(OpCode::Enter);
+        self.compile_expression(&mut lambda, true, expr)?;
+        lambda.emit(OpCode::Ret);
+        trace!("main: \n{}", self.decompile_text(&lambda));
+        let lambda = self.heap.put(lambda);
+        entry_lambda.emit(OpCode::PushImmediate);
+        entry_lambda.emit(VCell::FixedNum(0));
+        entry_lambda.emit(OpCode::MovImmediate);
+        entry_lambda.emit(lambda);
+        entry_lambda.emit(VCell::Acc);
+        entry_lambda.emit(OpCode::CallAcc);
+        entry_lambda.emit(OpCode::Halt);
+        Ok(entry_lambda)
     }
 
-    pub fn compile_expression(&mut self, lambda: &mut Lambda, cell: &Cell) -> Result<(), Error> {
-        match cell {
+    /// Compile Expression
+    ///
+    /// Compile expression compiles a single expression, emitting its byte code to the currently
+    /// compiling procedure.
+    ///
+    /// `lambda` - The lambda to emit byte code to
+    /// `expr` - The expression to compile.
+    /// `tail` - Tail is true if this expression is in a tail position.
+    pub fn compile_expression(
+        &mut self,
+        lambda: &mut Lambda,
+        tail: bool,
+        expr: &Cell,
+    ) -> Result<(), Error> {
+        match expr {
             Cell::Pair(car, cdr) => match car.deref() {
                 Cell::Symbol(proc) => match proc.as_str() {
-                    "define" => self.compile_define(lambda, cell),
-                    "lambda" | "λ" => self.compile_lambda(lambda, cell, false),
+                    "define" => self.compile_define(lambda, expr),
+                    "lambda" | "λ" => self.compile_lambda(lambda, expr, false),
                     "quote" => self.compile_quote(lambda, car!(cdr)),
-                    "if" => self.compile_if(lambda, cdr),
-                    "car" => self.compile_unary(OpCode::Car, "car", lambda, cdr),
-                    "cdr" => self.compile_unary(OpCode::Cdr, "cdr", lambda, cdr),
-                    "cons" => self.compile_arg2(OpCode::Cons, "cons", lambda, cdr),
-                    "eq?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr),
-                    "eqv?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, cdr),
-                    "not" => self.compile_unary(OpCode::Not, "not", lambda, cdr),
-                    "+" => self.compile_var_arg(OpCode::Add, "+", lambda, cdr),
-                    "-" => self.compile_var_arg(OpCode::Sub, "-", lambda, cdr),
-                    "*" => self.compile_var_arg(OpCode::Mul, "*", lambda, cdr),
-                    "boolean?" => self.compile_unary(OpCode::IsBoolean, proc, lambda, cdr),
-                    "char?" => self.compile_unary(OpCode::IsChar, proc, lambda, cdr),
-                    "list?" => self.compile_unary(OpCode::IsList, proc, lambda, cdr),
-                    "number?" => self.compile_unary(OpCode::IsNumber, proc, lambda, cdr),
-                    "null?" => self.compile_unary(OpCode::IsNull, proc, lambda, cdr),
-                    "pair?" => self.compile_unary(OpCode::IsPair, proc, lambda, cdr),
-                    "port?" => self.compile_unary(OpCode::IsPort, proc, lambda, cdr),
-                    "procedure?" => self.compile_unary(OpCode::IsProcedure, proc, lambda, cdr),
-                    "string?" => self.compile_unary(OpCode::IsString, proc, lambda, cdr),
-                    "symbol?" => self.compile_unary(OpCode::IsSymbol, proc, lambda, cdr),
-                    "vector?" => self.compile_unary(OpCode::IsVector, proc, lambda, cdr),
-                    _ => self.compile_procedure_application(lambda, car, cdr),
+                    "if" => self.compile_if(lambda, tail, expr),
+                    "car" => self.compile_unary(OpCode::Car, "car", lambda, expr),
+                    "cdr" => self.compile_unary(OpCode::Cdr, "cdr", lambda, expr),
+                    "cons" => self.compile_arg2(OpCode::Cons, "cons", lambda, expr),
+                    "eq?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, expr),
+                    "eqv?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, expr),
+                    "not" => self.compile_unary(OpCode::Not, "not", lambda, expr),
+                    "+" => self.compile_var_arg(OpCode::Add, "+", lambda, expr),
+                    "-" => self.compile_var_arg(OpCode::Sub, "-", lambda, expr),
+                    "*" => self.compile_var_arg(OpCode::Mul, "*", lambda, expr),
+                    "boolean?" => self.compile_unary(OpCode::IsBoolean, proc, lambda, expr),
+                    "char?" => self.compile_unary(OpCode::IsChar, proc, lambda, expr),
+                    "list?" => self.compile_unary(OpCode::IsList, proc, lambda, expr),
+                    "number?" => self.compile_unary(OpCode::IsNumber, proc, lambda, expr),
+                    "null?" => self.compile_unary(OpCode::IsNull, proc, lambda, expr),
+                    "pair?" => self.compile_unary(OpCode::IsPair, proc, lambda, expr),
+                    "port?" => self.compile_unary(OpCode::IsPort, proc, lambda, expr),
+                    "procedure?" => self.compile_unary(OpCode::IsProcedure, proc, lambda, expr),
+                    "string?" => self.compile_unary(OpCode::IsString, proc, lambda, expr),
+                    "symbol?" => self.compile_unary(OpCode::IsSymbol, proc, lambda, expr),
+                    "vector?" => self.compile_unary(OpCode::IsVector, proc, lambda, expr),
+                    _ => self.compile_procedure_application(lambda, tail, expr),
                 },
-                _ => self.compile_procedure_application(lambda, car, cdr),
+                _ => self.compile_procedure_application(lambda, tail, expr),
             },
-            Cell::Symbol(_) => self.compile_symbol_expression(lambda, cell),
+            Cell::Symbol(_) => self.compile_symbol_expression(lambda, expr),
             Cell::Nil => Err(UnquotedNil),
             Cell::Number(_)
             | Cell::Bool(_)
             | Cell::Void
             | Cell::Undefined
             | Cell::Closure
-            | Cell::Lambda => self.compile_quote(lambda, cell),
+            | Cell::Lambda => self.compile_quote(lambda, expr),
         }
     }
 
@@ -123,32 +153,32 @@ impl Vm {
     /// `lambda` - The lambda to emit bytecode to
     /// `expr` - (define variable expression)    
     pub fn compile_define(&mut self, lambda: &mut Lambda, expr: &Cell) -> Result<(), Error> {
-        let lat = cdr!(expr);
+        let rest = cdr!(expr);
 
         // A define must have at least 2 arguments
-        if lat.is_nil() || cdr!(lat).is_nil() {
+        if rest.is_nil() || cdr!(rest).is_nil() {
             return Err(InvalidNumArgs("define".into()));
         }
 
         // Extract the symbol given the form, and at the same time compile the
         // expression or lambda so that its result will be in %acc for the define.
-        let symbol = match car!(lat) {
+        let symbol = match car!(rest) {
             Cell::Symbol(_) => {
-                if !cdr!(cdr!(lat)).is_nil() {
+                if !cdr!(cdr!(rest)).is_nil() {
                     return Err(InvalidNumArgs("define".into()));
                 }
-                self.compile_expression(lambda, car!(cdr!(lat)))?;
-                car!(lat)
+                self.compile_expression(lambda, false, car!(cdr!(rest)))?;
+                car!(rest)
             }
             Cell::Pair(_, _) => {
                 self.compile_lambda(lambda, expr, true)?;
-                car!(car!(lat))
+                car!(car!(rest))
             }
             _ => {
                 return Err(InvalidArgs(
                     "define".into(),
                     "symbol or (variable formals)".into(),
-                    car!(lat).to_string(),
+                    car!(rest).to_string(),
                 ));
             }
         };
@@ -192,16 +222,16 @@ impl Vm {
         expr: &Cell,
         is_define_special: bool,
     ) -> Result<(), Error> {
-        let lat = cdr!(expr);
-        if lat.is_nil() {
+        let rest = cdr!(expr);
+        if rest.is_nil() {
             return Err(InvalidNumArgs("procedure".into()));
         }
 
         // The position of formal args and body differ slightly
         // on whether this was a define special form or a lambda
         let (formal_args, body) = match is_define_special {
-            true => (cdr!(car!(lat)), cdr!(lat)),
-            false => (car!(lat), cdr!(lat)),
+            true => (cdr!(car!(rest)), cdr!(rest)),
+            false => (car!(rest), cdr!(rest)),
         };
 
         // Compile formal args into a list of symbols
@@ -223,7 +253,7 @@ impl Vm {
             return Err(LambdaMissingExpression);
         }
         while body.is_pair() {
-            self.compile_expression(&mut lambda, car!(body))?;
+            self.compile_expression(&mut lambda, cdr!(body).is_nil(), car!(body))?;
             body = cdr!(body);
         }
 
@@ -256,9 +286,9 @@ impl Vm {
             return Ok((vec![], false));
         }
         let mut symbols = vec![];
-        let mut lat = formal_args;
-        while lat.is_pair() {
-            let symbol = car!(lat);
+        let mut rest = formal_args;
+        while rest.is_pair() {
+            let symbol = car!(rest);
             if !symbol.is_symbol() {
                 return Err(InvalidArgs(
                     "procedure".into(),
@@ -267,11 +297,11 @@ impl Vm {
                 ));
             }
             symbols.push(self.heap.put_cell(symbol));
-            lat = cdr!(lat);
+            rest = cdr!(rest);
         }
 
-        if lat.is_symbol() {
-            symbols.push(self.heap.put_cell(lat));
+        if rest.is_symbol() {
+            symbols.push(self.heap.put_cell(rest));
             Ok((symbols, true))
         } else {
             Ok((symbols, false))
@@ -280,7 +310,7 @@ impl Vm {
 
     /// Compile Procedure Application
     ///
-    /// Evaluate the argument expressions in lat, and then apply their
+    /// Evaluate the argument expressions in expr, and then apply their
     /// results to proc.
     ///
     /// Procedure calls are in the form:
@@ -298,21 +328,23 @@ impl Vm {
     /// # Arguments
     /// `lambda` - The lambda to emit bytecode to
     /// `proc` - The procedure to apply
-    /// `lat` - Zero or more expressions to apply to proc as arguments.
+    /// `expr` - The procedure to apply
+    /// `tail` - Tail is true if this procedure application is in a tail position.
     pub fn compile_procedure_application(
         &mut self,
         lambda: &mut Lambda,
-        proc: &Cell,
-        lat: &Cell,
+        tail: bool,
+        expr: &Cell,
     ) -> Result<(), Error> {
+        let proc = car!(expr);
+        let mut rest = cdr!(expr);
         // Evaluate and push each argument left-to-right
         let mut n: i64 = 0;
-        let mut lat = lat;
-        while lat.is_pair() {
-            self.compile_expression(lambda, lat.car().unwrap())?;
+        while rest.is_pair() {
+            self.compile_expression(lambda, false, rest.car().unwrap())?;
             lambda.emit(OpCode::PushAcc);
             n += 1;
-            lat = lat.cdr().unwrap();
+            rest = rest.cdr().unwrap();
         }
 
         // Push the argument count
@@ -320,8 +352,11 @@ impl Vm {
         lambda.emit(VCell::FixedNum(n));
 
         // Evaluate the procedure to call, and emit a CALL instruction
-        self.compile_expression(lambda, proc)?;
-        lambda.emit(OpCode::CallAcc);
+        self.compile_expression(lambda, false, proc)?;
+        lambda.emit(match tail {
+            true => OpCode::TCallAcc,
+            false => OpCode::CallAcc,
+        });
         Ok(())
     }
 
@@ -337,11 +372,22 @@ impl Vm {
     ///   branch is chosen.
     /// * If test yields false without an alternate, the result is unspecified. Marwood
     ///   will evaluate the `if` expression to #<void>
-    pub fn compile_if(&mut self, lambda: &mut Lambda, lat: &Cell) -> Result<(), Error> {
-        if lat.is_nil() || !lat.is_list() {
-            return Err(InvalidArgs("if".into(), "test".into(), lat.to_string()));
+    ///
+    /// # Arguments
+    /// `lambda` - The lambda to emit bytecode to
+    /// `expr` - The if expression
+    /// `tail` - Tail is true if this expression is in a tail position
+    pub fn compile_if(
+        &mut self,
+        lambda: &mut Lambda,
+        tail: bool,
+        expr: &Cell,
+    ) -> Result<(), Error> {
+        let rest = cdr!(expr);
+        if rest.is_nil() || !rest.is_list() {
+            return Err(InvalidArgs("if".into(), "test".into(), rest.to_string()));
         }
-        let (test, consequent, alternate) = match lat.collect_vec().as_slice() {
+        let (test, consequent, alternate) = match rest.collect_vec().as_slice() {
             [test, consequent] => (*test, *consequent, None),
             [test, consequent, alternate] => (*test, *consequent, Some(*alternate)),
             _ => {
@@ -350,7 +396,7 @@ impl Vm {
         };
 
         // Evaluate test
-        self.compile_expression(lambda, test)?;
+        self.compile_expression(lambda, false, test)?;
 
         // JMP if %acc is #f
         lambda.emit(OpCode::Jnt);
@@ -360,7 +406,7 @@ impl Vm {
         // Compile the consequent and update the JMP offset to be
         // the bytecode directly after the consequent. The consequent's
         // final instruction is a JMP to the end of the alternate.
-        self.compile_expression(lambda, consequent)?;
+        self.compile_expression(lambda, tail, consequent)?;
         lambda.emit(OpCode::Jmp);
         let jmp_operand = lambda.bc.len();
         lambda.emit(VCell::Ptr(0xCAFEBEEF));
@@ -369,7 +415,7 @@ impl Vm {
         // Compile the alternate, or if there is no alternate then evaluate to #<void>
         match alternate {
             Some(alternate) => {
-                self.compile_expression(lambda, alternate)?;
+                self.compile_expression(lambda, tail, alternate)?;
             }
             None => {
                 lambda.emit(OpCode::MovImmediate);
@@ -389,18 +435,19 @@ impl Vm {
     /// `op` - The opcode operating on the argument
     /// `name` - The name of the procedure, used for error purposes.
     /// `lambda` - The lambda to emit bytecode to
-    /// `lat` - The argument to the procedure
+    /// `expr` - The unary expression
     pub fn compile_unary(
         &mut self,
         op: OpCode,
         name: &str,
         lambda: &mut Lambda,
-        lat: &Cell,
+        expr: &Cell,
     ) -> Result<(), Error> {
-        if lat.is_nil() || !cdr!(lat).is_nil() {
+        let rest = cdr!(expr);
+        if rest.is_nil() || !cdr!(rest).is_nil() {
             return Err(InvalidNumArgs(name.into()));
         }
-        self.compile_expression(lambda, car!(lat))?;
+        self.compile_expression(lambda, false, car!(rest))?;
         lambda.emit(op);
         Ok(())
     }
@@ -413,20 +460,21 @@ impl Vm {
     /// `op` - The opcode operating on the two arguments
     /// `name` - The name of the procedure, used for error purposes.
     /// `lambda` - The lambda to emit bytecode to
-    /// `lat` - The arguments to the procedure
+    /// `expr` - The arguments to the procedure
     pub fn compile_arg2(
         &mut self,
         op: OpCode,
         name: &str,
         lambda: &mut Lambda,
-        lat: &Cell,
+        expr: &Cell,
     ) -> Result<(), Error> {
-        if lat.is_nil() || !cdr!(cdr!(lat)).is_nil() {
+        let rest = cdr!(expr);
+        if rest.is_nil() || !cdr!(cdr!(rest)).is_nil() {
             return Err(InvalidNumArgs(name.into()));
         }
-        self.compile_expression(lambda, car!(cdr!(lat)))?;
+        self.compile_expression(lambda, false, car!(cdr!(rest)))?;
         lambda.emit(OpCode::PushAcc);
-        self.compile_expression(lambda, car!(lat))?;
+        self.compile_expression(lambda, false, car!(rest))?;
         lambda.emit(op);
         Ok(())
     }
@@ -439,10 +487,10 @@ impl Vm {
     ///
     /// # Arguments
     /// `lambda` - The lambda to emit bytecode to
-    /// `cell` - The value to quote.
-    pub fn compile_quote(&mut self, lambda: &mut Lambda, cell: &Cell) -> Result<(), Error> {
+    /// `expr` - The expression to quote.
+    pub fn compile_quote(&mut self, lambda: &mut Lambda, expr: &Cell) -> Result<(), Error> {
         lambda.emit(OpCode::MovImmediate);
-        lambda.emit(self.heap.put_cell(cell));
+        lambda.emit(self.heap.put_cell(expr));
         lambda.emit(VCell::Acc);
         Ok(())
     }
@@ -459,23 +507,22 @@ impl Vm {
     /// `op` - The opcode operating on the list of arguments
     /// `name` - The name of the procedure, used for error purposes.
     /// `lambda` - The lambda to emit bytecode to
-    /// `lat` - The arguments to the procedure
+    /// `expr` - The expression (op ...)
     pub fn compile_var_arg(
         &mut self,
         op: OpCode,
         name: &str,
         lambda: &mut Lambda,
-        lat: &Cell,
+        expr: &Cell,
     ) -> Result<(), Error> {
-        let mut lat = lat;
-
+        let mut rest = cdr!(expr);
         let base_value = match op {
             OpCode::Mul => &Cell::Number(1),
             _ => &Cell::Number(0),
         };
 
         // Special zero arg form. Evaluate to the base value.
-        if lat.is_nil() {
+        if rest.is_nil() {
             if op == OpCode::Sub {
                 return Err(InvalidNumArgs(name.to_string()));
             }
@@ -483,26 +530,26 @@ impl Vm {
             return Ok(());
         }
 
-        let first_arg = car!(lat);
-        lat = cdr!(lat);
+        let first_arg = car!(rest);
+        rest = cdr!(rest);
 
         // Special one arg form. Add it to 0 so that type
         // checking from the ADD instruction still occurs.
-        if lat.is_nil() {
+        if rest.is_nil() {
             self.compile_quote(lambda, base_value)?;
             lambda.emit(OpCode::PushAcc);
-            self.compile_expression(lambda, first_arg)?;
+            self.compile_expression(lambda, false, first_arg)?;
             lambda.emit(op);
             return Ok(());
         }
 
         // Each additional arg is added to ACC
-        self.compile_expression(lambda, first_arg)?;
-        while !lat.is_nil() {
+        self.compile_expression(lambda, false, first_arg)?;
+        while !rest.is_nil() {
             lambda.emit(OpCode::PushAcc);
-            self.compile_expression(lambda, car!(lat))?;
+            self.compile_expression(lambda, false, car!(rest))?;
             lambda.emit(op.clone());
-            lat = cdr!(lat);
+            rest = cdr!(rest);
         }
 
         Ok(())
