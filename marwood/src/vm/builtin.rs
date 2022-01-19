@@ -2,7 +2,7 @@ use crate::vm::vcell::VCell;
 use crate::vm::Error::{ExpectedPairButFound, InvalidArgs, InvalidNumArgs};
 use crate::vm::{Error, Vm};
 
-/// Guilt Ins
+/// Built Ins
 ///
 /// Built ins are implementations for scheme primitive or library procedures
 /// that either must be written in rust (e.g. type predicates), or are implemented
