@@ -89,21 +89,18 @@ shallow bindings. At compile time, Marwood computes the exact mapping of binding
 by a procedures immediate-outer-function (IOF), building an EnvironmentMap that instructs 
 the runtime of what bindings to inherit from the IOF's Environment and Stack.
 
-
-### Builtin Procedures
+### Built-in Procedures
 
 There are three types of built-in procedures:
 
 * Syntactic keywords such as `if`, `define` and `lambda`. These procedures are not
-  first class and they are handled entire by the compiler. The implementation for
+  first class and they are handled entirely by the compiler. The implementation for
   these syntactic keywords may be found in [compile.rs](marwood/src/vm/compile.rs).
 
-* Certain primitives or library procedures such as type primitives (e.g. `null? and
-  `procedure?`), `eq?`, `car`, `cdr`, `-`, `+`, etc are implemented as rust builtins
-  unless shadowed in the environment. These procedures are implemented in rust either
-  because they must be (e.g. type predicates), or for performance reasons. These can
+* Certain primitives or library procedures such as type primitives (e.g. `null?` and
+  `procedure?`), `eq?`, `car`, `cdr`, `-`, `+`, etc are implemented as rust built-ins
+  and unlike syntactic keywords may be shadowed in the environment. These can
   be found in [builtin.rs](marwood/src/vm/builtin.rs).
-
 
 * Derived library procedures that are implemented directly in
   [prelude.scm](marwood/prelude.scm).
