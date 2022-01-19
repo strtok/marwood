@@ -60,8 +60,8 @@ impl Vm {
     ///
     /// Read and compile prelude.scm
     pub fn load_prelude(&mut self) {
-        let prelude_text = include_str!("prelude.scm");
-        let prelude_tokens = lex::scan(include_str!("prelude.scm")).expect("invalid prelude");
+        let prelude_text = include_str!("../../prelude.scm");
+        let prelude_tokens = lex::scan(prelude_text).expect("invalid prelude");
         let mut it = prelude_tokens.iter().peekable();
         while it.peek().is_some() {
             let ast = parse(prelude_text, &mut it).expect("invalid prelude");

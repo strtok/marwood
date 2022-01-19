@@ -89,6 +89,25 @@ shallow bindings. At compile time, Marwood computes the exact mapping of binding
 by a procedures immediate-outer-function (IOF), building an EnvironmentMap that instructs 
 the runtime of what bindings to inherit from the IOF's Environment and Stack.
 
+
+### Builtin Procedures
+
+There are three types of built-in procedures:
+
+* Syntactic keywords such as `if`, `define` and `lambda`. These procedures are not
+  first class and they are handled entire by the compiler. The implementation for
+  these syntactic keywords may be found in [compile.rs](marwood/src/vm/compile.rs).
+
+* Certain primitives or library procedures such as type primitives (e.g. `null? and
+  `procedure?`), `eq?`, `car`, `cdr`, `-`, `+`, etc are implemented as rust builtins
+  unless shadowed in the environment. These procedures are implemented in rust either
+  because they must be (e.g. type predicates), or for performance reasons. These can
+  be found in [builtin.rs](marwood/src/vm/builtin.rs).
+
+
+* Derived library procedures that are implemented directly in
+  [prelude.scm](marwood/src/vm/prelude.scm).
+
 ## Procedure Application
 
 Marwood uses the stack to pass each operand of a procedure being applied to
@@ -113,7 +132,7 @@ each evaluation on the stack
   contains a reference to the procedure being applied.
 * Emit a `CALL %acc` instruction
 
-### CALL
+### CALL Instruction
 
 The CALL instruction expects the following conditions:
 
@@ -155,7 +174,7 @@ After the CALL instruction, the stack should appear as follows:
     +----------------------------+
 ```
 
-### TCALL
+### TCALL Instruction
 
 TCALL is the tail call optimized version of CALL. It is emitted by the compiler if
 a procedure application is in the tail position. TCALL performs a tailcall by 
@@ -169,7 +188,7 @@ current call frame.
 If the argument count differs, TCALL rewrites the current stack frame with 
 the just pushed arguments.
 
-### ENTER
+### ENTER Instruction
 
 The procedure's byte code will immediately execute the ENTER instruction to
 finish setting up the stack. 
@@ -212,7 +231,7 @@ And the stack after ENTER has finished executing:
     +----------------------------+
 ```
 
-### VARARG
+### VARARG Instruction
 
 The VARARG instruction precedes the ENTER instruction for procedures with variable number of arguments, 
 which are in the form:
@@ -231,7 +250,7 @@ VARARG rebuilds the top of the caller's frame in this order:
 * a new correct arg is pushed on the stack followed by the caller's saved
   %ip and %ep
 
-### RET
+### RET Instruction
 
 The RET instruction performs the following in order:
 
@@ -258,36 +277,18 @@ of the `add` procedure.
 
 | Opcode                       | Description                                                                                                           |
 |------------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| ADD                          | Perform addition on the values in ACC and the the top of the stack and store the result in ACC                        |
-| BOOLEAN?                     | Set %acc #t if %acc is a boolean                                                                                      |
 | CALL %acc                    | Given the arguments for the procedure in %acc have been pushed on the stack, jump to the procedure in %acc.           |
-| CAR                          | Move the car of the pair in ACC into ACC. Errors if ACC Is not a pair.                                                |
-| CDR                          | Move the cdr of the pair in ACC into ACC. Errors if ACC is not a pair.                                                |
-| CHAR?                        | Set %acc #t if %acc is a char                                                                                         |
-| CONS                         | Box a pair, storing a reference in ACC. The car of the pair is taken from ACC, and the cdr from the top of the stack. |
 | CLOSURE %acc                 | Create a lexical environment as a result of evaluating a (lambda ...) expression.                                     |
 | ENVGET &lt;SLOT&gt;          | Store the value in environment slot SLOT in ACC                                                                       |
 | ENVSET &lt;SLOT&gt;          | Set the value in environment slot SLOT to the value in ACC                                                            |
 | ENTER                        | Setup the currently executing procedure's stack frame                                                                 |
-| EQ                           | Sets ACC to true if ACC == arg[0], otherwise false. This instruction mirrors the eq? procedure in scheme.             |
 | HALT                         | Halt program, returning the result contained within ACC                                                               |
-| LIST?                        | Set %acc #t if %acc is a proper list                                                                                  |
 | JNT &lt;OFFSET&gt;           | Set %ip to OFFSET if %acc is #f                                                                                       |
 | JMP &lt;OFFSET&gt;           | Set %ip to OFFSET                                                                                                     |
 | MOV &lt;SRC&gt; &lt;DEST&gt; | Move the value from SRC into DEST                                                                                     |
-| MUL                          | Perform multiplication on the values in ACC and the the top of the stack and store the result in ACC                  |
-| NOT                          | Set %acc to !%acc. If %acc is not a boolean type, set %acc to #f.                                                     |
-| NULL?                        | Set %acc #t if %acc is '()                                                                                            |
-| NUMBER?                      | Set %acc #t if %acc is a number type                                                                                  |
-| PORT?                        | Set %acc #t if %acc is a port                                                                                         |
 | PUSH                         | Push the value in ACC on to the stack                                                                                 |
-| PROCEDURE?                   | Set %acc #t if %acc is a procedure                                                                                    |
 | RET                          | Return from a procedure entered via CALL                                                                              |
-| SUB                          | Perform subtraction on the values in ACC and the the top of the stack and store the result in ACC                     |
-| STRING?                      | Set %acc #t if %acc is a string                                                                                       |
-| SYMBOL?                      | Set %acc #t if %acc is a symbol                                                                                       |
 | TCALL %acc                   | Identical to a CALL instruction, except that a tail optimizing CALL is performed.                                     |
-| VECTOR?                      | Set %acc #t if %acc is a vector                                                                                       |
 
 # License
 Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
