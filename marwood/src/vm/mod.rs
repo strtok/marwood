@@ -7,6 +7,7 @@ use crate::vm::stack::Stack;
 use crate::vm::vcell::VCell;
 use log::trace;
 
+pub mod builtin;
 pub mod compare;
 pub mod compile;
 pub mod environment;
@@ -50,6 +51,7 @@ impl Vm {
             acc: VCell::undefined(),
             bp: 0,
         };
+        vm.load_builtins();
         vm.load_prelude();
         vm
     }

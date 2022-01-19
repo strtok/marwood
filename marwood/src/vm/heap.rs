@@ -162,6 +162,7 @@ impl Heap {
             VCell::Void => Cell::Void,
             VCell::Closure(_, _) => Cell::Closure,
             VCell::Lambda(_) => Cell::Lambda,
+            VCell::BuiltInProc(_) => Cell::Lambda,
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
             VCell::Acc
@@ -236,6 +237,7 @@ impl Heap {
                 | VCell::Nil
                 | VCell::OpCode(_)
                 | VCell::Symbol(_)
+                | VCell::BuiltInProc(_)
                 | VCell::Undefined
                 | VCell::Void => {}
             }
@@ -273,6 +275,7 @@ impl Heap {
             | VCell::Nil
             | VCell::OpCode(_)
             | VCell::Symbol(_)
+            | VCell::BuiltInProc(_)
             | VCell::Undefined
             | VCell::Void => {}
         }

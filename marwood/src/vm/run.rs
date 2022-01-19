@@ -2,10 +2,9 @@ use crate::cell::Cell;
 use crate::vm::environment::{BindingSource, EnvironmentMap, LexicalEnvironment};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
-use crate::vm::vcell::VCell;
+use crate::vm::vcell::{BuiltInProc, VCell};
 use crate::vm::Error::{
-    ExpectedPairButFound, InvalidArgs, InvalidBytecode, InvalidNumArgs, InvalidProcedure,
-    VariableNotBound,
+    InvalidArgs, InvalidBytecode, InvalidNumArgs, InvalidProcedure, VariableNotBound,
 };
 use crate::vm::{Error, Vm};
 use log::trace;
@@ -107,6 +106,10 @@ impl Vm {
                 let lambda = match self.heap.get(&self.acc) {
                     VCell::Closure(lambda, _) => lambda,
                     VCell::Lambda(_) => self.acc.as_ptr()?,
+                    VCell::BuiltInProc(BuiltInProc(func)) => {
+                        func(self)?;
+                        return Ok(false);
+                    }
                     other => {
                         return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
                     }
@@ -121,6 +124,10 @@ impl Vm {
                 let lambda = match self.heap.get(&self.acc) {
                     VCell::Closure(lambda, _) => lambda,
                     VCell::Lambda(_) => self.acc.as_ptr()?,
+                    VCell::BuiltInProc(BuiltInProc(func)) => {
+                        func(self)?;
+                        return Ok(false);
+                    }
                     other => {
                         return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
                     }
@@ -224,38 +231,6 @@ impl Vm {
                     self.stack.push(saved_ep);
                 }
             }
-            // Lists
-            //
-            // The opcodes in this section provide primitive instructions for manipulating lists,
-            // such as the primitives for `car`, `cdr` and `cons`
-            //
-            OpCode::Car => {
-                let arg = self.heap.get(&self.acc);
-                match car(&arg) {
-                    Ok(vcell) => self.acc = vcell,
-                    Err(_) => {
-                        return Err(ExpectedPairButFound(
-                            self.heap.get_as_cell(&arg).to_string(),
-                        ));
-                    }
-                }
-            }
-            OpCode::Cdr => {
-                let arg = self.heap.get(&self.acc);
-                match cdr(&arg) {
-                    Ok(vcell) => self.acc = vcell,
-                    Err(_) => {
-                        return Err(ExpectedPairButFound(
-                            self.heap.get_as_cell(&arg).to_string(),
-                        ));
-                    }
-                }
-            }
-            OpCode::Cons => {
-                let car = self.acc.clone().as_ptr()?;
-                let cdr = self.pop_stack()?.as_ptr()?;
-                self.acc = self.heap.put(VCell::Pair(car, cdr));
-            }
             // Numbers
             //
             // The opcodes in this section provide primitives for monipulating numbers,
@@ -290,66 +265,6 @@ impl Vm {
                     OpCode::Sub => self.acc = self.heap.put(VCell::fixed_num(y - x)),
                     OpCode::Mul => self.acc = self.heap.put(VCell::fixed_num(x * y)),
                     _ => return Err(InvalidBytecode),
-                };
-            }
-            // Predicates
-            //
-            // These opcodes provide predicates for a single object, or for equivalence of
-            // objects. Predicates always evaluate to #t or #f
-            OpCode::Eq => {
-                let arg = self.pop_stack()?;
-                self.acc = self.heap.put(self.eqv(&self.acc, &arg)?);
-            }
-            OpCode::IsBoolean => {
-                let arg = self.heap.get(&self.acc);
-                self.acc = self.heap.put(arg.is_boolean());
-            }
-            OpCode::IsChar => {
-                self.acc = self.heap.put(false);
-            }
-            OpCode::IsList => {
-                let mut rest = self.heap.get(&self.acc);
-                loop {
-                    if !rest.is_pair() {
-                        self.acc = self.heap.put(rest.is_nil());
-                        break;
-                    }
-                    rest = self.heap.get(&rest.as_cdr()?);
-                }
-            }
-            OpCode::IsNull => {
-                let arg = self.heap.get(&self.acc);
-                self.acc = self.heap.put(arg.is_nil());
-            }
-            OpCode::IsNumber => {
-                let arg = self.heap.get(&self.acc);
-                self.acc = self.heap.put(arg.is_number());
-            }
-            OpCode::IsPair => {
-                let arg = self.heap.get(&self.acc);
-                self.acc = self.heap.put(arg.is_pair());
-            }
-            OpCode::IsPort => {
-                self.acc = self.heap.put(false);
-            }
-            OpCode::IsProcedure => {
-                let arg = self.heap.get(&self.acc);
-                self.acc = self.heap.put(arg.is_procedure());
-            }
-            OpCode::IsString => {
-                self.acc = self.heap.put(false);
-            }
-            OpCode::IsSymbol => {
-                let arg = self.heap.get(&self.acc);
-                self.acc = self.heap.put(arg.is_symbol());
-            }
-            OpCode::IsVector => {
-                self.acc = self.heap.put(false);
-            }
-            OpCode::Not => {
-                self.acc = match self.heap.get(&self.acc) {
-                    VCell::Bool(val) => self.heap.put(!val),
-                    _ => self.heap.put(false),
                 };
             }
         }
@@ -603,16 +518,6 @@ impl Vm {
             )
         );
     }
-}
-
-fn car<T: AsRef<VCell>>(vcell: T) -> Result<VCell, Error> {
-    let vcell = vcell.as_ref();
-    vcell.as_car()
-}
-
-fn cdr<T: AsRef<VCell>>(vcell: T) -> Result<VCell, Error> {
-    let vcell = vcell.as_ref();
-    vcell.as_cdr()
 }
 
 #[cfg(test)]

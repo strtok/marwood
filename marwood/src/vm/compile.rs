@@ -73,26 +73,6 @@ impl Vm {
                     "lambda" | "λ" => self.compile_lambda(lambda, expr, false),
                     "quote" => self.compile_quote(lambda, car!(cdr)),
                     "if" => self.compile_if(lambda, tail, expr),
-                    "car" => self.compile_unary(OpCode::Car, "car", lambda, expr),
-                    "cdr" => self.compile_unary(OpCode::Cdr, "cdr", lambda, expr),
-                    "cons" => self.compile_arg2(OpCode::Cons, "cons", lambda, expr),
-                    "eq?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, expr),
-                    "eqv?" => self.compile_arg2(OpCode::Eq, "eq?", lambda, expr),
-                    "not" => self.compile_unary(OpCode::Not, "not", lambda, expr),
-                    "+" => self.compile_var_arg(OpCode::Add, "+", lambda, expr),
-                    "-" => self.compile_var_arg(OpCode::Sub, "-", lambda, expr),
-                    "*" => self.compile_var_arg(OpCode::Mul, "*", lambda, expr),
-                    "boolean?" => self.compile_unary(OpCode::IsBoolean, proc, lambda, expr),
-                    "char?" => self.compile_unary(OpCode::IsChar, proc, lambda, expr),
-                    "list?" => self.compile_unary(OpCode::IsList, proc, lambda, expr),
-                    "number?" => self.compile_unary(OpCode::IsNumber, proc, lambda, expr),
-                    "null?" => self.compile_unary(OpCode::IsNull, proc, lambda, expr),
-                    "pair?" => self.compile_unary(OpCode::IsPair, proc, lambda, expr),
-                    "port?" => self.compile_unary(OpCode::IsPort, proc, lambda, expr),
-                    "procedure?" => self.compile_unary(OpCode::IsProcedure, proc, lambda, expr),
-                    "string?" => self.compile_unary(OpCode::IsString, proc, lambda, expr),
-                    "symbol?" => self.compile_unary(OpCode::IsSymbol, proc, lambda, expr),
-                    "vector?" => self.compile_unary(OpCode::IsVector, proc, lambda, expr),
                     _ => self.compile_procedure_application(lambda, tail, expr),
                 },
                 _ => self.compile_procedure_application(lambda, tail, expr),
@@ -442,58 +422,6 @@ impl Vm {
         Ok(())
     }
 
-    /// Compile Unary
-    ///
-    /// Compile a procedure that takes one argument (ACC)
-    ///
-    /// # Arguments
-    /// `op` - The opcode operating on the argument
-    /// `name` - The name of the procedure, used for error purposes.
-    /// `lambda` - The lambda to emit bytecode to
-    /// `expr` - The unary expression
-    pub fn compile_unary(
-        &mut self,
-        op: OpCode,
-        name: &str,
-        lambda: &mut Lambda,
-        expr: &Cell,
-    ) -> Result<(), Error> {
-        let rest = cdr!(expr);
-        if rest.is_nil() || !cdr!(rest).is_nil() {
-            return Err(InvalidNumArgs(name.into()));
-        }
-        self.compile_expression(lambda, false, car!(rest))?;
-        lambda.emit(op);
-        Ok(())
-    }
-
-    /// Compile Arg 2
-    ///
-    /// Compile a procedure that takes two arguments (ACC, Arg[0])
-    ///
-    /// # Arguments
-    /// `op` - The opcode operating on the two arguments
-    /// `name` - The name of the procedure, used for error purposes.
-    /// `lambda` - The lambda to emit bytecode to
-    /// `expr` - The arguments to the procedure
-    pub fn compile_arg2(
-        &mut self,
-        op: OpCode,
-        name: &str,
-        lambda: &mut Lambda,
-        expr: &Cell,
-    ) -> Result<(), Error> {
-        let rest = cdr!(expr);
-        if rest.is_nil() || !cdr!(cdr!(rest)).is_nil() {
-            return Err(InvalidNumArgs(name.into()));
-        }
-        self.compile_expression(lambda, false, car!(cdr!(rest)))?;
-        lambda.emit(OpCode::PushAcc);
-        self.compile_expression(lambda, false, car!(rest))?;
-        lambda.emit(op);
-        Ok(())
-    }
-
     /// Compile Quote
     ///
     /// Quote is compiled as a single argument instruction (QUOTE VAL). Quote is
@@ -507,66 +435,6 @@ impl Vm {
         lambda.emit(OpCode::MovImmediate);
         lambda.emit(self.heap.put_cell(expr));
         lambda.emit(VCell::Acc);
-        Ok(())
-    }
-
-    /// Compile Var Arg
-    ///
-    /// Compile a procedure that takes zero or more arguments, using the provided
-    /// instruction to fold the result of every two arguments with the next.
-    ///
-    /// Some opcodes may require -at least one- argument, and will return an error
-    /// if at least one argument is not provided.
-    ///
-    /// # Arguments
-    /// `op` - The opcode operating on the list of arguments
-    /// `name` - The name of the procedure, used for error purposes.
-    /// `lambda` - The lambda to emit bytecode to
-    /// `expr` - The expression (op ...)
-    pub fn compile_var_arg(
-        &mut self,
-        op: OpCode,
-        name: &str,
-        lambda: &mut Lambda,
-        expr: &Cell,
-    ) -> Result<(), Error> {
-        let mut rest = cdr!(expr);
-        let base_value = match op {
-            OpCode::Mul => &Cell::Number(1),
-            _ => &Cell::Number(0),
-        };
-
-        // Special zero arg form. Evaluate to the base value.
-        if rest.is_nil() {
-            if op == OpCode::Sub {
-                return Err(InvalidNumArgs(name.to_string()));
-            }
-            self.compile_quote(lambda, base_value)?;
-            return Ok(());
-        }
-
-        let first_arg = car!(rest);
-        rest = cdr!(rest);
-
-        // Special one arg form. Add it to 0 so that type
-        // checking from the ADD instruction still occurs.
-        if rest.is_nil() {
-            self.compile_quote(lambda, base_value)?;
-            lambda.emit(OpCode::PushAcc);
-            self.compile_expression(lambda, false, first_arg)?;
-            lambda.emit(op);
-            return Ok(());
-        }
-
-        // Each additional arg is added to ACC
-        self.compile_expression(lambda, false, first_arg)?;
-        while !rest.is_nil() {
-            lambda.emit(OpCode::PushAcc);
-            self.compile_expression(lambda, false, car!(rest))?;
-            lambda.emit(op.clone());
-            rest = cdr!(rest);
-        }
-
         Ok(())
     }
 }

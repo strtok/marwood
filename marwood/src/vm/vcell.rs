@@ -1,9 +1,10 @@
 use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
-use crate::vm::Error;
 use crate::vm::Error::ExpectedType;
+use crate::vm::{Error, Vm};
 use std::fmt;
+use std::fmt::{Debug, Formatter};
 use std::rc::Rc;
 
 /// VCell
@@ -16,12 +17,13 @@ use std::rc::Rc;
 /// * References into the heap (Ptr)
 /// * Global and lexical environment slot references (EnvSlot)
 /// * Other runtime sentinel values, such as Undefined and Void.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum VCell {
     Acc,
     BasePointer(usize),
     BasePointerOffset(i64),
     Bool(bool),
+    BuiltInProc(BuiltInProc),
     Closure(usize, usize),
     GlobalEnvSlot(usize),
     LexicalEnv(Rc<LexicalEnvironment>),
@@ -38,6 +40,23 @@ pub enum VCell {
     Undefined,
     Void,
 }
+
+#[derive(Clone)]
+pub struct BuiltInProc(pub fn(&mut Vm) -> Result<(), Error>);
+
+impl Debug for BuiltInProc {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "VCell::SysCall")
+    }
+}
+
+impl PartialEq<Self> for BuiltInProc {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.0 as *mut fn(&mut Vm), other.0 as *mut fn(&mut Vm))
+    }
+}
+
+impl Eq for BuiltInProc {}
 
 pub const ACC_TYPE_TEXT: &str = "#<acc>";
 pub const BASE_POINTER_TYPE_TEXT: &str = "#<base-pointer>";
@@ -56,6 +75,7 @@ pub const OPCODE_TYPE_TEXT: &str = "#<opcode>";
 pub const PAIR_TYPE_TEXT: &str = "#<pair>";
 pub const PTR_TYPE_TEXT: &str = "#<ptr>";
 pub const SYMBOL_TYPE_TEXT: &str = "#<symbol>";
+pub const SYSCALL_TYPE_TEXT: &str = "#<syscall>";
 pub const UNDEFINED_TYPE_TEXT: &str = "#<undefined>";
 pub const VOID_TYPE_TEXT: &str = "#<void>";
 
@@ -83,9 +103,14 @@ impl VCell {
             VCell::Pair(_, _) => PAIR_TYPE_TEXT,
             VCell::Ptr(_) => PTR_TYPE_TEXT,
             VCell::Symbol(_) => SYMBOL_TYPE_TEXT,
+            VCell::BuiltInProc(_) => SYSCALL_TYPE_TEXT,
             VCell::Undefined => UNDEFINED_TYPE_TEXT,
             VCell::Void => VOID_TYPE_TEXT,
         }
+    }
+
+    pub fn syscall(func: fn(&mut Vm) -> Result<(), Error>) -> VCell {
+        VCell::BuiltInProc(BuiltInProc(func))
     }
 
     pub fn undefined() -> VCell {
@@ -176,8 +201,12 @@ impl VCell {
         matches!(self, VCell::Closure(_, _))
     }
 
+    pub fn is_builtin_proc(&self) -> bool {
+        matches!(self, VCell::BuiltInProc(_))
+    }
+
     pub fn is_procedure(&self) -> bool {
-        self.is_lambda() || self.is_closure()
+        self.is_lambda() || self.is_closure() || self.is_builtin_proc()
     }
 
     pub fn is_lexical_env(&self) -> bool {
@@ -322,6 +351,7 @@ impl fmt::Display for VCell {
             VCell::Pair(car, cdr) => write!(f, "(${:02x} . ${:02x})", car, cdr),
             VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
             VCell::Symbol(s) => write!(f, "{}", *s),
+            VCell::BuiltInProc(_) => write!(f, "#<syscall>"),
             VCell::Undefined => write!(f, "undefined"),
             VCell::Void => write!(f, "#<void>"),
         }
