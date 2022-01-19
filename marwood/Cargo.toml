@@ -1,6 +1,6 @@
 [package]
 name = "marwood"
-version = "0.2.0"
+version = "0.2.1"
 description = "Scheme R5RS Virtual Machine"
 repository = "https://github.com/strtok/marwood"
 authors = ["Erik Bremen <strtok@strtok.net>"]

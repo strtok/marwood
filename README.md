@@ -106,7 +106,7 @@ There are three types of built-in procedures:
 
 
 * Derived library procedures that are implemented directly in
-  [prelude.scm](marwood/src/vm/prelude.scm).
+  [prelude.scm](marwood/prelude.scm).
 
 ## Procedure Application
 
