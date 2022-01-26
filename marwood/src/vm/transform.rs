@@ -20,10 +20,26 @@ macro_rules! cdr {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Pattern {
+    variables: Vec<Cell>,
+    pattern: Cell,
+}
+
+impl Pattern {
+    fn new(pattern: Cell, variables: Vec<Cell>) -> Pattern {
+        Pattern { pattern, variables }
+    }
+
+    fn is_variable(&self, cell: &Cell) -> bool {
+        self.variables.iter().any(|it| it == cell)
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct Transform {
     keyword: Cell,
     ellipsis: Cell,
-    syntax_rules: Vec<(Cell, Cell)>,
+    syntax_rules: Vec<(Pattern, Cell)>,
     literals: Vec<Cell>,
 }
 
@@ -84,8 +100,9 @@ impl Transform {
         for it in syntax_rules {
             let pattern = car!(it).clone();
             let template = car!(cdr!(it)).clone();
-            Self::check_pattern_syntax(&pattern, &ellipsis, &literals)?;
-            Self::check_template_syntax(&pattern, &ellipsis, &literals)?;
+            let variables = Self::check_pattern_syntax(&pattern, &ellipsis, &literals)?;
+            let pattern = Pattern::new(pattern.clone(), variables.into_iter().cloned().collect());
+            Self::check_template_syntax(&template, &pattern, &ellipsis)?;
             syntax_rules_vec.push((pattern, template));
         }
 
@@ -118,70 +135,110 @@ impl Transform {
     ///   by a pattern variable
     /// * An ellipsis can be the last element in a list, unless it's an improper
     ///   list.
-    fn check_pattern_syntax(
-        pattern: &Cell,
-        ellipsis: &Cell,
-        literals: &[Cell],
-    ) -> Result<(), Error> {
+    fn check_pattern_syntax<'a>(
+        pattern: &'a Cell,
+        ellipsis: &'a Cell,
+        literals: &'a [Cell],
+    ) -> Result<Vec<&'a Cell>, Error> {
         if !pattern.is_pair() {
             return Err(InvalidDefineSyntax("pattern must be a ()".into()));
         }
         let mut variables = vec![];
-        fn check_pattern_syntax<'a, 'b>(
-            pattern: &'a Cell,
-            ellipsis: &'a Cell,
-            literals: &'a [Cell],
-            variables: &'b mut Vec<&'a Cell>,
-        ) -> Result<(), Error> {
-            if pattern.is_pair() && car!(pattern) == ellipsis {
-                return Err(InvalidDefineSyntax("ellipsis out of place".into()));
-            }
-            let improper = pattern.is_improper_list();
-            let mut ellipsis_in_pattern = false;
-            let mut cur = pattern.iter().peekable();
-            while let Some(pattern) = cur.next() {
-                match pattern {
-                    Cell::Pair(_, _) => {
-                        check_pattern_syntax(pattern, ellipsis, literals, variables)?
-                    }
-                    Cell::Symbol(sym) => {
-                        if literals.iter().any(|it| it == pattern) || sym == "_" {
-                            continue;
-                        }
+        Self::check_pattern_syntax_recurse(cdr!(pattern), ellipsis, literals, &mut variables)?;
+        Ok(variables)
+    }
 
-                        if pattern == ellipsis {
-                            if ellipsis_in_pattern || (improper && cur.peek().is_none()) {
-                                return Err(InvalidDefineSyntax("ellipses out of place".into()));
-                            }
-                            ellipsis_in_pattern = true;
-                            continue;
-                        }
-
-                        // All other identifiers must be variables
-                        if variables.iter().any(|it| *it == pattern) {
-                            return Err(InvalidDefineSyntax(format!(
-                                "the pattern variable {} was used more than once",
-                                pattern
-                            )));
-                        } else {
-                            variables.push(pattern);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            Ok(())
+    fn check_pattern_syntax_recurse<'a, 'b>(
+        pattern: &'a Cell,
+        ellipsis: &'a Cell,
+        literals: &'a [Cell],
+        variables: &'b mut Vec<&'a Cell>,
+    ) -> Result<(), Error> {
+        if pattern.is_pair() && car!(pattern) == ellipsis {
+            return Err(InvalidDefineSyntax("ellipsis out of place".into()));
         }
-        check_pattern_syntax(cdr!(pattern), ellipsis, literals, &mut variables)
+        let improper = pattern.is_improper_list();
+        let mut ellipsis_in_pattern = false;
+        let mut iter = pattern.iter().peekable();
+        while let Some(pattern) = iter.next() {
+            match pattern {
+                Cell::Pair(_, _) => {
+                    Self::check_pattern_syntax_recurse(pattern, ellipsis, literals, variables)?
+                }
+                Cell::Symbol(sym) => {
+                    if literals.iter().any(|it| it == pattern) || sym == "_" {
+                        if iter.peek() == Some(&ellipsis) {
+                            return Err(InvalidDefineSyntax(
+                                "ellipsis must follow a pattern variable".into(),
+                            ));
+                        }
+                        continue;
+                    }
+
+                    if pattern == ellipsis {
+                        if ellipsis_in_pattern || (improper && iter.peek().is_none()) {
+                            return Err(InvalidDefineSyntax("ellipses out of place".into()));
+                        }
+                        ellipsis_in_pattern = true;
+                        continue;
+                    }
+
+                    // All other identifiers must be variables
+                    if variables.iter().any(|it| *it == pattern) {
+                        return Err(InvalidDefineSyntax(format!(
+                            "the pattern variable {} was used more than once",
+                            pattern
+                        )));
+                    } else {
+                        variables.push(pattern);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Ok(())
     }
 
     /// Check Template Syntax
+    ///
+    /// * Any symbol preceding an ellipsis must be a pattern variable
+    /// * Pattern variables may not be expanded multiple times (TODO)
+    /// * Like patterns, ellipsis must not be in the tail position of an
+    ///   improper list.
     fn check_template_syntax(
-        _pattern: &Cell,
-        _ellipsis: &Cell,
-        _literals: &[Cell],
+        template: &Cell,
+        pattern: &Pattern,
+        ellipsis: &Cell,
     ) -> Result<(), Error> {
+        let improper = template.is_improper_list();
+        let mut ellipsis_in_pattern = false;
+        let mut iter = template.iter().peekable();
+
+        if template.is_pair() && car!(template) == ellipsis {
+            return Err(InvalidDefineSyntax("ellipsis out of place".into()));
+        }
+
+        while let Some(template) = iter.next() {
+            match template {
+                Cell::Pair(_, _) => Self::check_template_syntax(template, pattern, ellipsis)?,
+                Cell::Symbol(_) => {
+                    if !pattern.is_variable(template) && iter.peek() == Some(&ellipsis) {
+                        return Err(InvalidDefineSyntax(
+                            "ellipses must follow a pattern variable".into(),
+                        ));
+                    }
+                    if template == ellipsis {
+                        if ellipsis_in_pattern || (improper && iter.peek().is_none()) {
+                            return Err(InvalidDefineSyntax("ellipses out of place".into()));
+                        }
+                        ellipsis_in_pattern = true;
+                        continue;
+                    }
+                }
+                _ => {}
+            }
+        }
         Ok(())
     }
 
@@ -227,17 +284,19 @@ impl Transform {
 
         for rule in &self.syntax_rules {
             let mut pattern_variables = vec![];
-            self.find_pattern_variables(cdr!(&rule.0), &mut pattern_variables);
+            self.find_pattern_variables(cdr!(&rule.0.pattern), &mut pattern_variables);
             let mut env = PatternEnvironment::new();
-            env.variables = pattern_variables;
-            if self.pattern_match(cdr!(&rule.0), cdr!(expr), &mut env) {
+            if self.pattern_match(cdr!(&rule.0.pattern), cdr!(expr), &mut env) {
                 return self
-                    .expand(&rule.1, &mut env)
+                    .expand(&rule.1, &rule.0, &mut env)
                     .ok_or_else(|| InvalidSyntax(self.keyword.to_string()));
             }
         }
 
-        return Err(InvalidSyntax(format!("bad use of {}", self.keyword)));
+        return Err(InvalidSyntax(format!(
+            "no matching syntax for {}",
+            self.keyword
+        )));
     }
 
     /// Pattern Match
@@ -261,20 +320,63 @@ impl Transform {
         }
         let mut expr_iter = expr.iter().peekable();
         let mut pattern_iter = pattern.iter().peekable();
-        if pattern_iter.peek().is_none() {
-            return expr_iter.peek().is_none();
-        }
 
-        let mut pattern = pattern_iter.next().unwrap();
+        let mut expr;
+        let mut pattern = &Cell::Nil;
+
+        let mut in_ellipsis = false;
+
         loop {
-            let in_ellipsis = pattern_iter.peek() == Some(&&self.ellipsis);
-
-            let expr = match expr_iter.next() {
+            // Get the next expression
+            // If there is no next expression, then:
+            //   * If we are in an ellipsis expansion, move the pattern iterator
+            //     past it so we can see if more pattern remains.
+            //   * If any pattern remains, there is no match.
+            //   * If pattern was exhausted, then the match is complete.
+            expr = match expr_iter.next() {
                 Some(expr) => expr,
                 None => {
-                    return in_ellipsis;
+                    if in_ellipsis {
+                        pattern_iter.next();
+                    }
+                    return match pattern_iter.next() {
+                        Some(_) => {
+                            if pattern_iter.peek() == Some(&&self.ellipsis) {
+                                pattern_iter.next();
+                                pattern_iter.peek().is_none()
+                            } else {
+                                false
+                            }
+                        }
+                        None => true,
+                    };
                 }
             };
+
+            // Get the next pattern.
+            // * Reuse the same pattern if we're in an ellipsis expansion
+            //   and based on the expression length there's more to capture.
+            pattern = match in_ellipsis {
+                true => {
+                    if pattern_iter.len() == expr_iter.len() + 2 {
+                        pattern_iter.next();
+                        match pattern_iter.next() {
+                            Some(pattern) => pattern,
+                            None => return expr_iter.peek().is_none(),
+                        }
+                    } else {
+                        pattern
+                    }
+                }
+                false => match pattern_iter.next() {
+                    Some(pattern) => pattern,
+                    None => {
+                        return false;
+                    }
+                },
+            };
+
+            in_ellipsis = pattern_iter.peek() == Some(&&self.ellipsis);
 
             match pattern {
                 Cell::Symbol(_) => {
@@ -291,27 +393,6 @@ impl Transform {
                     }
                 }
             }
-
-            if in_ellipsis {
-                let pattern_len = pattern_iter.peek().map_or(0, |it| it.len()) - 1;
-                let expr_len = expr_iter.peek().map_or(0, |it| it.len());
-                if expr_len == pattern_len {
-                    pattern_iter.next();
-                    pattern = match pattern_iter.next() {
-                        Some(pattern) => pattern,
-                        None => {
-                            return expr_iter.peek().is_none();
-                        }
-                    }
-                }
-            } else {
-                pattern = match pattern_iter.next() {
-                    Some(pattern) => pattern,
-                    None => {
-                        return expr_iter.peek().is_none();
-                    }
-                }
-            }
         }
     }
 
@@ -323,10 +404,15 @@ impl Transform {
     /// # Arguments
     /// `template` - The template to use for expansion
     /// `bindings` The matched bindings from the pattern
-    fn expand(&self, template: &Cell, env: &mut PatternEnvironment) -> Option<Cell> {
+    fn expand(
+        &self,
+        template: &Cell,
+        pattern: &Pattern,
+        env: &mut PatternEnvironment,
+    ) -> Option<Cell> {
         match template {
             Cell::Symbol(_) => {
-                return if env.is_variable(template) {
+                return if pattern.is_variable(template) {
                     env.get_binding(template).cloned()
                 } else {
                     Some(template.clone())
@@ -338,7 +424,7 @@ impl Transform {
                 let mut template = template_iter.next().unwrap();
                 loop {
                     let in_ellipsis = template_iter.peek() == Some(&&self.ellipsis);
-                    match self.expand(template, env) {
+                    match self.expand(template, pattern, env) {
                         Some(cell) => {
                             v.push(cell);
                             if in_ellipsis {
@@ -376,20 +462,11 @@ impl Transform {
 struct PatternEnvironment<'a> {
     /// Bindings are pairs of matched (pattern expr)
     bindings: Vec<(&'a Cell, &'a Cell)>,
-
-    /// Variables are a list of all matching pattern
-    /// variable identifiers and can be used to test if
-    /// an identifier in the template is a pattern variable
-    /// or not.
-    variables: Vec<&'a Cell>,
 }
 
 impl<'a> PatternEnvironment<'a> {
     fn new() -> PatternEnvironment<'a> {
-        PatternEnvironment {
-            bindings: vec![],
-            variables: vec![],
-        }
+        PatternEnvironment { bindings: vec![] }
     }
 
     fn add_binding(&mut self, pattern: &'a Cell, expr: &'a Cell) {
@@ -402,10 +479,6 @@ impl<'a> PatternEnvironment<'a> {
         } else {
             None
         }
-    }
-
-    fn is_variable(&self, expr: &Cell) -> bool {
-        self.variables.iter().any(|it| *it == expr)
     }
 }
 
@@ -484,11 +557,91 @@ mod tests {
         "#
         ))
         .is_err());
+
+        // ellipsis in head position
+        assert!(Transform::try_new(&parse!(
+            r#"
+        (define-syntax bad
+              (syntax-rules ()
+                [(_ (...)) ()]))
+        "#
+        ))
+        .is_err());
+
+        // Ellipsis in improper list tail
         assert!(Transform::try_new(&parse!(
             r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ foo . ...) ()]))
+        "#
+        ))
+        .is_err());
+
+        // Ellipsis matching the keyword
+        assert!(Transform::try_new(&parse!(
+            r#"
+        (define-syntax bad
+              (syntax-rules ()
+                [(_ ...) ()]))
+        "#
+        ))
+        .is_err());
+
+        // Ellipsis matching _
+        assert!(Transform::try_new(&parse!(
+            r#"
+        (define-syntax bad
+              (syntax-rules ()
+                [(_ _ ...) ()]))
+        "#
+        ))
+        .is_err());
+
+        // Ellipsis matching a literal
+        assert!(Transform::try_new(&parse!(
+            r#"
+        (define-syntax bad
+              (syntax-rules (literal)
+                [(_ literal ...) ()]))
+        "#
+        ))
+        .is_err());
+    }
+
+    #[test]
+    fn bad_template_syntax() {
+        // Expansion of a non-pattern variavle
+        assert!(Transform::try_new(&parse!(
+            r#"
+        (define-syntax bad
+              (syntax-rules ()
+                [(_ a ...) (b ...)]))
+        "#
+        ))
+        .is_err());
+        // Invalid ellipsis position
+        assert!(Transform::try_new(&parse!(
+            r#"
+        (define-syntax bad
+              (syntax-rules ()
+                [(_ a ...) (...)]))
+        "#
+        ))
+        .is_err());
+        assert!(Transform::try_new(&parse!(
+            r#"
+        (define-syntax bad
+              (syntax-rules ()
+                [(_ a ...) (a ... ...)]))
+        "#
+        ))
+        .is_err());
+        assert!(Transform::try_new(&parse!(
+            r#"
+        (define-syntax bad
+              (syntax-rules ()
+                [(_ a ...) (a . ...)]))
         "#
         ))
         .is_err());
@@ -569,7 +722,7 @@ mod tests {
             r#"
         (define-syntax sum
               (syntax-rules ()
-                [(sum *a ...) (+ *a ...)]
+                [(sum a* ...) (+ a* ...)]
         ))
         "#
         ))
@@ -583,6 +736,49 @@ mod tests {
             transform.transform(&parse!("(sum 10 20)")),
             Ok(parse!("(+ 10 20)"))
         );
+    }
+
+    #[test]
+    fn expansion_edge_cases() {
+        {
+            let transform = Transform::try_new(&parse!(
+                r#"
+            (define-syntax sum
+                  (syntax-rules ()
+                    [(sum a1 a* ... a2) (+ a1 a* ... a2)]
+            ))
+            "#
+            ))
+            .unwrap();
+            assert!(transform.transform(&parse!("(sum 10 20)")).is_err());
+            assert_eq!(
+                transform.transform(&parse!("(sum 10 20 30)")),
+                Ok(parse!("(+ 10 20 30)"))
+            );
+        }
+        {
+            let transform = Transform::try_new(&parse!(
+                r#"
+            (define-syntax sum
+                  (syntax-rules ()
+                    [(sum a1 a* ...) (+ a1 a* ...)]
+            ))
+            "#
+            ))
+            .unwrap();
+            assert_eq!(
+                transform.transform(&parse!("(sum 10)")),
+                Ok(parse!("(+ 10)"))
+            );
+            assert_eq!(
+                transform.transform(&parse!("(sum 10 20)")),
+                Ok(parse!("(+ 10 20)"))
+            );
+            assert_eq!(
+                transform.transform(&parse!("(sum 10 20 30)")),
+                Ok(parse!("(+ 10 20 30)"))
+            );
+        }
     }
 
     #[test]

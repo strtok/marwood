@@ -321,6 +321,8 @@ pub struct IntoIter<'a> {
     next: &'a Cell,
 }
 
+impl<'a> ExactSizeIterator for IntoIter<'a> {}
+
 impl<'a> Iterator for IntoIter<'a> {
     type Item = &'a Cell;
 
@@ -339,6 +341,11 @@ impl<'a> Iterator for IntoIter<'a> {
             }
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.next.len();
+        (len, Some(len))
+    }
 }
 
 impl<'a> IntoIterator for &'a Cell {
@@ -353,6 +360,8 @@ impl<'a> IntoIterator for &'a Cell {
 pub struct Iter {
     next: Option<Cell>,
 }
+
+impl ExactSizeIterator for Iter {}
 
 impl Iterator for Iter {
     type Item = Cell;
@@ -369,6 +378,14 @@ impl Iterator for Iter {
                 cell
             }
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = match &self.next {
+            Some(cell) => cell.len(),
+            None => 0,
+        };
+        (len, Some(len))
     }
 }
 
