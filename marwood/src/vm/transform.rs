@@ -380,7 +380,13 @@ impl Transform {
 
             match pattern {
                 Cell::Symbol(_) => {
-                    env.add_binding(pattern, expr);
+                    if self.is_literal(pattern) {
+                        if pattern != expr {
+                            return false;
+                        }
+                    } else if pattern != &cell!["_"] {
+                        env.add_binding(pattern, expr);
+                    }
                 }
                 Cell::Pair(_, _) => {
                     if !self.pattern_match(pattern, expr, env) {
@@ -779,6 +785,74 @@ mod tests {
                 Ok(parse!("(+ 10 20 30)"))
             );
         }
+    }
+
+    #[test]
+    fn literal() {
+        let transform = Transform::try_new(&parse!(
+            r#"
+            (define-syntax sum
+                  (syntax-rules (add sub)
+                    [(math add a1 a2) (+ a1 a2)]
+                    [(math sub a1 a2) (- a1 a2)]                    
+            ))
+            "#
+        ))
+        .unwrap();
+        assert!(transform
+            .transform(&parse!("(math multiply 10 10)"))
+            .is_err());
+        assert_eq!(
+            transform.transform(&parse!("(math add 10 20)")),
+            Ok(parse!("(+ 10 20)"))
+        );
+        assert_eq!(
+            transform.transform(&parse!("(math sub 10 20)")),
+            Ok(parse!("(- 10 20)"))
+        );
+    }
+
+    #[test]
+    fn underscore() {
+        let transform = Transform::try_new(&parse!(
+            r#"
+            (define-syntax sum
+                  (syntax-rules ()
+                    [(sum _ a1 _ a2) (+ a1 a2)]
+            ))
+            "#
+        ))
+        .unwrap();
+        assert!(transform.transform(&parse!("(sum)")).is_err());
+        assert!(transform.transform(&parse!("(sum 10)")).is_err());
+        assert!(transform.transform(&parse!("(sum 10 20)")).is_err());
+        assert!(transform.transform(&parse!("(sum 10 20 30 )")).is_err());
+        assert_eq!(
+            transform.transform(&parse!("(sum 10 20 30 40)")),
+            Ok(parse!("(+ 20 40)"))
+        );
+    }
+
+    #[test]
+    fn underscore_as_literal() {
+        let transform = Transform::try_new(&parse!(
+            r#"
+            (define-syntax sum
+                  (syntax-rules (_)
+                    [(sum _ a1 _ a2) (+ a1 a2)]
+            ))
+            "#
+        ))
+        .unwrap();
+        assert!(transform.transform(&parse!("(sum)")).is_err());
+        assert!(transform.transform(&parse!("(sum 10)")).is_err());
+        assert!(transform.transform(&parse!("(sum 10 20)")).is_err());
+        assert!(transform.transform(&parse!("(sum 10 20 30 )")).is_err());
+        assert!(transform.transform(&parse!("(sum 10 20 30 40)")).is_err());
+        assert_eq!(
+            transform.transform(&parse!("(sum _ 20 _ 40)")),
+            Ok(parse!("(+ 20 40)"))
+        );
     }
 
     #[test]
