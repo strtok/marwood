@@ -226,6 +226,19 @@ impl GlobalEnvironment {
         }
     }
 
+    /// Get
+    ///
+    /// Given a symbol symbol reference, return the object bound
+    /// to the symbole or None. This provides a deep binding lookup
+    /// by symbol.
+    ///
+    /// # Arguments
+    /// `sym` - The symbol to provide a binding for
+    pub fn get<T: Into<usize>>(&mut self, sym: T) -> Option<VCell> {
+        let sym: usize = sym.into();
+        self.bindings.get(&sym).map(|slot| self.get_slot(*slot))
+    }
+
     /// Get Symbol
     ///
     /// Get the symbol bound to an environment slot. This is a reverse lookup

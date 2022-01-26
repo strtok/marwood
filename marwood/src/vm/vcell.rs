@@ -1,6 +1,7 @@
 use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
+use crate::vm::transform::Transform;
 use crate::vm::Error::ExpectedType;
 use crate::vm::{Error, Vm};
 use std::fmt;
@@ -31,6 +32,7 @@ pub enum VCell {
     LexicalEnvPtr(usize, usize),
     FixedNum(i64),
     InstructionPointer(usize, usize),
+    Macro(Rc<Transform>),
     Lambda(Rc<Lambda>),
     Nil,
     OpCode(OpCode),
@@ -64,6 +66,7 @@ pub const BASE_POINTER_OFFSET_TYPE_TEXT: &str = "#<base-pointer-offset>";
 pub const BOOL_TYPE_TEXT: &str = "#<bool>";
 pub const CLOSURE_TYPE_TEXT: &str = "#<closure>";
 pub const GLOBAL_ENV_SLOT_TYPE_TEXT: &str = "#<global-environment-slot>";
+pub const MACRO_TYPE_TEXT: &str = "#<macro>";
 pub const LEXICAL_ENV_TYPE_TEXT: &str = "#<lexical-environment>";
 pub const LEXICAL_ENV_TYPE_SLOT: &str = "#<lexical-environment-slot>";
 pub const LEXICAL_ENV_POINTER_TYPE_TEXT: &str = "#<lexical-environment-pointer>";
@@ -104,6 +107,7 @@ impl VCell {
             VCell::Ptr(_) => PTR_TYPE_TEXT,
             VCell::Symbol(_) => SYMBOL_TYPE_TEXT,
             VCell::BuiltInProc(_) => SYSCALL_TYPE_TEXT,
+            VCell::Macro(_) => MACRO_TYPE_TEXT,
             VCell::Undefined => UNDEFINED_TYPE_TEXT,
             VCell::Void => VOID_TYPE_TEXT,
         }
@@ -213,6 +217,10 @@ impl VCell {
         matches!(self, VCell::LexicalEnv(_))
     }
 
+    pub fn is_macro(&self) -> bool {
+        matches!(self, VCell::Macro(_))
+    }
+
     pub fn as_opcode(&self) -> Result<OpCode, Error> {
         match self {
             VCell::OpCode(op) => Ok(op.clone()),
@@ -252,6 +260,13 @@ impl VCell {
         match self {
             VCell::Lambda(lambda) => Ok(&*lambda),
             _ => Err(ExpectedType(LAMBDA_TYPE_TEXT, self.type_text())),
+        }
+    }
+
+    pub fn as_macro(&self) -> Result<&Transform, Error> {
+        match self {
+            VCell::Macro(transform) => Ok(&*transform),
+            _ => Err(ExpectedType(MACRO_TYPE_TEXT, self.type_text())),
         }
     }
 
@@ -342,6 +357,7 @@ impl fmt::Display for VCell {
             VCell::InstructionPointer(lambda, ip) => {
                 write!(f, "%ip[${:02x}][${:02x}]", *lambda, *ip)
             }
+            VCell::Macro(_) => write!(f, "#<macro>"),
             VCell::LexicalEnv(_) => write!(f, "#<lexical-environment>"),
             VCell::LexicalEnvSlot(slot) => write!(f, "env[${:02x}]", slot),
             VCell::LexicalEnvPtr(env, slot) => write!(f, "env[${:02x}][${:02x}]", env, slot),

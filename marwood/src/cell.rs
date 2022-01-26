@@ -15,6 +15,7 @@ pub enum Cell {
     // Types that exist in VCell, but need Cell representation for
     // printing purposes. These are never created by the lexer/parser.
     Closure,
+    Macro,
     Lambda,
     Undefined,
     Void,
@@ -90,6 +91,10 @@ impl Cell {
         IntoIter { next: self }
     }
 
+    pub fn iter_improper(&self) -> IntoIter {
+        IntoIter { next: self }
+    }
+
     pub fn collect_vec(&self) -> Vec<&Cell> {
         self.iter().collect::<Vec<_>>()
     }
@@ -119,6 +124,29 @@ impl Cell {
         } else {
             false
         }
+    }
+
+    pub fn is_improper_list(&self) -> bool {
+        if self.is_pair() {
+            let mut rest = self.cdr().unwrap();
+            loop {
+                if !rest.is_pair() {
+                    return !rest.is_nil();
+                } else {
+                    rest = rest.cdr().unwrap();
+                }
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.iter().count()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn is_quote(&self) -> bool {
@@ -297,12 +325,18 @@ impl<'a> Iterator for IntoIter<'a> {
     type Item = &'a Cell;
 
     fn next(&mut self) -> Option<Self::Item> {
+        const NIL: Cell = Cell::Nil;
         match self.next {
             Cell::Pair(car, cdr) => {
                 self.next = cdr.borrow();
                 Some(car.borrow())
             }
-            _ => None,
+            Cell::Nil => None,
+            _ => {
+                let cell = self.next;
+                self.next = &NIL;
+                Some(cell)
+            }
         }
     }
 }
@@ -329,7 +363,11 @@ impl Iterator for Iter {
                 self.next = Some(*cdr);
                 Some(*car)
             }
-            _ => None,
+            Some(Cell::Nil) => None,
+            cell => {
+                self.next = Some(Cell::Nil);
+                cell
+            }
         }
     }
 }
@@ -391,6 +429,9 @@ impl Display for Cell {
             }
             Cell::Closure => {
                 write!(f, "#<procedure>")
+            }
+            Cell::Macro => {
+                write!(f, "#<macro>")
             }
             Cell::Lambda => {
                 write!(f, "#<procedure>")
@@ -500,26 +541,39 @@ mod tests {
     fn improper_list() {
         let improper_list = Cell::new_improper_list(vec![cell![1], cell![2]].into_iter(), cell![3]);
         assert!(!improper_list.is_list());
+        assert!(improper_list.is_improper_list());
         assert_eq!(improper_list, cons!(cell!(1), cons!(cell!(2), cell!(3))));
         assert_eq!(format!("{}", improper_list), "(1 2 . 3)");
     }
 
     #[test]
-    fn into_iter() {
+    fn iter() {
         assert_eq!(
             list![1, 2, 3].iter().cloned().collect::<Vec<Cell>>(),
             vec![cell![1], cell![2], cell![3]]
         );
-        assert_eq!(cell![1].iter().cloned().collect::<Vec<Cell>>(), vec![]);
+        assert_eq!(
+            cell![1].iter().cloned().collect::<Vec<Cell>>(),
+            vec![cell![1]]
+        );
     }
 
     #[test]
-    fn iter() {
+    fn into_iter() {
         assert_eq!(
             list![1, 2, 3].into_iter().collect::<Vec<Cell>>(),
             vec![cell![1], cell![2], cell![3]]
         );
-        assert_eq!(cell![1].into_iter().collect::<Vec<Cell>>(), vec![]);
+        assert_eq!(cell![1].into_iter().collect::<Vec<Cell>>(), vec![cell![1]]);
+    }
+
+    #[test]
+    fn iter_improper() {
+        let improper_list = Cell::new_improper_list(vec![cell![1], cell![2]].into_iter(), cell![3]);
+        assert_eq!(
+            improper_list.iter_improper().collect::<Vec<&Cell>>(),
+            vec![&cell![1], &cell![2], &cell![3]]
+        );
     }
 
     #[test]

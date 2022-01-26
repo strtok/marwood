@@ -17,6 +17,7 @@ pub mod lambda;
 pub mod opcode;
 pub mod run;
 pub mod stack;
+pub mod transform;
 pub mod vcell;
 
 const HEAP_SIZE: usize = 1024;
@@ -112,6 +113,9 @@ pub enum Error {
     #[error("invalid bytecode")]
     InvalidBytecode,
 
+    #[error("invalid define syntax: '{0}'")]
+    InvalidDefineSyntax(String),
+
     #[error("call of non-procedure: {0}")]
     InvalidProcedure(String),
 
@@ -121,8 +125,14 @@ pub enum Error {
     #[error("invalid use of syntactic keyword {0}")]
     InvalidSyntactic(String),
 
+    #[error("invalid syntax: {0}")]
+    InvalidSyntax(String),
+
     #[error("lambda require at least one expression")]
     LambdaMissingExpression,
+
+    #[error("misplaced macro keyword {0}")]
+    MisplacedMacroKeyword(String),
 
     #[error("unknown procedure {0}")]
     UnknownProcedure(String),

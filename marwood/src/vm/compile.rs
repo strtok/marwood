@@ -2,6 +2,7 @@ use crate::cell::Cell;
 use crate::vm::environment::{free_symbols, BindingLocation};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
+use crate::vm::transform::Transform;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
 use crate::vm::Error::{
@@ -10,6 +11,7 @@ use crate::vm::Error::{
 use crate::vm::{Error, Vm};
 use log::trace;
 use std::ops::Deref;
+use std::rc::Rc;
 
 macro_rules! car {
     ($cell:expr) => {{
@@ -57,6 +59,7 @@ impl Vm {
     /// Compile expression compiles a single expression, emitting its byte code to the currently
     /// compiling procedure.
     ///
+    /// # Arguments
     /// `lambda` - The lambda to emit byte code to
     /// `expr` - The expression to compile.
     /// `tail` - Tail is true if this expression is in a tail position.
@@ -67,24 +70,71 @@ impl Vm {
         expr: &Cell,
     ) -> Result<(), Error> {
         match expr {
-            Cell::Pair(car, cdr) => match car.deref() {
-                Cell::Symbol(proc) => match proc.as_str() {
-                    "define" => self.compile_define(lambda, expr),
-                    "lambda" | "λ" => self.compile_lambda(lambda, expr, false),
-                    "quote" => self.compile_quote(lambda, car!(cdr)),
-                    "if" => self.compile_if(lambda, tail, expr),
-                    _ => self.compile_procedure_application(lambda, tail, expr),
-                },
-                _ => self.compile_procedure_application(lambda, tail, expr),
-            },
+            Cell::Pair(_, _) => self.compile_procedure_application(lambda, tail, expr),
             Cell::Symbol(_) => self.compile_symbol_expression(lambda, expr),
             Cell::Nil => Err(UnquotedNil),
             Cell::Number(_)
             | Cell::Bool(_)
-            | Cell::Void
-            | Cell::Undefined
             | Cell::Closure
+            | Cell::Macro
+            | Cell::Undefined
+            | Cell::Void
             | Cell::Lambda => self.compile_quote(lambda, expr),
+        }
+    }
+
+    /// Compile Procedure Application
+    ///
+    /// Apply the given procedure by either:
+    /// * Expanding a macro if proc is a macro in the current
+    ///   environment
+    /// * Emitting inlined bytecode for built-in primitives, such
+    ///   as lambda and define
+    /// * Compiling a runtime procedure application
+    ///
+    /// # Arguments
+    /// `lambda` - The lambda to emit byte code to
+    /// `tail` - Tail is true if this expression is in a tail position.
+    /// `expr` - The expression to compile.
+    pub fn compile_procedure_application(
+        &mut self,
+        lambda: &mut Lambda,
+        tail: bool,
+        expr: &Cell,
+    ) -> Result<(), Error> {
+        let proc = expr.car().unwrap();
+        let rest = expr.cdr().unwrap();
+
+        if let Some(sym) = self.heap.get_sym_ref(proc) {
+            let vcell = match self.globenv.get(sym.as_ptr()?) {
+                Some(VCell::Ptr(ptr)) => Some(self.heap.get_at_index(ptr).clone()),
+                vcell => vcell,
+            };
+
+            if let Some(VCell::Macro(transform)) = vcell {
+                let expansion = transform.transform(expr)?;
+                trace!("macro expansion: {} => {}", expr, expansion);
+                self.compile_expression(lambda, tail, &expansion)?;
+                return Ok(());
+            }
+        }
+
+        //
+        // if car.deref().is_symbol() {
+        //     let sym_ref = self.heap.put(car);
+        //     self.globenv.get_binding()
+        // }
+
+        match proc.deref() {
+            Cell::Symbol(proc) => match proc.as_str() {
+                "define" => self.compile_define(lambda, expr),
+                "define-syntax" => self.compile_define_syntax(lambda, expr),
+                "lambda" | "λ" => self.compile_lambda(lambda, expr, false),
+                "quote" => self.compile_quote(lambda, car!(rest)),
+                "if" => self.compile_if(lambda, tail, expr),
+                _ => self.compile_runtime_procedure_application(lambda, tail, expr),
+            },
+            _ => self.compile_runtime_procedure_application(lambda, tail, expr),
         }
     }
 
@@ -176,6 +226,30 @@ impl Vm {
         let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
         lambda.emit(OpCode::Mov);
         lambda.emit(VCell::Acc);
+        lambda.emit(env_slot);
+        lambda.emit(OpCode::MovImmediate);
+        lambda.emit(VCell::void());
+        lambda.emit(VCell::Acc);
+        Ok(())
+    }
+
+    /// Compile Define Syntax
+    ///
+    /// Compile a top-level macro to a VCell::Transform, storing it in the
+    /// heap.
+    ///
+    /// `lambda` - The lambda to emit bytecode to
+    /// `expr` - (define variable expression)    
+    pub fn compile_define_syntax(&mut self, lambda: &mut Lambda, expr: &Cell) -> Result<(), Error> {
+        let transform = Transform::try_new(expr)?;
+        let symbol = transform.keyword().clone();
+        let transform = self.heap.put(VCell::Macro(Rc::new(transform)));
+
+        let sym_ref = self.heap.put_cell(&symbol).as_ptr()?;
+        let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
+
+        lambda.emit(OpCode::MovImmediate);
+        lambda.emit(transform);
         lambda.emit(env_slot);
         lambda.emit(OpCode::MovImmediate);
         lambda.emit(VCell::void());
@@ -303,7 +377,7 @@ impl Vm {
         }
     }
 
-    /// Compile Procedure Application
+    /// Compile Runtime Procedure Application
     ///
     /// Evaluate the argument expressions in expr, and then apply their
     /// results to proc.
@@ -325,7 +399,7 @@ impl Vm {
     /// `proc` - The procedure to apply
     /// `expr` - The procedure to apply
     /// `tail` - Tail is true if this procedure application is in a tail position.
-    pub fn compile_procedure_application(
+    pub fn compile_runtime_procedure_application(
         &mut self,
         lambda: &mut Lambda,
         tail: bool,

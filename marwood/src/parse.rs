@@ -1,6 +1,7 @@
 use crate::cell::Cell;
 use crate::lex::{Token, TokenType};
 use crate::list;
+use crate::parse::Error::ExpectedListTerminator;
 use std::iter::Peekable;
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
@@ -13,6 +14,8 @@ pub enum Error {
     ExpectedOneTokenAfterDot,
     #[error("expected at least one token before .")]
     ExpectedTokenBeforeDot,
+    #[error("expected list terminator {0}, but encountered {1}")]
+    ExpectedListTerminator(char, char),
 }
 
 /// Parse one expression from the token stream.
@@ -32,7 +35,7 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
     match token.token_type {
         TokenType::SingleQuote => Ok(list!["quote", parse(text, cur)?]),
         TokenType::RightParen => Err(Error::UnexpectedToken(")".into())),
-        TokenType::LeftParen => parse_list(text, cur),
+        TokenType::LeftParen => parse_list(text, cur, token),
         TokenType::True => Ok(Cell::Bool(true)),
         TokenType::False => Ok(Cell::Bool(false)),
         TokenType::Symbol => Ok(Cell::new_symbol(token.span(text))),
@@ -55,15 +58,27 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
 /// *`cur` - an iterator over the token stream. The parser will only
 ///          advance the iterator enough to satisfy one expression.
 /// *`text` - the text backed by the token spans.
+/// * `start_token` - The start of list token, used to match the end of
+///     list token.
 fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
+    start_token: &Token,
 ) -> Result<Cell, Error> {
     let mut list = vec![];
     loop {
         match cur.peek().ok_or(Error::Eof)?.token_type {
             TokenType::RightParen => {
-                cur.next();
+                let start_token = start_token.span(text).chars().next().unwrap();
+                let end_token = cur.next().unwrap().span(text).chars().next().unwrap();
+                if !match start_token {
+                    '(' => end_token == ')',
+                    '[' => end_token == ']',
+                    '{' => end_token == '}',
+                    _ => false,
+                } {
+                    return Err(ExpectedListTerminator(start_token, end_token));
+                }
                 return Ok(Cell::new_list(list));
             }
             TokenType::Dot => {
@@ -259,5 +274,15 @@ mod tests {
             "(foo)" => list!["foo"],
             "(foo (bar baz))" => list!["foo", list!["bar", "baz"]]
         };
+    }
+
+    #[test]
+    fn alt_paren_chars() {
+        parses! {
+            "[1 2 3]" => list![1, 2, 3],
+            "{1 2 3}" => list![1, 2, 3]
+        };
+
+        fails!["'(1 2 3]", "'(4 5 6}", "'{1 2 3]", "'[1 2 3}"];
     }
 }

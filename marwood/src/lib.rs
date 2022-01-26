@@ -348,4 +348,25 @@ mod integration_test {
         fails!["(define my-if if)" => InvalidSyntactic("if".into())];
         fails!["(lambda (if) 42)" => InvalidSyntactic("if".into())];
     }
+
+    #[test]
+    fn or() {
+        evals!["(or 5)" => "5"];
+        evals!["(or #f 5)" => "5"];
+        evals!["(or (eq? 1 2) 'apples)" => "apples"];
+    }
+
+    #[test]
+    fn and() {
+        evals!["(and 5)" => "5"];
+        evals!["(and #t 5)" => "5"];
+        evals!["(and #f 5)" => "#f"];
+        evals!["(and #t #t 5)" => "5"];
+    }
+
+    #[test]
+    fn let_lambda() {
+        evals!["(let () (+ 10 20))" => "30"];
+        evals!["(let ([x 10] [y 20]) (+ x y))" => "30"];
+    }
 }

@@ -61,7 +61,7 @@ impl Token {
 pub enum Error {
     #[error("vectors are not supported")]
     VectorsNotSupported,
-    #[error("unexpected token '{0}'")]
+    #[error("unexpected character '{0}'")]
     UnexpectedToken(char),
 }
 
@@ -93,8 +93,9 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
 
     while let Some(&(_, c)) = cur.peek() {
         tokens.push(match c {
-            '(' | ')' | '\'' | '.' => scan_simple_token(&mut cur)?,
+            '(' | ')' | '[' | ']' | '{' | '}' | '\'' => scan_simple_token(&mut cur)?,
             '#' => scan_hash_token(&mut cur)?,
+            '.' => scan_dot(&mut cur)?,
             _ if is_initial_identifier(c) => scan_symbol(&mut cur)?,
             _ if is_initial_number(c) => scan_number(&mut cur)?,
             _ if c.is_whitespace() => {
@@ -108,15 +109,31 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
     Ok(tokens)
 }
 
+fn scan_dot(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
+    let start = cur.peek().unwrap().0;
+    let mut end = start;
+    while let Some(&(offset, c)) = cur.peek() {
+        if !is_subsequent_identifier(c) && start != end {
+            break;
+        }
+        end = offset + c.len_utf8();
+        cur.next();
+    }
+    if end - start == 1 {
+        Ok(Token::new((start, end), TokenType::Dot))
+    } else {
+        Ok(Token::new((start, end), TokenType::Symbol))
+    }
+}
+
 fn scan_simple_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     let (start, c) = cur.next().unwrap();
     Ok(Token::new(
         (start, start + c.len_utf8()),
         match c {
-            '(' => TokenType::LeftParen,
-            ')' => TokenType::RightParen,
+            '(' | '[' | '{' => TokenType::LeftParen,
+            ')' | ']' | '}' => TokenType::RightParen,
             '\'' => TokenType::SingleQuote,
-            '.' => TokenType::Dot,
             _ => {
                 panic!();
             }
@@ -266,6 +283,11 @@ mod tests {
             (".", TokenType::Dot),
             ("bar", TokenType::Symbol),
             (")", TokenType::RightParen)
+        };
+        lexes! {
+            "." => TokenType::Dot,
+            ".." => TokenType::Symbol,
+            "..." => TokenType::Symbol
         };
     }
 

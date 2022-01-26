@@ -100,6 +100,7 @@ impl Heap {
             }
             cell::Cell::Symbol(ref sym) => self.put(VCell::symbol(sym.clone())),
             cell::Cell::Closure => panic!("unexpected closure"),
+            cell::Cell::Macro => panic!("unexpected macro"),
             cell::Cell::Lambda => panic!("unexpected lambda"),
         }
     }
@@ -138,6 +139,21 @@ impl Heap {
         }
     }
 
+    /// Get Sym Ref
+    ///
+    /// Return a Some(VCell) ptr to the given sym reference if sym is interned, otherwise
+    /// None.
+    ///
+    /// # Arguments
+    /// `sym` - The symbol to lookup
+    pub fn get_sym_ref(&self, sym: &Cell) -> Option<VCell> {
+        if let Cell::Symbol(sym) = sym {
+            self.str_map.get(sym).map(|it| VCell::ptr(*it))
+        } else {
+            None
+        }
+    }
+
     /// Get As Ast
     ///
     /// Return a Cell representation of the given vcell by copying the recursive
@@ -163,6 +179,7 @@ impl Heap {
             VCell::Closure(_, _) => Cell::Closure,
             VCell::Lambda(_) => Cell::Lambda,
             VCell::BuiltInProc(_) => Cell::Lambda,
+            VCell::Macro(_) => Cell::Macro,
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
             VCell::Acc
@@ -229,6 +246,7 @@ impl Heap {
                 | VCell::BasePointer(_)
                 | VCell::BasePointerOffset(_)
                 | VCell::Bool(_)
+                | VCell::BuiltInProc(_)
                 | VCell::GlobalEnvSlot(_)
                 | VCell::LexicalEnvSlot(_)
                 | VCell::LexicalEnvPtr(_, _)
@@ -237,7 +255,7 @@ impl Heap {
                 | VCell::Nil
                 | VCell::OpCode(_)
                 | VCell::Symbol(_)
-                | VCell::BuiltInProc(_)
+                | VCell::Macro(_)
                 | VCell::Undefined
                 | VCell::Void => {}
             }
@@ -276,6 +294,7 @@ impl Heap {
             | VCell::OpCode(_)
             | VCell::Symbol(_)
             | VCell::BuiltInProc(_)
+            | VCell::Macro(_)
             | VCell::Undefined
             | VCell::Void => {}
         }
