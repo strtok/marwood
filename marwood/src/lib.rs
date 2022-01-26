@@ -365,8 +365,24 @@ mod integration_test {
     }
 
     #[test]
+    fn begin() {
+        evals!["(begin (+ 10 10) (+ 20 20) (+ 5 5))" => "10"];
+    }
+
+    #[test]
+    fn unless() {
+        evals!["(unless #t 10)" => "#<void>"];
+        evals!["(unless #f 10)" => "10"];
+    }
+
+    #[test]
     fn let_lambda() {
         evals!["(let () (+ 10 20))" => "30"];
         evals!["(let ([x 10] [y 20]) (+ x y))" => "30"];
+    }
+
+    #[test]
+    fn let_star() {
+        evals!["(let* ([x 10] [y (* x x)]) (+ x y))" => "110"]
     }
 }
