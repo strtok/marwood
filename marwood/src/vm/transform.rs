@@ -813,6 +813,23 @@ mod tests {
     }
 
     #[test]
+    fn alternative_ellipsis() {
+        let transform = Transform::try_new(&parse!(
+            r#"
+            (define-syntax sum
+                  (syntax-rules * ()
+                    [(sum a* *) (+ a* *)]
+            ))
+            "#
+        ))
+        .unwrap();
+        assert_eq!(
+            transform.transform(&parse!("(sum 10 20)")),
+            Ok(parse!("(+ 10 20)"))
+        );
+    }
+
+    #[test]
     fn underscore() {
         let transform = Transform::try_new(&parse!(
             r#"
