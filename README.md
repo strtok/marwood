@@ -8,7 +8,7 @@
 [Deploy]: https://github.com/strtok/marwood/actions/workflows/deploy.yml
 Marwood is a [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) implementation for rust, featuring:
 
-* a scheme r5rs compiler & 64 bit virtual machine composed of 3x64bit cells
+* a scheme r5rs compiler & 64 bit runtime composed of 3x64bit cells called `vcells`
 * mark & sweep garbage collection
 * a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
 * a WebAssembly repl at [repl.marwood.io](https://repl.marwood.io).
@@ -37,7 +37,7 @@ Here's the scheme that will execute in the VM given the rust example:
 And the rust code to execute the scheme above in marwood:
 ```rust
 let mut vm = Vm::new();
-
+ 
 vm.eval(&parse!("(define make-adder (lambda (x) (lambda (y) (+ x y))))")).unwrap();
 vm.eval(&parse!("(define add-1000 (make-adder 1000))")).unwrap();
 
@@ -50,6 +50,21 @@ for it in 0..5 {
 ```
 
 # Design
+
+## Cells
+
+Marwood's parser outputs a data structure called a [Cell](marwood/src/cell.rs), which is capable of recursively
+representing any scheme expression. This data structure is interpreted by the compiler
+and converted to Marwood's runtime `VCell` type.
+
+```rust
+enum Cell {
+  Boolean(bool),
+  Symbol(String),
+  Pair(Box<Cell>, Box<Cell>),
+  ...
+}
+```
 
 ## VCells
 
@@ -69,11 +84,25 @@ These cells are used to represent:
 * Instruction operands
 * Heap and environment pointers
 
-## Heap
+```rust
+enum VCell {
+  OpCode(OpCode)
+  Ptr(usize),
+  String(<Rc<String>>),
+  ...
+}
+```
+
+## Heap & Garbage Collection
 
 Marwood's [heap](marwood/src/vm/heap.rs) is composed of a growbable vector of VCell
 slots. [Garbage collection](marwood/src/vm/gc.rs) is performed via a root based
-mark & sweep.
+mark & sweep on Marwood's roots:
+
+* Global Environment Slots
+* Registers
+* Currently running stack
+* Currently running procedure bytecode and lexical environment
 
 ## Global Environment
 
@@ -88,6 +117,19 @@ Marwood maintains a per-procedure lexical environment represented by a vector of
 shallow bindings. At compile time, Marwood computes the exact mapping of bindings inherited 
 by a procedures immediate-outer-function (IOF), building an EnvironmentMap that instructs 
 the runtime of what bindings to inherit from the IOF's Environment and Stack.
+
+## Macros
+
+Marwood's macro support is ongoing. Currently it supports:
+
+- [x] define-syntax
+  - [x] syntax-rules
+  - [ ] hygiene
+- [ ] let-syntax
+- [ ] letrec-syntax
+
+This is enough functionality to provide support for the derived forms provided in the spec, 
+such as: let, let*, letrec, and, or, begin, when, unless, etc.
 
 ### Built-in Procedures
 
