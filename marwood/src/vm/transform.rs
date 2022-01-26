@@ -19,6 +19,12 @@ macro_rules! cdr {
     }};
 }
 
+/// Pattern
+///
+/// Pattern represents a single syntax-rules pattern, where
+/// `pattern` contains the pattern expression and `variables` is
+/// the set of pattern variables encountered in the pattern.
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct Pattern {
     variables: Vec<Cell>,
@@ -35,6 +41,9 @@ impl Pattern {
     }
 }
 
+/// Transform
+///
+/// Transform is a runtime representation of a set of syntax-rules.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Transform {
     keyword: Cell,
@@ -242,32 +251,6 @@ impl Transform {
         Ok(())
     }
 
-    /// Find Pattern Variables
-    ///
-    /// Given the pattern express, build up a set of all pattern
-    /// variables:
-    ///
-    /// * Variables which are not literals
-    /// * Variables which are not _
-    /// * Variables which are not the ellipsis
-    pub fn find_pattern_variables<'a>(&self, pattern: &'a Cell, variables: &mut Vec<&'a Cell>) {
-        match pattern {
-            Cell::Symbol(_) => {
-                if !self.is_literal(pattern) & !(pattern == &cell!["_"])
-                    && !(pattern == &self.ellipsis)
-                {
-                    variables.push(pattern);
-                }
-            }
-            Cell::Pair(_, _) => {
-                for it in pattern {
-                    self.find_pattern_variables(it, variables);
-                }
-            }
-            _ => {}
-        }
-    }
-
     /// Transform
     ///
     /// Transform the input expression given the syntax-rules defined in
@@ -283,8 +266,6 @@ impl Transform {
         }
 
         for rule in &self.syntax_rules {
-            let mut pattern_variables = vec![];
-            self.find_pattern_variables(cdr!(&rule.0.pattern), &mut pattern_variables);
             let mut env = PatternEnvironment::new();
             if self.pattern_match(cdr!(&rule.0.pattern), cdr!(expr), &mut env) {
                 return self
@@ -409,6 +390,7 @@ impl Transform {
     ///
     /// # Arguments
     /// `template` - The template to use for expansion
+    /// `pattern` - The pattern associated with the template being expanded.
     /// `bindings` The matched bindings from the pattern
     fn expand(
         &self,
