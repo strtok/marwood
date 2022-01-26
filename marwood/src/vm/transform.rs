@@ -586,6 +586,34 @@ mod tests {
     }
 
     #[test]
+    fn zip_multi() {
+        let transform = Transform::try_new(&parse!(
+            r#"
+        (define-syntax zip-mult (syntax-rules () 
+            [(_ (x x* ...) (y y* ...)) 
+             (+ (* x y) (* x* y*) ...)]))
+        "#
+        ))
+        .unwrap();
+        assert_eq!(
+            transform.transform(&parse!("(zip-multi (10) (10))")),
+            Ok(parse!("(+ (* 10 10))"))
+        );
+        assert_eq!(
+            transform.transform(&parse!("(zip-mult (10 20 30) (10 20 30))")),
+            Ok(parse!("(+ (* 10 10) (* 20 20) (* 30 30))"))
+        );
+        assert_eq!(
+            transform.transform(&parse!("(zip-mult (10 20 30 40) (10 20 30))")),
+            Ok(parse!("(+ (* 10 10) (* 20 20) (* 30 30))"))
+        );
+        assert_eq!(
+            transform.transform(&parse!("(zip-mult (10 20 30) (10 20 30 40))")),
+            Ok(parse!("(+ (* 10 10) (* 20 20) (* 30 30))"))
+        );
+    }
+
+    #[test]
     fn begin_macro() {
         let transform = Transform::try_new(&parse!(
             r#"        
