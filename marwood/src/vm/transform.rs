@@ -46,7 +46,7 @@ impl Pattern {
             variables: vec![],
             expanded_variables: vec![],
             ellipsis: ellipsis.clone(),
-            literals: literals.iter().cloned().collect(),
+            literals: literals.to_vec(),
             underscore: cell!["_"],
         };
 
@@ -111,9 +111,9 @@ impl Pattern {
                         }
                         pattern.variables.push(it.clone())
                     } else if ellipsis_next {
-                        return Err(InvalidDefineSyntax(format!(
-                            "ellipsis must follow pattern variable"
-                        )));
+                        return Err(InvalidDefineSyntax(
+                            "ellipsis must follow pattern variable".into(),
+                        ));
                     }
 
                     if ellipsis_next {
@@ -931,38 +931,6 @@ mod tests {
         assert_eq!(
             transform.transform(&parse!("(sum _ 20 _ 40)")),
             Ok(parse!("(+ 20 40)"))
-        );
-    }
-
-    #[test]
-    fn pattern_variable_used_twice_in_template() {
-        let transform = Transform::try_new(&parse!(
-            r#"
-                (define-syntax foo (syntax-rules () 
-                   [(_ a b* ...) 
-                    '((a b*) ...)]))
-            "#
-        ))
-        .unwrap();
-        assert_eq!(
-            transform.transform(&parse!("(foo bar 1 2 3)")),
-            Ok(parse!("'((bar 1) (bar 2) (bar 3))"))
-        );
-    }
-
-    #[test]
-    fn nested_expansion() {
-        let transform = Transform::try_new(&parse!(
-            r#"
-            (define-syntax foo (syntax-rules () 
-                [(_ (a* ...)) 
-                 '(((a* (a* ...)) ... ))]))
-            "#
-        ))
-        .unwrap();
-        assert_eq!(
-            transform.transform(&parse!("(foo (1 2 3))")),
-            Ok(parse!("'(((1 (1 2 3)) (2 (1 2 3)) (3 (1 2 3))))"))
         );
     }
 
