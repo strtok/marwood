@@ -27,17 +27,127 @@ macro_rules! cdr {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Pattern {
+    expr: Cell,
     variables: Vec<Cell>,
-    pattern: Cell,
+    expanded_variables: Vec<Cell>,
+    ellipsis: Cell,
+    literals: Vec<Cell>,
+    underscore: Cell,
 }
 
 impl Pattern {
-    fn new(pattern: Cell, variables: Vec<Cell>) -> Pattern {
-        Pattern { pattern, variables }
+    pub fn try_new(expr: &Cell, ellipsis: &Cell, literals: &[Cell]) -> Result<Pattern, Error> {
+        if !expr.is_pair() {
+            return Err(InvalidDefineSyntax("pattern must be a ()".into()));
+        }
+
+        let mut pattern = Pattern {
+            expr: expr.clone(),
+            variables: vec![],
+            expanded_variables: vec![],
+            ellipsis: ellipsis.clone(),
+            literals: literals.iter().cloned().collect(),
+            underscore: cell!["_"],
+        };
+
+        Self::build(cdr!(expr), &mut pattern)?;
+        Ok(pattern)
     }
 
-    fn is_variable(&self, cell: &Cell) -> bool {
+    pub fn is_ellipsis(&self, cell: &Cell) -> bool {
+        *cell == self.ellipsis
+    }
+
+    pub fn is_literal(&self, cell: &Cell) -> bool {
+        self.literals.iter().any(|it| it == cell)
+    }
+
+    pub fn is_variable(&self, cell: &Cell) -> bool {
         self.variables.iter().any(|it| it == cell)
+    }
+
+    fn is_variable_candidate(&self, cell: &Cell) -> bool {
+        cell.is_symbol()
+            && !self.is_literal(cell)
+            && !self.is_ellipsis(cell)
+            && *cell != self.underscore
+    }
+
+    fn build(expr: &Cell, pattern: &mut Pattern) -> Result<(), Error> {
+        let improper = expr.is_improper_list();
+        let len = expr.len();
+        let mut iter = expr.iter().enumerate().peekable();
+        let mut ellipsis_ct = 0;
+        while let Some((idx, it)) = iter.next() {
+            let ellipsis_next = match iter.peek() {
+                Some((_, cell)) => pattern.is_ellipsis(cell),
+                _ => false,
+            };
+            match it {
+                Cell::Symbol(_) => {
+                    if pattern.is_ellipsis(it) {
+                        if idx == 0 || (idx == len - 1 && improper) {
+                            return Err(InvalidDefineSyntax(format!(
+                                "invalid ellipsis placement in {}",
+                                expr
+                            )));
+                        }
+                        ellipsis_ct += 1;
+                        if ellipsis_ct > 1 {
+                            return Err(InvalidDefineSyntax(format!(
+                                "duplicate ellipsis in {}",
+                                expr
+                            )));
+                        }
+                        continue;
+                    }
+
+                    if pattern.is_variable_candidate(it) {
+                        if pattern.is_variable(it) {
+                            return Err(InvalidDefineSyntax(format!(
+                                "duplicate pattern variable {}",
+                                it
+                            )));
+                        }
+                        pattern.variables.push(it.clone())
+                    } else if ellipsis_next {
+                        return Err(InvalidDefineSyntax(format!(
+                            "ellipsis must follow pattern variable"
+                        )));
+                    }
+
+                    if ellipsis_next {
+                        Self::find_expanded_variables(it, pattern);
+                    }
+                }
+                Cell::Pair(_, _) => {
+                    if ellipsis_next {
+                        Self::find_expanded_variables(it, pattern);
+                    }
+                    Self::build(it, pattern)?;
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn find_expanded_variables(expr: &Cell, pattern: &mut Pattern) {
+        match expr {
+            Cell::Symbol(_) => {
+                if pattern.is_variable_candidate(expr)
+                    && !pattern.expanded_variables.iter().any(|it| it == expr)
+                {
+                    pattern.expanded_variables.push(expr.clone());
+                }
+            }
+            Cell::Pair(_, _) => {
+                for it in expr {
+                    Self::find_expanded_variables(it, pattern);
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -109,8 +219,7 @@ impl Transform {
         for it in syntax_rules {
             let pattern = car!(it).clone();
             let template = car!(cdr!(it)).clone();
-            let variables = Self::check_pattern_syntax(&pattern, &ellipsis, &literals)?;
-            let pattern = Pattern::new(pattern.clone(), variables.into_iter().cloned().collect());
+            let pattern = Pattern::try_new(&pattern, &ellipsis, &literals)?;
             Self::check_template_syntax(&template, &pattern, &ellipsis)?;
             syntax_rules_vec.push((pattern, template));
         }
@@ -132,81 +241,6 @@ impl Transform {
 
     pub fn keyword(&self) -> &Cell {
         &self.keyword
-    }
-
-    /// Check Pattern Syntax
-    ///
-    /// Check numerous rules
-    ///
-    /// * A variable must not appear more than once in the pattern, unless it is
-    ///   a literal or _.
-    /// * An ellipsis may only appear once in a list, and must be preceded
-    ///   by a pattern variable
-    /// * An ellipsis can be the last element in a list, unless it's an improper
-    ///   list.
-    fn check_pattern_syntax<'a>(
-        pattern: &'a Cell,
-        ellipsis: &'a Cell,
-        literals: &'a [Cell],
-    ) -> Result<Vec<&'a Cell>, Error> {
-        if !pattern.is_pair() {
-            return Err(InvalidDefineSyntax("pattern must be a ()".into()));
-        }
-        let mut variables = vec![];
-        Self::check_pattern_syntax_recurse(cdr!(pattern), ellipsis, literals, &mut variables)?;
-        Ok(variables)
-    }
-
-    fn check_pattern_syntax_recurse<'a, 'b>(
-        pattern: &'a Cell,
-        ellipsis: &'a Cell,
-        literals: &'a [Cell],
-        variables: &'b mut Vec<&'a Cell>,
-    ) -> Result<(), Error> {
-        if pattern.is_pair() && car!(pattern) == ellipsis {
-            return Err(InvalidDefineSyntax("ellipsis out of place".into()));
-        }
-        let improper = pattern.is_improper_list();
-        let mut ellipsis_in_pattern = false;
-        let mut iter = pattern.iter().peekable();
-        while let Some(pattern) = iter.next() {
-            match pattern {
-                Cell::Pair(_, _) => {
-                    Self::check_pattern_syntax_recurse(pattern, ellipsis, literals, variables)?
-                }
-                Cell::Symbol(sym) => {
-                    if literals.iter().any(|it| it == pattern) || sym == "_" {
-                        if iter.peek() == Some(&ellipsis) {
-                            return Err(InvalidDefineSyntax(
-                                "ellipsis must follow a pattern variable".into(),
-                            ));
-                        }
-                        continue;
-                    }
-
-                    if pattern == ellipsis {
-                        if ellipsis_in_pattern || (improper && iter.peek().is_none()) {
-                            return Err(InvalidDefineSyntax("ellipses out of place".into()));
-                        }
-                        ellipsis_in_pattern = true;
-                        continue;
-                    }
-
-                    // All other identifiers must be variables
-                    if variables.iter().any(|it| *it == pattern) {
-                        return Err(InvalidDefineSyntax(format!(
-                            "the pattern variable {} was used more than once",
-                            pattern
-                        )));
-                    } else {
-                        variables.push(pattern);
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        Ok(())
     }
 
     /// Check Template Syntax
@@ -267,7 +301,7 @@ impl Transform {
 
         for rule in &self.syntax_rules {
             let mut env = PatternEnvironment::new();
-            if self.pattern_match(cdr!(&rule.0.pattern), cdr!(expr), &mut env) {
+            if self.pattern_match(cdr!(&rule.0.expr), cdr!(expr), &mut env) {
                 return self
                     .expand(&rule.1, &rule.0, &mut env)
                     .ok_or_else(|| InvalidSyntax(self.keyword.to_string()));
@@ -410,6 +444,7 @@ impl Transform {
                 let mut v = vec![];
                 let mut template_iter = template.iter().peekable();
                 let mut template = template_iter.next().unwrap();
+
                 loop {
                     let in_ellipsis = template_iter.peek() == Some(&&self.ellipsis);
                     match self.expand(template, pattern, env) {
@@ -446,7 +481,7 @@ impl Transform {
 /// Pattern environment is the result of a successful pattern,
 /// containing all of the information needed to apply the template
 /// portion of the pattern rule.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct PatternEnvironment<'a> {
     /// Bindings are pairs of matched (pattern expr)
     bindings: Vec<(&'a Cell, &'a Cell)>,
@@ -476,6 +511,51 @@ mod tests {
     use crate::parse;
     use crate::{cell, lex};
 
+    #[test]
+    fn bad_patterns() {
+        assert!(Pattern::try_new(&parse!("#t"), &cell!["..."], &vec![]).is_err());
+        assert!(Pattern::try_new(&parse!("(_ ... a)"), &cell!["..."], &vec![]).is_err());
+        assert!(Pattern::try_new(&parse!("(_ a . ...)"), &cell!["..."], &vec![]).is_err());
+        assert!(Pattern::try_new(&parse!("(_ a a)"), &cell!["..."], &vec![]).is_err());
+    }
+
+    #[test]
+    fn pattern_variable() {
+        assert_eq!(
+            Pattern::try_new(&parse!("(_ a b c)"), &cell!["..."], &vec![])
+                .unwrap()
+                .variables,
+            vec![cell!["a"], cell!["b"], cell!["c"]]
+        );
+        assert_eq!(
+            Pattern::try_new(&parse!("(_ a b . c)"), &cell!["..."], &vec![])
+                .unwrap()
+                .variables,
+            vec![cell!["a"], cell!["b"], cell!["c"]]
+        );
+        assert_eq!(
+            Pattern::try_new(&parse!("(_ a* ...)"), &cell!["..."], &vec![])
+                .unwrap()
+                .variables,
+            vec![cell!["a*"]]
+        );
+        assert_eq!(
+            Pattern::try_new(&parse!("(_ (a* b*) ...)"), &cell!["..."], &vec![])
+                .unwrap()
+                .variables,
+            vec![cell!["a*"], cell!["b*"]]
+        );
+    }
+
+    #[test]
+    fn expanded_pattern_variables() {
+        let pattern =
+            Pattern::try_new(&parse!("(_ a (b (c ...)) ...)"), &cell!["..."], &vec![]).unwrap();
+        assert_eq!(pattern.variables, vec![cell!["a"], cell!["b"], cell!["c"]]);
+        assert_eq!(pattern.expanded_variables, vec![cell!["b"], cell!["c"]]);
+    }
+
+    #[test]
     #[test]
     fn error_on_bad_form() {
         assert!(Transform::try_new(&parse!("(define-syntax)")).is_err());
@@ -851,6 +931,38 @@ mod tests {
         assert_eq!(
             transform.transform(&parse!("(sum _ 20 _ 40)")),
             Ok(parse!("(+ 20 40)"))
+        );
+    }
+
+    #[test]
+    fn pattern_variable_used_twice_in_template() {
+        let transform = Transform::try_new(&parse!(
+            r#"
+                (define-syntax foo (syntax-rules () 
+                   [(_ a b* ...) 
+                    '((a b*) ...)]))
+            "#
+        ))
+        .unwrap();
+        assert_eq!(
+            transform.transform(&parse!("(foo bar 1 2 3)")),
+            Ok(parse!("'((bar 1) (bar 2) (bar 3))"))
+        );
+    }
+
+    #[test]
+    fn nested_expansion() {
+        let transform = Transform::try_new(&parse!(
+            r#"
+            (define-syntax foo (syntax-rules () 
+                [(_ (a* ...)) 
+                 '(((a* (a* ...)) ... ))]))
+            "#
+        ))
+        .unwrap();
+        assert_eq!(
+            transform.transform(&parse!("(foo (1 2 3))")),
+            Ok(parse!("'(((1 (1 2 3)) (2 (1 2 3)) (3 (1 2 3))))"))
         );
     }
 
