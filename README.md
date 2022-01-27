@@ -120,16 +120,8 @@ the runtime of what bindings to inherit from the IOF's Environment and Stack.
 
 ## Macros
 
-Marwood's macro support is ongoing. Currently it supports:
-
-- [x] define-syntax
-  - [x] syntax-rules
-  - [ ] hygiene
-- [ ] let-syntax
-- [ ] letrec-syntax
-
-This is enough functionality to provide support for the derived forms provided in the spec, 
-such as: let, let*, letrec, and, or, begin, when, unless, etc.
+Marwood's macro support is immature, with enough support for the derived procedures
+from R5RS, such as: let, let*, letrec, and, or, begin, when, unless, etc.
 
 ### Built-in Procedures
 
