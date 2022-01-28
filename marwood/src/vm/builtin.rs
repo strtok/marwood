@@ -27,6 +27,11 @@ impl Vm {
         self.load_builtin(">", gt);
         self.load_builtin(">=", gteq);
         self.load_builtin("<=", lteq);
+        self.load_builtin("zero?", zero);
+        self.load_builtin("positive?", positive);
+        self.load_builtin("negative?", negative);
+        self.load_builtin("even?", even);
+        self.load_builtin("odd?", odd);
         self.load_builtin("+", plus);
         self.load_builtin("-", minus);
         self.load_builtin("*", multiply);
@@ -196,27 +201,27 @@ fn not(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 fn num_equal(vm: &mut Vm) -> Result<VCell, Error> {
-    num_comp(vm, |x, y| x == y)
+    num_comp(vm, "=", |x, y| x == y)
 }
 
 fn lt(vm: &mut Vm) -> Result<VCell, Error> {
-    num_comp(vm, |x, y| x < y)
+    num_comp(vm, "<", |x, y| x < y)
 }
 
 fn gt(vm: &mut Vm) -> Result<VCell, Error> {
-    num_comp(vm, |x, y| x > y)
+    num_comp(vm, ">", |x, y| x > y)
 }
 
 fn lteq(vm: &mut Vm) -> Result<VCell, Error> {
-    num_comp(vm, |x, y| x <= y)
+    num_comp(vm, "<=", |x, y| x <= y)
 }
 
 fn gteq(vm: &mut Vm) -> Result<VCell, Error> {
-    num_comp(vm, |x, y| x >= y)
+    num_comp(vm, ">=", |x, y| x >= y)
 }
 
-fn num_comp(vm: &mut Vm, comp: impl Fn(i64, i64) -> bool) -> Result<VCell, Error> {
-    let argc = pop_argc(vm, 1, None, "=")?;
+fn num_comp(vm: &mut Vm, name: &str, comp: impl Fn(i64, i64) -> bool) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, None, name)?;
     let mut result = true;
 
     let mut y = match vm.heap.get(vm.stack.pop()?) {
@@ -241,6 +246,39 @@ fn num_comp(vm: &mut Vm, comp: impl Fn(i64, i64) -> bool) -> Result<VCell, Error
     }
 
     Ok(result.into())
+}
+
+fn zero(vm: &mut Vm) -> Result<VCell, Error> {
+    num_unary_predicate(vm, "zero?", |x| x == 0)
+}
+
+fn positive(vm: &mut Vm) -> Result<VCell, Error> {
+    num_unary_predicate(vm, "positive?", |x| x > 0)
+}
+
+fn negative(vm: &mut Vm) -> Result<VCell, Error> {
+    num_unary_predicate(vm, "negative?", |x| x < 0)
+}
+
+fn odd(vm: &mut Vm) -> Result<VCell, Error> {
+    num_unary_predicate(vm, "odd?", |x| x % 2 != 0)
+}
+
+fn even(vm: &mut Vm) -> Result<VCell, Error> {
+    num_unary_predicate(vm, "even?", |x| x % 2 == 0)
+}
+
+fn num_unary_predicate(
+    vm: &mut Vm,
+    name: &str,
+    predicate: impl Fn(i64) -> bool,
+) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), name)?;
+    let x = match vm.heap.get(vm.stack.pop()?) {
+        VCell::FixedNum(val) => val,
+        _ => return Ok(false.into()),
+    };
+    Ok(predicate(x).into())
 }
 
 fn plus(vm: &mut Vm) -> Result<VCell, Error> {

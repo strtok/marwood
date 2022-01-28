@@ -433,4 +433,22 @@ mod integration_test {
           "(>= 5 4 3 2 3 1)" => "#f"
         ];
     }
+
+    #[test]
+    fn num_unary() {
+        evals![
+            "(zero? 0)" => "#t",
+            "(zero? 10)" => "#f",
+            "(positive? 10)" => "#t",
+            "(positive? 0)" => "#f",
+            "(positive? -10)" => "#f",
+            "(negative? -10)" => "#t",
+            "(negative? 0)" => "#f",
+            "(negative? 10)" => "#f",
+            "(odd? 3)" => "#t",
+            "(odd? 2)" => "#f",
+            "(even? 2)" => "#t",
+            "(even? 3)" => "#f"
+        ];
+    }
 }
