@@ -461,4 +461,16 @@ mod integration_test {
                "(counter)" => "3"
         ];
     }
+
+    #[test]
+    fn set_pair() {
+        evals!["(define l '(1 2 3))" => "#<void>",
+               "(set-car! (cdr l) 100))" => "#<void>",
+               "l" => "(1 100 3)"
+        ];
+        evals!["(define l '(1 2 3))" => "#<void>",
+               "(set-cdr! (cdr (cdr l)) '(4 5 6)))" => "#<void>",
+               "l" => "(1 2 3 4 5 6)"
+        ];
+    }
 }

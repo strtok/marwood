@@ -1,5 +1,5 @@
 use crate::vm::vcell::VCell;
-use crate::vm::Error::{ExpectedPairButFound, InvalidArgs, InvalidNumArgs};
+use crate::vm::Error::{ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidSyntax};
 use crate::vm::{Error, Vm};
 
 /// Built Ins
@@ -49,6 +49,8 @@ impl Vm {
         self.load_builtin("port?", is_port);
         self.load_builtin("positive?", positive);
         self.load_builtin("procedure?", is_procedure);
+        self.load_builtin("set-car!", set_car);
+        self.load_builtin("set-cdr!", set_cdr);
         self.load_builtin("string?", is_string);
         self.load_builtin("symbol?", is_symbol);
         self.load_builtin("vector?", is_vector);
@@ -342,4 +344,32 @@ fn multiply(vm: &mut Vm) -> Result<VCell, Error> {
         }
     }
     Ok(VCell::FixedNum(result))
+}
+
+fn set_car(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "set-car!")?;
+    let obj = vm.stack.pop()?.clone();
+    let pair = vm.stack.pop()?.clone();
+    let new_pair = match vm.heap.get(&pair) {
+        VCell::Pair(_, cdr) => VCell::Pair(obj.as_ptr()?, cdr),
+        _ => {
+            return Err(InvalidSyntax("set-car! expected a pair".into()));
+        }
+    };
+    *vm.heap.get_at_index_mut(pair.as_ptr()?) = new_pair;
+    Ok(VCell::Void)
+}
+
+fn set_cdr(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "set-cdr!")?;
+    let obj = vm.stack.pop()?.clone();
+    let pair = vm.stack.pop()?.clone();
+    let new_pair = match vm.heap.get(&pair) {
+        VCell::Pair(car, _) => VCell::Pair(car, obj.as_ptr()?),
+        _ => {
+            return Err(InvalidSyntax("set-cdr! expected a pair".into()));
+        }
+    };
+    *vm.heap.get_at_index_mut(pair.as_ptr()?) = new_pair;
+    Ok(VCell::Void)
 }
