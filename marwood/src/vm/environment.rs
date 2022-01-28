@@ -445,7 +445,7 @@ mod tests {
 
     #[test]
     fn primitive_symbol_check() {
-        assert!(cell!["+"].is_primitive_symbol());
+        assert!(cell!["lambda"].is_primitive_symbol());
         assert!(!cell!["foo"].is_primitive_symbol());
         assert!(!cell![100].is_primitive_symbol());
     }
@@ -472,6 +472,8 @@ mod tests {
         assert_eq!(
             free_symbols(&parse!["(+ (* a b) (* c d) e)"]),
             Ok(HashSet::from([
+                &cell!["+"],
+                &cell!["*"],
                 &cell!["a"],
                 &cell!["b"],
                 &cell!["c"],
@@ -495,12 +497,12 @@ mod tests {
         // lambdas
         assert_eq!(
             free_symbols(&parse!["(lambda (x) (+ x y) z)"]),
-            Ok(HashSet::from([&cell!["y"], &cell!["z"]]))
+            Ok(HashSet::from([&cell!["y"], &cell!["z"], &cell!["+"]]))
         );
 
         assert_eq!(
             free_symbols(&parse!("(lambda (n) (+ ((adder num) n)))")),
-            Ok(HashSet::from([&cell!["adder"], &cell!["num"]]))
+            Ok(HashSet::from([&cell!["adder"], &cell!["num"], &cell!["+"]]))
         );
 
         assert!(free_symbols(&parse!["(lambda)"]).is_err());

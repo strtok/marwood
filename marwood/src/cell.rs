@@ -173,31 +173,8 @@ impl Cell {
     /// `cell`
     pub fn is_primitive_symbol(&self) -> bool {
         lazy_static! {
-            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> = HashSet::from([
-                "car",
-                "cdr",
-                "cons",
-                "define",
-                "eq?",
-                "eqv?",
-                "lambda",
-                "quote",
-                "+",
-                "-",
-                "*",
-                "if",
-                "not",
-                "boolean?",
-                "char?",
-                "list?",
-                "null?",
-                "pair?",
-                "port?",
-                "procedure?",
-                "string?",
-                "symbol?",
-                "vector?"
-            ]);
+            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> =
+                HashSet::from(["define", "lambda", "quote",]);
         }
         match self {
             Cell::Symbol(sym) => {
@@ -215,27 +192,8 @@ impl Cell {
     /// `cell`
     pub fn is_syntactic_keyword(&self) -> bool {
         lazy_static! {
-            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> = HashSet::from([
-                "begin!",
-                "case",
-                "define",
-                "delay",
-                "do",
-                "else",
-                "lambda",
-                "if",
-                "cond",
-                "and",
-                "or",
-                "let",
-                "let*",
-                "letrec",
-                "quasiquote",
-                "quote",
-                "unquote",
-                "unquote-splicnig",
-                "set!",
-            ]);
+            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> =
+                HashSet::from(["define", "lambda", "if", "quote", "set!",]);
         }
         match self {
             Cell::Symbol(sym) => PRIMITIVE_SYMBOLS.contains(sym.as_str()),
