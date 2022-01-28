@@ -122,8 +122,8 @@ pub enum Error {
     #[error("invalid stack index: {0}")]
     InvalidStackIndex(usize),
 
-    #[error("invalid use of syntactic keyword {0}")]
-    InvalidSyntactic(String),
+    #[error("invalid use of primitive {0}")]
+    InvalidUsePrimitive(String),
 
     #[error("invalid syntax: {0}")]
     InvalidSyntax(String),

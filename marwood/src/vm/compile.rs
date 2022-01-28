@@ -6,7 +6,7 @@ use crate::vm::transform::Transform;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
 use crate::vm::Error::{
-    InvalidArgs, InvalidNumArgs, InvalidSyntactic, LambdaMissingExpression, UnquotedNil,
+    InvalidArgs, InvalidNumArgs, InvalidUsePrimitive, LambdaMissingExpression, UnquotedNil,
 };
 use crate::vm::{Error, Vm};
 use log::trace;
@@ -150,8 +150,8 @@ impl Vm {
         lambda: &mut Lambda,
         sym: &Cell,
     ) -> Result<(), Error> {
-        if sym.is_syntactic_keyword() {
-            return Err(InvalidSyntactic(sym.to_string()));
+        if sym.is_primitive_symbol() {
+            return Err(InvalidUsePrimitive(sym.to_string()));
         }
         let sym_ref = self.heap.put_cell(sym);
         match lambda.binding_location(&sym_ref) {
@@ -218,8 +218,8 @@ impl Vm {
             }
         };
 
-        if symbol.is_syntactic_keyword() {
-            return Err(InvalidSyntactic(symbol.to_string()));
+        if symbol.is_primitive_symbol() {
+            return Err(InvalidUsePrimitive(symbol.to_string()));
         }
 
         let sym_ref = self.heap.put_cell(symbol).as_ptr()?;
@@ -359,16 +359,16 @@ impl Vm {
                     symbol.to_string(),
                 ));
             }
-            if symbol.is_syntactic_keyword() {
-                return Err(InvalidSyntactic(symbol.to_string()));
+            if symbol.is_primitive_symbol() {
+                return Err(InvalidUsePrimitive(symbol.to_string()));
             }
             symbols.push(self.heap.put_cell(symbol));
             rest = cdr!(rest);
         }
 
         if rest.is_symbol() {
-            if rest.is_syntactic_keyword() {
-                return Err(InvalidSyntactic(rest.to_string()));
+            if rest.is_primitive_symbol() {
+                return Err(InvalidUsePrimitive(rest.to_string()));
             }
             symbols.push(self.heap.put_cell(rest));
             Ok((symbols, true))

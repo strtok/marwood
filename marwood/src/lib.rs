@@ -9,7 +9,7 @@ mod integration_test {
     use crate::lex;
     use crate::parse;
     use crate::vm::Error::{
-        ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidProcedure, InvalidSyntactic,
+        ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidProcedure, InvalidUsePrimitive,
         UnquotedNil, VariableNotBound,
     };
     use crate::vm::Vm;
@@ -363,9 +363,9 @@ mod integration_test {
 
     #[test]
     fn disallow_aliasing_syntactic_symbol() {
-        fails!["(define if 42)" => InvalidSyntactic("if".into())];
-        fails!["(define my-if if)" => InvalidSyntactic("if".into())];
-        fails!["(lambda (if) 42)" => InvalidSyntactic("if".into())];
+        fails!["(define if 42)" => InvalidUsePrimitive("if".into())];
+        fails!["(define my-if if)" => InvalidUsePrimitive("if".into())];
+        fails!["(lambda (if) 42)" => InvalidUsePrimitive("if".into())];
     }
 
     #[test]

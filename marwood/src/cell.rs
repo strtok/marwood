@@ -174,26 +174,7 @@ impl Cell {
     pub fn is_primitive_symbol(&self) -> bool {
         lazy_static! {
             static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> =
-                HashSet::from(["define", "lambda", "quote",]);
-        }
-        match self {
-            Cell::Symbol(sym) => {
-                PRIMITIVE_SYMBOLS.contains(sym.as_str()) || self.is_syntactic_keyword()
-            }
-            _ => false,
-        }
-    }
-
-    /// Is Syntactic Keyword
-    ///
-    /// Return true if the given cell is a syntactic keyword.
-    ///
-    /// # Arguments
-    /// `cell`
-    pub fn is_syntactic_keyword(&self) -> bool {
-        lazy_static! {
-            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> =
-                HashSet::from(["define", "lambda", "if", "quote", "set!",]);
+                HashSet::from(["define", "lambda", "if", "quote", "set!"]);
         }
         match self {
             Cell::Symbol(sym) => PRIMITIVE_SYMBOLS.contains(sym.as_str()),
