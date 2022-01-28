@@ -22,37 +22,37 @@ use crate::vm::{Error, Vm};
 
 impl Vm {
     pub fn load_builtins(&mut self) {
-        self.load_builtin("=", num_equal);
-        self.load_builtin("<", lt);
-        self.load_builtin(">", gt);
-        self.load_builtin(">=", gteq);
-        self.load_builtin("<=", lteq);
-        self.load_builtin("zero?", zero);
-        self.load_builtin("positive?", positive);
-        self.load_builtin("negative?", negative);
-        self.load_builtin("even?", even);
-        self.load_builtin("odd?", odd);
+        self.load_builtin("*", multiply);
         self.load_builtin("+", plus);
         self.load_builtin("-", minus);
-        self.load_builtin("*", multiply);
+        self.load_builtin("<", lt);
+        self.load_builtin("<=", lteq);
+        self.load_builtin("=", num_equal);
+        self.load_builtin(">", gt);
+        self.load_builtin(">=", gteq);
         self.load_builtin("boolean?", is_boolean);
         self.load_builtin("car", car);
         self.load_builtin("cdr", cdr);
         self.load_builtin("char?", is_char);
         self.load_builtin("cons", cons);
         self.load_builtin("eq?", eq);
-        self.load_builtin("eqv?", eqv);
         self.load_builtin("equal?", equal);
+        self.load_builtin("eqv?", eqv);
+        self.load_builtin("even?", even);
         self.load_builtin("list?", is_list);
+        self.load_builtin("negative?", negative);
         self.load_builtin("not", not);
         self.load_builtin("null?", is_null);
         self.load_builtin("number?", is_number);
+        self.load_builtin("odd?", odd);
         self.load_builtin("pair?", is_pair);
         self.load_builtin("port?", is_port);
+        self.load_builtin("positive?", positive);
         self.load_builtin("procedure?", is_procedure);
         self.load_builtin("string?", is_string);
         self.load_builtin("symbol?", is_symbol);
         self.load_builtin("vector?", is_vector);
+        self.load_builtin("zero?", zero);
     }
 
     fn load_builtin(&mut self, symbol: &str, func: fn(&mut Vm) -> Result<VCell, Error>) {
