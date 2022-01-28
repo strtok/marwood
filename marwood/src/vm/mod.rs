@@ -137,7 +137,7 @@ pub enum Error {
     #[error("unknown procedure {0}")]
     UnknownProcedure(String),
 
-    #[error("variable {0} not bound")]
+    #[error("{0} is not bound")]
     VariableNotBound(String),
 
     #[error("invalid syntax: () must be quoted")]
