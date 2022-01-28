@@ -107,7 +107,10 @@ impl Vm {
                     VCell::Closure(lambda, _) => lambda,
                     VCell::Lambda(_) => self.acc.as_ptr()?,
                     VCell::BuiltInProc(BuiltInProc(func)) => {
-                        func(self)?;
+                        self.acc = match func(self)? {
+                            VCell::Ptr(ptr) => VCell::Ptr(ptr),
+                            vcell => self.heap.put(vcell),
+                        };
                         return Ok(false);
                     }
                     other => {
@@ -125,7 +128,10 @@ impl Vm {
                     VCell::Closure(lambda, _) => lambda,
                     VCell::Lambda(_) => self.acc.as_ptr()?,
                     VCell::BuiltInProc(BuiltInProc(func)) => {
-                        func(self)?;
+                        self.acc = match func(self)? {
+                            VCell::Ptr(ptr) => VCell::Ptr(ptr),
+                            vcell => self.heap.put(vcell),
+                        };
                         return Ok(false);
                     }
                     other => {

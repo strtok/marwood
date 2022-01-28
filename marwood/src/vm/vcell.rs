@@ -44,7 +44,7 @@ pub enum VCell {
 }
 
 #[derive(Clone)]
-pub struct BuiltInProc(pub fn(&mut Vm) -> Result<(), Error>);
+pub struct BuiltInProc(pub fn(&mut Vm) -> Result<VCell, Error>);
 
 impl Debug for BuiltInProc {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
@@ -113,7 +113,7 @@ impl VCell {
         }
     }
 
-    pub fn syscall(func: fn(&mut Vm) -> Result<(), Error>) -> VCell {
+    pub fn syscall(func: fn(&mut Vm) -> Result<VCell, Error>) -> VCell {
         VCell::BuiltInProc(BuiltInProc(func))
     }
 

@@ -46,7 +46,7 @@ impl Vm {
         self.load_builtin("vector?", is_vector);
     }
 
-    fn load_builtin(&mut self, symbol: &str, func: fn(&mut Vm) -> Result<(), Error>) {
+    fn load_builtin(&mut self, symbol: &str, func: fn(&mut Vm) -> Result<VCell, Error>) {
         let syscall = self.heap.put(VCell::syscall(func));
         let symbol = self.heap.put(VCell::symbol(symbol));
         let slot = self.globenv.get_binding(symbol.as_ptr().unwrap());
@@ -67,159 +67,138 @@ fn pop_argc(vm: &mut Vm, min: usize, max: Option<usize>, proc: &str) -> Result<u
     }
 }
 
-fn car(vm: &mut Vm) -> Result<(), Error> {
+fn car(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "car")?;
-    let arg = vm.heap.get(vm.stack.pop()?);
-    match arg {
-        VCell::Pair(car, _) => vm.acc = VCell::ptr(car),
-        _ => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg).to_string())),
-    }
-    Ok(())
+    Ok(match vm.heap.get(vm.stack.pop()?) {
+        VCell::Pair(car, _) => VCell::ptr(car),
+        arg => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg).to_string())),
+    })
 }
 
-fn cdr(vm: &mut Vm) -> Result<(), Error> {
+fn cdr(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "cdr")?;
-    let arg = vm.heap.get(vm.stack.pop()?);
-    match arg {
-        VCell::Pair(_, cdr) => vm.acc = VCell::ptr(cdr),
-        _ => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg).to_string())),
-    }
-    Ok(())
+    Ok(match vm.heap.get(vm.stack.pop()?) {
+        VCell::Pair(_, cdr) => VCell::ptr(cdr),
+        arg => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg).to_string())),
+    })
 }
 
-fn cons(vm: &mut Vm) -> Result<(), Error> {
+fn cons(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "cons")?;
     let cdr = vm.stack.pop()?.as_ptr()?;
     let car = vm.stack.pop()?.as_ptr()?;
-    let pair = VCell::Pair(car, cdr);
-    vm.acc = vm.heap.put(pair);
-    Ok(())
+    Ok(VCell::Pair(car, cdr))
 }
 
-fn is_boolean(vm: &mut Vm) -> Result<(), Error> {
+fn is_boolean(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "boolean?")?;
     let result = vm.heap.get(vm.stack.pop()?);
-    vm.acc = vm.heap.put(result.is_boolean());
-    Ok(())
+    Ok(result.is_boolean().into())
 }
 
-fn is_char(vm: &mut Vm) -> Result<(), Error> {
+fn is_char(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "char?")?;
     let _ = vm.stack.pop()?;
-    vm.acc = vm.heap.put(false);
-    Ok(())
+    Ok(false.into())
 }
 
-fn is_list(vm: &mut Vm) -> Result<(), Error> {
+fn is_list(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "list?")?;
     let mut rest = vm.heap.get(vm.stack.pop()?);
     loop {
         if !rest.is_pair() {
-            vm.acc = vm.heap.put(rest.is_nil());
-            break;
+            return Ok(rest.is_nil().into());
         }
         rest = vm.heap.get(&rest.as_cdr()?);
     }
-    Ok(())
 }
 
-fn is_null(vm: &mut Vm) -> Result<(), Error> {
+fn is_null(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "null?")?;
     let result = vm.heap.get(vm.stack.pop()?);
-    vm.acc = vm.heap.put(result.is_nil());
-    Ok(())
+    Ok(result.is_nil().into())
 }
 
-fn is_number(vm: &mut Vm) -> Result<(), Error> {
+fn is_number(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "number?")?;
     let result = vm.heap.get(vm.stack.pop()?);
-    vm.acc = vm.heap.put(result.is_number());
-    Ok(())
+    Ok(result.is_number().into())
 }
 
-fn is_pair(vm: &mut Vm) -> Result<(), Error> {
+fn is_pair(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "pair?")?;
     let result = vm.heap.get(vm.stack.pop()?);
-    vm.acc = vm.heap.put(result.is_pair());
-    Ok(())
+    Ok(result.is_pair().into())
 }
 
-fn is_port(vm: &mut Vm) -> Result<(), Error> {
+fn is_port(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "port?")?;
     let _ = vm.stack.pop()?;
-    vm.acc = vm.heap.put(false);
-    Ok(())
+    Ok(false.into())
 }
 
-fn is_procedure(vm: &mut Vm) -> Result<(), Error> {
+fn is_procedure(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "procedure?")?;
     let result = vm.heap.get(vm.stack.pop()?);
-    vm.acc = vm.heap.put(result.is_procedure());
-    Ok(())
+    Ok(result.is_procedure().into())
 }
 
-fn is_string(vm: &mut Vm) -> Result<(), Error> {
+fn is_string(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "string?")?;
     let _ = vm.stack.pop()?;
-    vm.acc = vm.heap.put(false);
-    Ok(())
+    Ok(false.into())
 }
 
-fn is_symbol(vm: &mut Vm) -> Result<(), Error> {
+fn is_symbol(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "symbol?")?;
     let result = vm.heap.get(vm.stack.pop()?);
-    vm.acc = vm.heap.put(result.is_symbol());
-    Ok(())
+    Ok(result.is_symbol().into())
 }
 
-fn is_vector(vm: &mut Vm) -> Result<(), Error> {
+fn is_vector(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "vector?")?;
     let _ = vm.stack.pop()?;
-    vm.acc = vm.heap.put(false);
-    Ok(())
+    Ok(false.into())
 }
 
-fn eq(vm: &mut Vm) -> Result<(), Error> {
+fn eq(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "eq?")?;
     let left = vm.stack.pop()?.clone();
     let right = vm.stack.pop()?.clone();
-    vm.acc = vm.heap.put(vm.eqv(&left, &right)?);
-    Ok(())
+    Ok(vm.eqv(&left, &right)?.into())
 }
 
-fn eqv(vm: &mut Vm) -> Result<(), Error> {
+fn eqv(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "eqv?")?;
     let left = vm.stack.pop()?.clone();
     let right = vm.stack.pop()?.clone();
-    vm.acc = vm.heap.put(vm.eqv(&left, &right)?);
-    Ok(())
+    Ok(vm.eqv(&left, &right)?.into())
 }
 
-fn equal(vm: &mut Vm) -> Result<(), Error> {
+fn equal(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "eqv?")?;
     let left = vm.stack.pop()?.clone();
     let right = vm.stack.pop()?.clone();
-    vm.acc = vm.heap.put(vm.equal(&left, &right)?);
-    Ok(())
+    Ok(vm.equal(&left, &right)?.into())
 }
 
-fn not(vm: &mut Vm) -> Result<(), Error> {
+fn not(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "not")?;
-    vm.acc = match vm.heap.get(vm.stack.pop()?) {
-        VCell::Bool(val) => vm.heap.put(!val),
-        _ => vm.heap.put(false),
-    };
-    Ok(())
+    Ok(match vm.heap.get(vm.stack.pop()?) {
+        VCell::Bool(val) => !val,
+        _ => false,
+    }
+    .into())
 }
 
-fn num_equal(vm: &mut Vm) -> Result<(), Error> {
+fn num_equal(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 1, None, "=")?;
 
     let val = match vm.heap.get(vm.stack.pop()?) {
         VCell::FixedNum(val) => val,
         _ => {
             vm.heap.put(false);
-            return Ok(());
+            return Ok(false.into());
         }
     };
 
@@ -229,16 +208,14 @@ fn num_equal(vm: &mut Vm) -> Result<(), Error> {
                 continue;
             }
             _ => {
-                vm.acc = vm.heap.put(false);
-                return Ok(());
+                return Ok(false.into());
             }
         };
     }
-    vm.acc = vm.heap.put(true);
-    Ok(())
+    Ok(true.into())
 }
 
-fn plus(vm: &mut Vm) -> Result<(), Error> {
+fn plus(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 0, None, "+")?;
     let mut sum = 0_i64;
     for _ in 0..argc {
@@ -253,11 +230,10 @@ fn plus(vm: &mut Vm) -> Result<(), Error> {
             }
         }
     }
-    vm.acc = vm.heap.put(VCell::FixedNum(sum));
-    Ok(())
+    Ok(VCell::FixedNum(sum))
 }
 
-fn minus(vm: &mut Vm) -> Result<(), Error> {
+fn minus(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 1, None, "-")?;
     let mut result = 0_i64;
     for _ in 0..(argc - 1) {
@@ -281,15 +257,14 @@ fn minus(vm: &mut Vm) -> Result<(), Error> {
         result *= -1;
     }
 
-    vm.acc = vm.heap.put(VCell::FixedNum(result));
-    Ok(())
+    Ok(VCell::FixedNum(result))
 }
 
-fn multiply(vm: &mut Vm) -> Result<(), Error> {
+fn multiply(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 0, None, "*")?;
-    let mut sum = 1_i64;
+    let mut result = 1_i64;
     for _ in 0..argc {
-        sum *= match vm.heap.get(vm.stack.pop()?) {
+        result *= match vm.heap.get(vm.stack.pop()?) {
             VCell::FixedNum(n) => n,
             vcell => {
                 return Err(InvalidArgs(
@@ -300,6 +275,5 @@ fn multiply(vm: &mut Vm) -> Result<(), Error> {
             }
         }
     }
-    vm.acc = vm.heap.put(VCell::FixedNum(sum));
-    Ok(())
+    Ok(VCell::FixedNum(result))
 }
