@@ -22,6 +22,7 @@ use crate::vm::{Error, Vm};
 
 impl Vm {
     pub fn load_builtins(&mut self) {
+        self.load_builtin("=", num_equal);
         self.load_builtin("+", plus);
         self.load_builtin("-", minus);
         self.load_builtin("*", multiply);
@@ -208,6 +209,32 @@ fn not(vm: &mut Vm) -> Result<(), Error> {
         VCell::Bool(val) => vm.heap.put(!val),
         _ => vm.heap.put(false),
     };
+    Ok(())
+}
+
+fn num_equal(vm: &mut Vm) -> Result<(), Error> {
+    let argc = pop_argc(vm, 1, None, "=")?;
+
+    let val = match vm.heap.get(vm.stack.pop()?) {
+        VCell::FixedNum(val) => val,
+        _ => {
+            vm.heap.put(false);
+            return Ok(());
+        }
+    };
+
+    for _ in 0..argc - 1 {
+        match vm.heap.get(vm.stack.pop()?) {
+            VCell::FixedNum(next_val) if next_val == val => {
+                continue;
+            }
+            _ => {
+                vm.acc = vm.heap.put(false);
+                return Ok(());
+            }
+        };
+    }
+    vm.acc = vm.heap.put(true);
     Ok(())
 }
 

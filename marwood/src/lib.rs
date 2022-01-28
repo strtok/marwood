@@ -404,4 +404,12 @@ mod integration_test {
     fn let_star() {
         evals!["(let* ([x 10] [y (* x x)]) (+ x y))" => "110"]
     }
+
+    #[test]
+    fn num_equal() {
+        evals![
+            "(= 1 1)" => "#t",
+            "(= 1 0)" => "#f"
+        ];
+    }
 }
