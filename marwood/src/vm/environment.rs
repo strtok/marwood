@@ -84,20 +84,26 @@ impl EnvironmentMap {
     /// New From IOF
     ///
     /// Create a new lambda, and populate its environment map
-    /// given the IOF and set oxf free symbols.
-    pub fn new_from_iof(_args: &[VCell], iof: &Lambda, free_symbols: &[VCell]) -> EnvironmentMap {
-        let map = free_symbols
+    /// given the IOF and set of free symbols.
+    pub fn new_from_iof(args: &[VCell], iof: &Lambda, free_symbols: &[VCell]) -> EnvironmentMap {
+        let mut map = args
+            .iter()
+            .enumerate()
+            .map(|it| (it.1.clone(), BindingSource::Argument(it.0)))
+            .collect::<Vec<(VCell, BindingSource)>>();
+        free_symbols
             .iter()
             .filter_map(|sym| {
-                if let Some((n, _)) = iof.args.iter().enumerate().find(|(_, it)| *it == sym) {
+                if let Some(slot) = iof.envmap.get_slot(sym) {
+                    Some((sym.clone(), BindingSource::IofEnvironment(slot)))
+                } else if let Some((n, _)) = iof.args.iter().enumerate().find(|(_, it)| *it == sym)
+                {
                     Some((sym.clone(), BindingSource::IofArgument(n)))
                 } else {
-                    iof.envmap
-                        .get_slot(sym)
-                        .map(|n| (sym.clone(), BindingSource::IofEnvironment(n)))
+                    None
                 }
             })
-            .collect::<Vec<(VCell, BindingSource)>>();
+            .for_each(|binding| map.push(binding));
         EnvironmentMap { map }
     }
 

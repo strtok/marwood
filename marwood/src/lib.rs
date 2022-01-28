@@ -451,4 +451,14 @@ mod integration_test {
             "(even? 3)" => "#f"
         ];
     }
+
+    #[test]
+    fn set() {
+        evals!["(define (generator) (let ([x 0]) (lambda () (set! x (+ x 1)) x)))" => "#<void>",
+               "(define counter (generator))" => "#<void>",
+               "(counter)" => "1",
+               "(counter)" => "2",
+               "(counter)" => "3"
+        ];
+    }
 }

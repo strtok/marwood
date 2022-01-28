@@ -174,8 +174,8 @@ impl Vm {
             }
             OpCode::Enter => {
                 let (lambda, lexical_env) = match self.heap.get(&self.acc) {
-                    VCell::Closure(lambda, lexical_env) => (lambda, lexical_env),
-                    VCell::Lambda(_) => (self.acc.as_ptr()?, self.ep),
+                    VCell::Closure(lambda, lexical_env) => (lambda, Some(lexical_env)),
+                    VCell::Lambda(_) => (self.acc.as_ptr()?, None),
                     _ => {
                         return Err(InvalidBytecode);
                     }
@@ -188,7 +188,17 @@ impl Vm {
 
                 self.stack.push(VCell::BasePointer(self.bp));
                 self.bp = self.stack.get_sp() - 4;
-                self.ep = lexical_env;
+
+                if let Some(lexical_env) = lexical_env {
+                    self.ep = lexical_env;
+                    let lexical_env = self.heap.get_at_index(lexical_env).as_lexical_env()?;
+                    for (slot, binding) in lambda.envmap.get_map().iter().enumerate() {
+                        if let BindingSource::Argument(arg) = binding.1 {
+                            let arg_offset = self.bp - (lambda.argc() - arg) + 1;
+                            lexical_env.put(slot, self.stack.get(arg_offset)?.clone());
+                        }
+                    }
+                }
             }
             OpCode::Ret => {
                 let n = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
@@ -478,7 +488,11 @@ impl Vm {
                     lexical_env.put(slot, self.load_arg(arg)?.clone());
                 }
                 BindingSource::IofEnvironment(iof_slot) => {
-                    lexical_env.put(slot, VCell::LexicalEnvPtr(self.ep, iof_slot));
+                    let iof_env = self.heap.get_at_index(self.ep).as_lexical_env()?;
+                    match iof_env.get(iof_slot) {
+                        VCell::LexicalEnvPtr(_, _) => lexical_env.put(slot, iof_env.get(iof_slot)),
+                        _ => lexical_env.put(slot, VCell::LexicalEnvPtr(self.ep, iof_slot)),
+                    };
                 }
                 // Own arguments can't be captured in the environment until the procedure
                 // is applied.

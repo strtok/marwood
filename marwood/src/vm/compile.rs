@@ -6,7 +6,8 @@ use crate::vm::transform::Transform;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
 use crate::vm::Error::{
-    InvalidArgs, InvalidNumArgs, InvalidUsePrimitive, LambdaMissingExpression, UnquotedNil,
+    InvalidArgs, InvalidNumArgs, InvalidSyntax, InvalidUsePrimitive, LambdaMissingExpression,
+    UnquotedNil,
 };
 use crate::vm::{Error, Vm};
 use log::trace;
@@ -119,12 +120,6 @@ impl Vm {
             }
         }
 
-        //
-        // if car.deref().is_symbol() {
-        //     let sym_ref = self.heap.put(car);
-        //     self.globenv.get_binding()
-        // }
-
         match proc.deref() {
             Cell::Symbol(proc) => match proc.as_str() {
                 "define" => self.compile_define(lambda, expr),
@@ -132,6 +127,7 @@ impl Vm {
                 "lambda" | "λ" => self.compile_lambda(lambda, expr, false),
                 "quote" => self.compile_quote(lambda, car!(rest)),
                 "if" => self.compile_if(lambda, tail, expr),
+                "set!" => self.compile_set(lambda, tail, expr),
                 _ => self.compile_runtime_procedure_application(lambda, tail, expr),
             },
             _ => self.compile_runtime_procedure_application(lambda, tail, expr),
@@ -493,6 +489,60 @@ impl Vm {
             }
         }
         *lambda.bc.get_mut(jmp_operand).unwrap() = VCell::ptr(lambda.bc.len());
+        Ok(())
+    }
+
+    /// Set
+    ///
+    /// Set is a primitive that provides support for the set! procedure.
+    pub fn compile_set(
+        &mut self,
+        lambda: &mut Lambda,
+        _tail: bool,
+        expr: &Cell,
+    ) -> Result<(), Error> {
+        let rest = cdr!(expr);
+        let (variable, expression) = match rest.collect_vec().as_slice() {
+            [variable, expression] => (*variable, *expression),
+            _ => {
+                return Err(InvalidNumArgs("set!".into()));
+            }
+        };
+
+        if !variable.is_symbol() || variable.is_primitive_symbol() {
+            return Err(InvalidSyntax(format!(
+                "expected variable, but got {}",
+                variable
+            )));
+        }
+
+        self.compile_expression(lambda, false, expression)?;
+
+        let sym_ref = self.heap.put_cell(variable);
+        match lambda.binding_location(&sym_ref) {
+            BindingLocation::Global => {
+                let sym_ref = sym_ref.as_ptr().expect("expected ptr");
+                let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
+                lambda.emit(OpCode::Mov);
+                lambda.emit(VCell::Acc);
+                lambda.emit(env_slot);
+            }
+            BindingLocation::Argument(n) => {
+                let arg_offset = 0_i64 - lambda.argc() as i64 + n as i64 + 1;
+                lambda.emit(OpCode::Mov);
+                lambda.emit(VCell::Acc);
+                lambda.emit(BasePointerOffset(arg_offset));
+            }
+            BindingLocation::Environment(n) => {
+                lambda.emit(OpCode::Mov);
+                lambda.emit(VCell::Acc);
+                lambda.emit(LexicalEnvSlot(n));
+            }
+        }
+
+        lambda.emit(OpCode::Mov);
+        lambda.emit(self.heap.put(VCell::Void));
+        lambda.emit(VCell::Acc);
         Ok(())
     }
 
