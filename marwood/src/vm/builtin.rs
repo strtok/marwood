@@ -23,6 +23,10 @@ use crate::vm::{Error, Vm};
 impl Vm {
     pub fn load_builtins(&mut self) {
         self.load_builtin("=", num_equal);
+        self.load_builtin("<", lt);
+        self.load_builtin(">", gt);
+        self.load_builtin(">=", gteq);
+        self.load_builtin("<=", lteq);
         self.load_builtin("+", plus);
         self.load_builtin("-", minus);
         self.load_builtin("*", multiply);
@@ -192,27 +196,51 @@ fn not(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 fn num_equal(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = pop_argc(vm, 1, None, "=")?;
+    num_comp(vm, |x, y| x == y)
+}
 
-    let val = match vm.heap.get(vm.stack.pop()?) {
+fn lt(vm: &mut Vm) -> Result<VCell, Error> {
+    num_comp(vm, |x, y| x < y)
+}
+
+fn gt(vm: &mut Vm) -> Result<VCell, Error> {
+    num_comp(vm, |x, y| x > y)
+}
+
+fn lteq(vm: &mut Vm) -> Result<VCell, Error> {
+    num_comp(vm, |x, y| x <= y)
+}
+
+fn gteq(vm: &mut Vm) -> Result<VCell, Error> {
+    num_comp(vm, |x, y| x >= y)
+}
+
+fn num_comp(vm: &mut Vm, comp: impl Fn(i64, i64) -> bool) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, None, "=")?;
+    let mut result = true;
+
+    let mut y = match vm.heap.get(vm.stack.pop()?) {
         VCell::FixedNum(val) => val,
         _ => {
-            vm.heap.put(false);
-            return Ok(false.into());
+            result = false;
+            0
         }
     };
 
     for _ in 0..argc - 1 {
         match vm.heap.get(vm.stack.pop()?) {
-            VCell::FixedNum(next_val) if next_val == val => {
+            VCell::FixedNum(x) if comp(x, y) => {
+                y = x;
                 continue;
             }
             _ => {
-                return Ok(false.into());
+                result = false;
+                0
             }
         };
     }
-    Ok(true.into())
+
+    Ok(result.into())
 }
 
 fn plus(vm: &mut Vm) -> Result<VCell, Error> {
