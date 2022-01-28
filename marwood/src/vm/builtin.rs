@@ -32,6 +32,7 @@ impl Vm {
         self.load_builtin("cons", cons);
         self.load_builtin("eq?", eq);
         self.load_builtin("eqv?", eqv);
+        self.load_builtin("equal?", equal);
         self.load_builtin("list?", is_list);
         self.load_builtin("not", not);
         self.load_builtin("null?", is_null);
@@ -190,6 +191,14 @@ fn eqv(vm: &mut Vm) -> Result<(), Error> {
     let left = vm.stack.pop()?.clone();
     let right = vm.stack.pop()?.clone();
     vm.acc = vm.heap.put(vm.eqv(&left, &right)?);
+    Ok(())
+}
+
+fn equal(vm: &mut Vm) -> Result<(), Error> {
+    pop_argc(vm, 2, Some(2), "eqv?")?;
+    let left = vm.stack.pop()?.clone();
+    let right = vm.stack.pop()?.clone();
+    vm.acc = vm.heap.put(vm.equal(&left, &right)?);
     Ok(())
 }
 

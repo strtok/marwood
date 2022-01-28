@@ -46,6 +46,45 @@ impl Vm {
             _ => Ok(false),
         }
     }
+
+    /// equal
+    ///
+    /// This function backs the scheme equal? predicate.
+    ///
+    /// When applied to pairs, vectors and strings it recursively compares them.
+    /// If applied to any other type, it compares with eqv?.
+    pub fn equal(&self, left: &VCell, right: &VCell) -> Result<bool, Error> {
+        println!(
+            "{} vs {}",
+            self.heap.get_as_cell(left),
+            self.heap.get_as_cell(right)
+        );
+        let mut left = left.clone();
+        let mut right = right.clone();
+        loop {
+            if self.eqv(&left, &right)? {
+                return Ok(true);
+            }
+            left = match left {
+                VCell::Ptr(ptr) => self.heap.get_at_index(ptr).clone(),
+                _ => left.clone(),
+            };
+            right = match right {
+                VCell::Ptr(ptr) => self.heap.get_at_index(ptr).clone(),
+                _ => right.clone(),
+            };
+            if !left.is_pair() || !right.is_pair() {
+                return self.eqv(&left, &right);
+            }
+            let lcar = left.as_car()?;
+            let rcar = right.as_car()?;
+            if !self.equal(&lcar, &rcar)? {
+                return Ok(false);
+            }
+            left = self.heap.get(&left.as_cdr()?);
+            right = self.heap.get(&right.as_cdr()?);
+        }
+    }
 }
 
 #[cfg(test)]

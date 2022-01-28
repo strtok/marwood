@@ -130,6 +130,25 @@ mod integration_test {
     }
 
     #[test]
+    fn equal() {
+        evals![
+            "(define foo '(1 2 3))" => "#<void>",
+            "(define bar '(1 2 3))" => "#<void>",
+            "(define baz foo)" => "#<void>",
+            "(equal? foo bar)" => "#t",
+            "(equal? bar baz)" => "#t",
+            "(equal? foo baz)" => "#t",
+            "(equal? (cdr foo) (cdr baz))" => "#t",
+            "(equal? (cons foo bar) (cons foo bar))" => "#t",
+            "(equal? 0 0)" => "#t",
+            "(equal? '() '())" => "#t",
+            "(equal? #f #f)" => "#t",
+            "(equal? #t #t)" => "#t",
+            "(equal? 'foo 'foo)" => "#t"
+        ];
+    }
+
+    #[test]
     fn not() {
         evals![
           "(not #t)" => "#f",
