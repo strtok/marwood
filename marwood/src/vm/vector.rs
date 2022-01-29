@@ -24,4 +24,11 @@ impl Vector {
     pub fn get(&self, index: usize) -> Option<VCell> {
         self.vector.borrow().get(index).cloned()
     }
+
+    pub fn put(&self, index: usize, value: VCell) {
+        let mut vector = self.vector.borrow_mut();
+        if index < vector.len() {
+            *vector.get_mut(index).unwrap() = value;
+        }
+    }
 }

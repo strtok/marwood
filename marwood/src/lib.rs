@@ -518,4 +518,16 @@ mod integration_test {
         fails!["(vector-ref #(1 2 3) 10))" => 
             InvalidVectorIndex(10, 3)];
     }
+
+    #[test]
+    fn vector_set() {
+        evals!["(define v #(1 2 3))" => "#<void>",
+               "(vector-set! v 0 42)" => "#<void>",
+               "v" => "#(42 2 3)"
+        ];
+        fails!["(vector-set! '(1 2 3) 0 0))" =>
+            InvalidSyntax("(1 2 3) is not a vector".into())];
+        fails!["(vector-set! #(1 2 3) 10 0))" =>
+            InvalidVectorIndex(10, 3)];
+    }
 }
