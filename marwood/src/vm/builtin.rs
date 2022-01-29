@@ -1,6 +1,10 @@
 use crate::vm::vcell::VCell;
-use crate::vm::Error::{ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidSyntax};
+use crate::vm::vector::Vector;
+use crate::vm::Error::{
+    ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidSyntax, InvalidVectorIndex,
+};
 use crate::vm::{Error, Vm};
+use std::rc::Rc;
 
 /// Built Ins
 ///
@@ -55,6 +59,8 @@ impl Vm {
         self.load_builtin("string?", is_string);
         self.load_builtin("symbol?", is_symbol);
         self.load_builtin("vector", vector);
+        self.load_builtin("vector-length", vector_length);
+        self.load_builtin("vector-ref", vector_ref);
         self.load_builtin("vector?", is_vector);
         self.load_builtin("zero?", zero);
     }
@@ -77,6 +83,18 @@ fn pop_argc(vm: &mut Vm, min: usize, max: Option<usize>, proc: &str) -> Result<u
         Err(InvalidNumArgs(proc.into()))
     } else {
         Ok(argc)
+    }
+}
+
+fn pop_vector(vm: &mut Vm) -> Result<Rc<Vector>, Error> {
+    match vm.heap.get(vm.stack.pop()?) {
+        VCell::Vector(vector) => Ok(vector),
+        vcell => {
+            return Err(InvalidSyntax(format!(
+                "{} is not a vector",
+                vm.heap.get_as_cell(&vcell)
+            )))
+        }
     }
 }
 
@@ -398,4 +416,28 @@ fn make_vector(vm: &mut Vm) -> Result<VCell, Error> {
 
     let outv = vec![fill; len];
     Ok(vm.heap.put(VCell::vector(outv)))
+}
+
+fn vector_length(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "vector-length")?;
+    let vector = pop_vector(vm)?;
+    Ok(vm.heap.put(VCell::FixedNum(vector.len() as i64)))
+}
+
+fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "vector-length")?;
+    let idx = match vm.heap.get(vm.stack.pop()?) {
+        VCell::FixedNum(idx) if idx >= 0 => idx as usize,
+        vcell => {
+            return Err(InvalidSyntax(format!(
+                "{} is not a valid vector index",
+                vm.heap.get_as_cell(&vcell)
+            )))
+        }
+    };
+    let vector = pop_vector(vm)?;
+    match vector.get(idx) {
+        Some(value) => Ok(value),
+        None => Err(InvalidVectorIndex(idx, vector.len())),
+    }
 }

@@ -10,7 +10,7 @@ mod integration_test {
     use crate::parse;
     use crate::vm::Error::{
         ExpectedPairButFound, InvalidArgs, InvalidDefineSyntax, InvalidNumArgs, InvalidProcedure,
-        InvalidUsePrimitive, UnquotedNil, VariableNotBound,
+        InvalidSyntax, InvalidUsePrimitive, InvalidVectorIndex, UnquotedNil, VariableNotBound,
     };
     use crate::vm::Vm;
 
@@ -496,5 +496,26 @@ mod integration_test {
             "(make-vector 3)" => "#(0 0 0)",
             "(make-vector 3 '(1 2))" => "#((1 2) (1 2) (1 2))"
         ];
+    }
+
+    #[test]
+    fn vector_length() {
+        evals!["(vector-length #())" => "0",
+               "(vector-length #(1 2 3))" => "3"
+        ];
+        fails!["(vector-length '(1 2 3)))" => 
+            InvalidSyntax("(1 2 3) is not a vector".into())];
+    }
+
+    #[test]
+    fn vector_ref() {
+        evals!["(vector-ref #(1 2 3) 0)" => "1",
+               "(vector-ref #(1 2 3) 1)" => "2",
+               "(vector-ref #(1 2 3) 2)" => "3"
+        ];
+        fails!["(vector-ref '(1 2 3) 0))" => 
+            InvalidSyntax("(1 2 3) is not a vector".into())];
+        fails!["(vector-ref #(1 2 3) 10))" => 
+            InvalidVectorIndex(10, 3)];
     }
 }

@@ -143,4 +143,7 @@ pub enum Error {
 
     #[error("invalid syntax: () must be quoted")]
     UnquotedNil,
+
+    #[error("vector index {0} out of range of 0..{0}")]
+    InvalidVectorIndex(usize, usize),
 }
