@@ -73,6 +73,11 @@
 
 (define (list . l) l)
 
+(define (length list)
+    (cond
+      ((null? list) 0)
+      (else (+ (length (cdr list)) 1))))
+
 (define (memq obj list)
     (cond
       ((null? list) #f)
