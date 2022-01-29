@@ -11,6 +11,7 @@ pub enum Cell {
     Number(i64),
     Pair(Box<Cell>, Box<Cell>),
     Symbol(String),
+    Vector(Vec<Cell>),
 
     // Types that exist in VCell, but need Cell representation for
     // printing purposes. These are never created by the lexer/parser.
@@ -387,6 +388,17 @@ impl Display for Cell {
             Cell::Nil => {
                 write!(f, "()")
             }
+            Cell::Vector(vector) => {
+                write!(f, "#(")?;
+                for (idx, cell) in vector.iter().enumerate() {
+                    if idx == vector.len() - 1 {
+                        write!(f, "{}", cell)?;
+                    } else {
+                        write!(f, "{} ", cell)?;
+                    }
+                }
+                write!(f, ")")
+            }
             Cell::Closure => {
                 write!(f, "#<procedure>")
             }
@@ -452,6 +464,17 @@ macro_rules! list {
     }};
 }
 
+#[macro_export]
+macro_rules! vector {
+    () => {
+        Cell::Vector(vec![])
+    };
+    ($($elt:expr),+) => {{
+        let v = vec![$(Cell::from($elt),)+];
+        Cell::Vector(v)
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -490,6 +513,14 @@ mod tests {
         );
         assert_eq!(list![], Cell::new_list(vec!()));
         assert_eq!(list!["foo"], Cell::new_list(vec!(Cell::new_symbol("foo"))));
+    }
+
+    #[test]
+    fn vector_macr() {
+        assert_eq!(
+            vector![1, 2, 3],
+            Cell::Vector(vec![cell![1], cell![2], cell![3]])
+        );
     }
 
     #[test]

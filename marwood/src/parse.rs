@@ -1,7 +1,7 @@
 use crate::cell::Cell;
 use crate::lex::{Token, TokenType};
 use crate::list;
-use crate::parse::Error::ExpectedListTerminator;
+use crate::parse::Error::{ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken};
 use std::iter::Peekable;
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
@@ -16,6 +16,8 @@ pub enum Error {
     ExpectedTokenBeforeDot,
     #[error("expected list terminator {0}, but encountered {1}")]
     ExpectedListTerminator(char, char),
+    #[error("expected vector terminator ), but encountered {0}")]
+    ExpectedVectorTerminator(char),
 }
 
 /// Parse one expression from the token stream.
@@ -36,6 +38,7 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
         TokenType::SingleQuote => Ok(list!["quote", parse(text, cur)?]),
         TokenType::RightParen => Err(Error::UnexpectedToken(")".into())),
         TokenType::LeftParen => parse_list(text, cur, token),
+        TokenType::HashParen => parse_vector(text, cur),
         TokenType::True => Ok(Cell::Bool(true)),
         TokenType::False => Ok(Cell::Bool(false)),
         TokenType::Symbol => Ok(Cell::new_symbol(token.span(text))),
@@ -125,6 +128,44 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
     }
 }
 
+/// Vector
+///
+/// This function is called by a parser that's encountered a '('.
+/// It will recursively parse every value in the list until
+/// it encounters a ')' or a '.', the later of which calls
+/// parse_improper_list_tail() to finish parsing the dotted
+/// form of a list.
+///
+/// # Arguments
+/// *`cur` - an iterator over the token stream. The parser will only
+///          advance the iterator enough to satisfy one expression.
+/// *`text` - the text backed by the token spans.
+/// * `start_token` - The start of list token, used to match the end of
+///     list token.
+fn parse_vector<'a, T: Iterator<Item = &'a Token>>(
+    text: &str,
+    cur: &mut Peekable<T>,
+) -> Result<Cell, Error> {
+    let mut vector = vec![];
+    loop {
+        match cur.peek().ok_or(Error::Eof)?.token_type {
+            TokenType::RightParen => {
+                let end_token = cur.next().unwrap().span(text).chars().next().unwrap();
+                if end_token != ')' {
+                    return Err(ExpectedVectorTerminator(end_token));
+                }
+                return Ok(Cell::Vector(vector));
+            }
+            TokenType::Dot => {
+                return Err(UnexpectedToken(".".into()));
+            }
+            _ => {
+                vector.push(parse(text, cur)?);
+            }
+        }
+    }
+}
+
 /// Parse Number
 ///
 /// This function is called by a parser that has encountered a number
@@ -174,6 +215,7 @@ mod tests {
     use crate::cons;
     use crate::lex;
     use crate::list;
+    use crate::vector;
 
     macro_rules! parses {
         ($($lhs:expr => $rhs:expr),+) => {{
@@ -253,6 +295,19 @@ mod tests {
             "((().()).())" => cons![cons![cell![], cell![]], cell![]]
         };
         fails!["(.)", "(. 0)", "(0 .)", "(0 .)", "(0 1 .)", "(1 . 2 . 3)"];
+    }
+
+    #[test]
+    fn vectors() {
+        parses! {
+            "#()" => vector![],
+            "#(1)" => vector![1],
+            "#(1 2 3)" => vector![1,2,3],
+            "#(#(1 2 3) #(4 5 6))" => vector![vector![1,2,3], vector![4,5,6]],
+            "#('foo 'bar)" => vector![list!["quote", "foo"], list!["quote", "bar"]]
+        };
+
+        fails!["#(1 2 3}", "#(1 2 3]", "#(1 2 . 3)"];
     }
 
     #[test]

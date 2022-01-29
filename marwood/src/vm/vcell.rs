@@ -2,6 +2,7 @@ use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
+use crate::vm::vector::Vector;
 use crate::vm::Error::ExpectedType;
 use crate::vm::{Error, Vm};
 use std::fmt;
@@ -40,6 +41,7 @@ pub enum VCell {
     Ptr(usize),
     Symbol(Rc<String>),
     Undefined,
+    Vector(Rc<Vector>),
     Void,
 }
 
@@ -80,6 +82,7 @@ pub const PTR_TYPE_TEXT: &str = "#<ptr>";
 pub const SYMBOL_TYPE_TEXT: &str = "#<symbol>";
 pub const SYSCALL_TYPE_TEXT: &str = "#<syscall>";
 pub const UNDEFINED_TYPE_TEXT: &str = "#<undefined>";
+pub const VECTOR_TYPE_TEXT: &str = "#<vector>";
 pub const VOID_TYPE_TEXT: &str = "#<void>";
 
 impl VCell {
@@ -109,6 +112,7 @@ impl VCell {
             VCell::BuiltInProc(_) => SYSCALL_TYPE_TEXT,
             VCell::Macro(_) => MACRO_TYPE_TEXT,
             VCell::Undefined => UNDEFINED_TYPE_TEXT,
+            VCell::Vector(_) => VECTOR_TYPE_TEXT,
             VCell::Void => VOID_TYPE_TEXT,
         }
     }
@@ -143,6 +147,10 @@ impl VCell {
 
     pub fn symbol<T: Into<String>>(ptr: T) -> VCell {
         VCell::Symbol(Rc::new(ptr.into()))
+    }
+
+    pub fn vector<T: Into<Vec<VCell>>>(vector: T) -> VCell {
+        VCell::Vector(Rc::new(Vector::new(vector.into())))
     }
 
     pub fn lambda<T: Into<Lambda>>(lambda: T) -> VCell {
@@ -221,6 +229,10 @@ impl VCell {
         matches!(self, VCell::Macro(_))
     }
 
+    pub fn is_vector(&self) -> bool {
+        matches!(self, VCell::Vector(_))
+    }
+
     pub fn as_opcode(&self) -> Result<OpCode, Error> {
         match self {
             VCell::OpCode(op) => Ok(op.clone()),
@@ -288,6 +300,13 @@ impl VCell {
         match self {
             VCell::LexicalEnv(env) => Ok(&*env),
             _ => Err(ExpectedType(LEXICAL_ENV_TYPE_TEXT, self.type_text())),
+        }
+    }
+
+    pub fn as_vector(&self) -> Result<&Vector, Error> {
+        match self {
+            VCell::Vector(vector) => Ok(&*vector),
+            _ => Err(ExpectedType(VECTOR_TYPE_TEXT, self.type_text())),
         }
     }
 
@@ -369,6 +388,7 @@ impl fmt::Display for VCell {
             VCell::Symbol(s) => write!(f, "{}", *s),
             VCell::BuiltInProc(_) => write!(f, "#<syscall>"),
             VCell::Undefined => write!(f, "undefined"),
+            VCell::Vector(_) => write!(f, "#<vector>"),
             VCell::Void => write!(f, "#<void>"),
         }
     }

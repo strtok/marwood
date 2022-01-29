@@ -16,6 +16,7 @@ pub enum TokenType {
     Symbol,
     True,
     WhiteSpace,
+    HashParen,
 }
 
 /// Token
@@ -59,8 +60,6 @@ impl Token {
 /// The type of error encountered by the scanner.
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum Error {
-    #[error("vectors are not supported")]
-    VectorsNotSupported,
     #[error("unexpected character '{0}'")]
     UnexpectedToken(char),
 }
@@ -148,7 +147,7 @@ fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     match c {
         't' => Ok(Token::new((start, start + 2), TokenType::True)),
         'f' => Ok(Token::new((start, start + 2), TokenType::False)),
-        '(' => Err(Error::VectorsNotSupported),
+        '(' => Ok(Token::new((start, start + 2), TokenType::HashParen)),
         _ => Err(Error::UnexpectedToken('#')),
     }
 }
@@ -250,7 +249,8 @@ mod tests {
     fn parens() {
         lexes! {
             "(" => TokenType::LeftParen,
-            ")" => TokenType::RightParen
+            ")" => TokenType::RightParen,
+            "#(" => TokenType::HashParen
         };
     }
 
@@ -317,7 +317,6 @@ mod tests {
         };
 
         fails! {
-            "#(vector)" => Error::VectorsNotSupported,
             "#b" => Error::UnexpectedToken('#')
         };
     }

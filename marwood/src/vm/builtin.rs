@@ -39,6 +39,7 @@ impl Vm {
         self.load_builtin("equal?", equal);
         self.load_builtin("eqv?", eqv);
         self.load_builtin("even?", even);
+        self.load_builtin("make-vector", make_vector);
         self.load_builtin("list?", is_list);
         self.load_builtin("negative?", negative);
         self.load_builtin("not", not);
@@ -53,6 +54,7 @@ impl Vm {
         self.load_builtin("set-cdr!", set_cdr);
         self.load_builtin("string?", is_string);
         self.load_builtin("symbol?", is_symbol);
+        self.load_builtin("vector", vector);
         self.load_builtin("vector?", is_vector);
         self.load_builtin("zero?", zero);
     }
@@ -168,8 +170,8 @@ fn is_symbol(vm: &mut Vm) -> Result<VCell, Error> {
 
 fn is_vector(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "vector?")?;
-    let _ = vm.stack.pop()?;
-    Ok(false.into())
+    let result = vm.heap.get(vm.stack.pop()?);
+    Ok(result.is_vector().into())
 }
 
 fn eq(vm: &mut Vm) -> Result<VCell, Error> {
@@ -372,4 +374,28 @@ fn set_cdr(vm: &mut Vm) -> Result<VCell, Error> {
     };
     *vm.heap.get_at_index_mut(pair.as_ptr()?) = new_pair;
     Ok(VCell::Void)
+}
+
+fn vector(vm: &mut Vm) -> Result<VCell, Error> {
+    let len = pop_argc(vm, 0, None, "vector")?;
+    let mut outv = vec![VCell::Undefined; len];
+    for idx in (0..len).rev() {
+        *outv.get_mut(idx).unwrap() = vm.stack.pop()?.clone();
+    }
+    Ok(vm.heap.put(VCell::vector(outv)))
+}
+
+fn make_vector(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, Some(2), "make-vector")?;
+    let fill = match argc {
+        2 => vm.stack.pop()?.clone(),
+        _ => vm.heap.put(VCell::FixedNum(0)),
+    };
+    let len = match vm.heap.get(vm.stack.pop()?) {
+        VCell::FixedNum(n) if n >= 0 => n as usize,
+        _ => return Err(InvalidSyntax("make-vector requires an integer size".into())),
+    };
+
+    let outv = vec![fill; len];
+    Ok(vm.heap.put(VCell::vector(outv)))
 }

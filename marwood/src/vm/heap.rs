@@ -102,6 +102,13 @@ impl Heap {
             cell::Cell::Closure => panic!("unexpected closure"),
             cell::Cell::Macro => panic!("unexpected macro"),
             cell::Cell::Lambda => panic!("unexpected lambda"),
+            cell::Cell::Vector(ref vector) => {
+                let mut outv = Vec::with_capacity(vector.len());
+                for it in vector {
+                    outv.push(self.put_cell(it))
+                }
+                self.put(VCell::vector(outv))
+            }
         }
     }
 
@@ -180,6 +187,13 @@ impl Heap {
             VCell::Lambda(_) => Cell::Lambda,
             VCell::BuiltInProc(_) => Cell::Lambda,
             VCell::Macro(_) => Cell::Macro,
+            VCell::Vector(vector) => {
+                let mut outv = Vec::with_capacity(vector.len());
+                for idx in 0..vector.len() {
+                    outv.push(self.get_as_cell(&vector.get(idx).unwrap()));
+                }
+                Cell::Vector(outv)
+            }
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
             VCell::Acc
@@ -242,6 +256,12 @@ impl Heap {
                         self.mark_vcell(&env.get(it));
                     }
                 }
+                VCell::Vector(vector) => {
+                    for idx in 0..vector.len() {
+                        let vcell = vector.get(idx).unwrap();
+                        self.mark_vcell(&vcell);
+                    }
+                }
                 VCell::Acc
                 | VCell::BasePointer(_)
                 | VCell::BasePointerOffset(_)
@@ -281,6 +301,12 @@ impl Heap {
             }
             VCell::LexicalEnvPtr(ptr, _) => {
                 self.mark(*ptr);
+            }
+            VCell::Vector(vector) => {
+                for idx in 0..vector.len() {
+                    let vcell = vector.get(idx).unwrap();
+                    self.mark_vcell(&vcell);
+                }
             }
             VCell::Acc
             | VCell::BasePointer(_)

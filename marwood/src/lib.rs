@@ -202,7 +202,11 @@ mod integration_test {
             "(list? '(1 2))" => "#t",
             "(list? '(1 3 4))" => "#t",
             "(list? '(1 2 . 3))" => "#f"
-        ]
+        ];
+
+        evals![
+            "(vector? #(1 2 3))" => "#t"
+        ];
     }
 
     #[test]
@@ -479,5 +483,18 @@ mod integration_test {
         evals!["((lambda (x) (define y 10) (+ x y)) 20)" => "30"];
         fails!["(lambda (x) (define y 10) (+ x y) (define z 10))" => 
             InvalidDefineSyntax("out of context: (define z 10)".into())];
+    }
+
+    #[test]
+    fn vector_and_make_vector() {
+        evals![
+            "(vector)" => "#()",
+            "(vector (+ 10 10) #t)" => "#(20 #t)"
+        ];
+        evals![
+            "(make-vector 0)" => "#()",
+            "(make-vector 3)" => "#(0 0 0)",
+            "(make-vector 3 '(1 2))" => "#((1 2) (1 2) (1 2))"
+        ];
     }
 }

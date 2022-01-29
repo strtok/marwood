@@ -19,6 +19,7 @@ pub mod run;
 pub mod stack;
 pub mod transform;
 pub mod vcell;
+pub mod vector;
 
 const HEAP_SIZE: usize = 1024;
 
