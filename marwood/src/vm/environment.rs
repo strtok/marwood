@@ -2,6 +2,7 @@ use crate::cell::Cell;
 use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
 use crate::vm::Error;
+use crate::vm::Error::InvalidDefineSyntax;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
@@ -39,6 +40,12 @@ pub enum BindingSource {
     /// The binding is inherited from the Nth slot of the IOF's
     /// environment
     IofEnvironment(usize),
+
+    /// The binding is an internal definition (i.e. define in the body)
+    ///
+    /// For example, in `(lambda (x) (define y 10) (+ x y))`, y is an
+    /// internal definition.
+    InternalDefinition,
 }
 
 /// Binding Location
@@ -85,12 +92,23 @@ impl EnvironmentMap {
     ///
     /// Create a new lambda, and populate its environment map
     /// given the IOF and set of free symbols.
-    pub fn new_from_iof(args: &[VCell], iof: &Lambda, free_symbols: &[VCell]) -> EnvironmentMap {
+    pub fn new_from_iof(
+        args: &[VCell],
+        internally_defined: &[VCell],
+        iof: &Lambda,
+        free_symbols: &[VCell],
+    ) -> EnvironmentMap {
         let mut map = args
             .iter()
             .enumerate()
             .map(|it| (it.1.clone(), BindingSource::Argument(it.0)))
             .collect::<Vec<(VCell, BindingSource)>>();
+
+        internally_defined
+            .iter()
+            .map(|it| (it.clone(), BindingSource::InternalDefinition))
+            .for_each(|binding| map.push(binding));
+
         free_symbols
             .iter()
             .filter_map(|sym| {
@@ -420,6 +438,41 @@ fn find_free_symbols_in_proc<'a>(
     }
 
     Ok(())
+}
+
+/// Interally defined symbols
+///
+/// Given the body of a lambda, return the list of internally defined
+/// symbols as a result of calls to define at the beginning of the block.
+///
+/// Internal define expressions are only allowed at the beginning of the
+/// block. Any additional defines will be skipped in anticipation of the
+/// compiler compiling this lambda expression forming an error.
+///
+/// This function also acts as a syntax check to ensure define is only
+/// present at the beginning of a body.
+///
+/// # Arguments
+/// `body` - The body of the lambda
+pub fn internally_defined_symbols(body: &Cell) -> Result<HashSet<&Cell>, Error> {
+    let mut symbols = HashSet::new();
+    let mut beginning_of_body = true;
+
+    for expr in body {
+        if expr.is_pair() && expr.car().unwrap().is_define() {
+            if !beginning_of_body {
+                return Err(InvalidDefineSyntax(format!("out of context: {}", expr)));
+            }
+            let expr = expr.cdr().unwrap();
+            if expr.is_pair() && expr.car().unwrap().is_symbol() {
+                symbols.insert(expr.car().unwrap());
+            }
+            continue;
+        } else {
+            beginning_of_body = false;
+        }
+    }
+    Ok(symbols)
 }
 
 #[cfg(test)]

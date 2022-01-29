@@ -153,6 +153,10 @@ impl Cell {
         self.is_symbol_str("quote")
     }
 
+    pub fn is_define(&self) -> bool {
+        self.is_symbol_str("define")
+    }
+
     pub fn is_lambda(&self) -> bool {
         self.is_symbol_str("lambda")
     }

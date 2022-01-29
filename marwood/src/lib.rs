@@ -9,8 +9,8 @@ mod integration_test {
     use crate::lex;
     use crate::parse;
     use crate::vm::Error::{
-        ExpectedPairButFound, InvalidArgs, InvalidNumArgs, InvalidProcedure, InvalidUsePrimitive,
-        UnquotedNil, VariableNotBound,
+        ExpectedPairButFound, InvalidArgs, InvalidDefineSyntax, InvalidNumArgs, InvalidProcedure,
+        InvalidUsePrimitive, UnquotedNil, VariableNotBound,
     };
     use crate::vm::Vm;
 
@@ -472,5 +472,12 @@ mod integration_test {
                "(set-cdr! (cdr (cdr l)) '(4 5 6)))" => "#<void>",
                "l" => "(1 2 3 4 5 6)"
         ];
+    }
+
+    #[test]
+    fn internal_define() {
+        evals!["((lambda (x) (define y 10) (+ x y)) 20)" => "30"];
+        fails!["(lambda (x) (define y 10) (+ x y) (define z 10))" => 
+            InvalidDefineSyntax("out of context: (define z 10)".into())];
     }
 }

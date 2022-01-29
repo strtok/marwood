@@ -7,6 +7,7 @@ use crate::vm::vcell::VCell;
 /// by the compiler with an entry point of bc[0].
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Lambda {
+    pub top_level: bool,
     pub envmap: EnvironmentMap,
     pub args: Vec<VCell>,
     pub is_vararg: bool,
@@ -24,9 +25,10 @@ impl Lambda {
     ///          point to a symbol representing a formal argument.
     pub fn new(args: Vec<VCell>) -> Lambda {
         Lambda {
+            top_level: false,
+            is_vararg: false,
             envmap: EnvironmentMap::new(),
             args,
-            is_vararg: false,
             bc: vec![],
         }
     }
@@ -37,17 +39,27 @@ impl Lambda {
     /// given the IOF and set of free symbols.
     pub fn new_from_iof(
         args: Vec<VCell>,
+        internally_defined: Vec<VCell>,
         iof: &Lambda,
         free_symbols: &[VCell],
         is_vararg: bool,
     ) -> Lambda {
-        let envmap = EnvironmentMap::new_from_iof(&args, iof, free_symbols);
+        let envmap = EnvironmentMap::new_from_iof(&args, &internally_defined, iof, free_symbols);
         Lambda {
+            top_level: false,
             args,
             is_vararg,
             envmap,
             bc: vec![],
         }
+    }
+
+    pub fn set_top_level(&mut self) {
+        self.top_level = true;
+    }
+
+    pub fn is_top_level(&self) -> bool {
+        self.top_level
     }
 
     /// Get
@@ -97,6 +109,7 @@ impl Lambda {
 impl From<Vec<VCell>> for Lambda {
     fn from(bc: Vec<VCell>) -> Self {
         Lambda {
+            top_level: false,
             envmap: EnvironmentMap::new(),
             args: vec![],
             is_vararg: false,

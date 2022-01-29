@@ -494,9 +494,11 @@ impl Vm {
                         _ => lexical_env.put(slot, VCell::LexicalEnvPtr(self.ep, iof_slot)),
                     };
                 }
-                // Own arguments can't be captured in the environment until the procedure
-                // is applied.
-                BindingSource::Global | BindingSource::Argument(_) => {}
+                // Argument bindings aren't available until CALL/TCALL, and internal definitions are not
+                // defined until the lambda's body executes.
+                BindingSource::Global
+                | BindingSource::Argument(_)
+                | BindingSource::InternalDefinition => {}
             }
         }
         Ok(lexical_env)

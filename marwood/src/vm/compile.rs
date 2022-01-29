@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::vm::environment::{free_symbols, BindingLocation};
+use crate::vm::environment::{free_symbols, internally_defined_symbols, BindingLocation};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
@@ -39,7 +39,8 @@ impl Vm {
     /// `expr` - The expression to compile.
     pub fn compile(&mut self, expr: &Cell) -> Result<Lambda, Error> {
         let mut entry_lambda = Lambda::new(vec![]);
-        let mut lambda = Lambda::new_from_iof(vec![], &entry_lambda, &[], false);
+        let mut lambda = Lambda::new_from_iof(vec![], vec![], &entry_lambda, &[], false);
+        lambda.set_top_level();
         lambda.emit(OpCode::Enter);
         self.compile_expression(&mut lambda, true, expr)?;
         lambda.emit(OpCode::Ret);
@@ -218,13 +219,84 @@ impl Vm {
             return Err(InvalidUsePrimitive(symbol.to_string()));
         }
 
-        let sym_ref = self.heap.put_cell(symbol).as_ptr()?;
-        let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
+        let sym_ref = self.heap.put_cell(symbol);
         lambda.emit(OpCode::Mov);
         lambda.emit(VCell::Acc);
-        lambda.emit(env_slot);
+        match lambda.binding_location(&sym_ref) {
+            BindingLocation::Global => {
+                let sym_ref = sym_ref.as_ptr().expect("expected ptr");
+                let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
+                lambda.emit(env_slot);
+            }
+            BindingLocation::Argument(n) => {
+                let arg_offset = 0_i64 - lambda.argc() as i64 + n as i64 + 1;
+                lambda.emit(BasePointerOffset(arg_offset));
+            }
+            BindingLocation::Environment(n) => {
+                lambda.emit(LexicalEnvSlot(n));
+            }
+        }
+
         lambda.emit(OpCode::MovImmediate);
         lambda.emit(VCell::void());
+        lambda.emit(VCell::Acc);
+        Ok(())
+    }
+
+    /// Set
+    ///
+    /// Set is a primitive that provides support for the set! procedure.
+    ///
+    /// A set! must be in the following form:
+    ///
+    /// * (set ⟨variable⟩ ⟨expression⟩)
+    ///
+    /// `lambda` - The lambda to emit bytecode to
+    /// `expr` - (set! variable expression)
+    /// `tail` - whether or not this set is in a tail context
+    pub fn compile_set(
+        &mut self,
+        lambda: &mut Lambda,
+        _tail: bool,
+        expr: &Cell,
+    ) -> Result<(), Error> {
+        let rest = cdr!(expr);
+        let (variable, expression) = match rest.collect_vec().as_slice() {
+            [variable, expression] => (*variable, *expression),
+            _ => {
+                return Err(InvalidNumArgs("set!".into()));
+            }
+        };
+
+        if !variable.is_symbol() || variable.is_primitive_symbol() {
+            return Err(InvalidSyntax(format!(
+                "expected variable, but got {}",
+                variable
+            )));
+        }
+
+        self.compile_expression(lambda, false, expression)?;
+
+        let sym_ref = self.heap.put_cell(variable);
+        lambda.emit(OpCode::Mov);
+        lambda.emit(VCell::Acc);
+        match lambda.binding_location(&sym_ref) {
+            BindingLocation::Global => {
+                let sym_ref = sym_ref.as_ptr().expect("expected ptr");
+                let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
+                lambda.emit(env_slot);
+            }
+            BindingLocation::Argument(n) => {
+                let arg_offset = 0_i64 - lambda.argc() as i64 + n as i64 + 1;
+                lambda.emit(BasePointerOffset(arg_offset));
+            }
+            BindingLocation::Environment(n) => {
+                lambda.emit(LexicalEnvSlot(n));
+            }
+        }
+
+        lambda.emit(OpCode::Mov);
+        lambda.emit(self.heap.put(VCell::Void));
         lambda.emit(VCell::Acc);
         Ok(())
     }
@@ -297,10 +369,22 @@ impl Vm {
         let (formal_args, is_vararg) = self.compile_formal_arguments(formal_args)?;
         let free_symbols = free_symbols(expr)?
             .iter()
+            .inspect(|it| trace!("free: {}", it))
+            .map(|sym| self.heap.put_cell(sym))
+            .collect::<Vec<VCell>>();
+        let internally_defined = internally_defined_symbols(body)?
+            .iter()
+            .inspect(|it| trace!("internal: {}", it))
             .map(|sym| self.heap.put_cell(sym))
             .collect::<Vec<VCell>>();
 
-        let mut lambda = Lambda::new_from_iof(formal_args, iof, &free_symbols, is_vararg);
+        let mut lambda = Lambda::new_from_iof(
+            formal_args,
+            internally_defined,
+            iof,
+            &free_symbols,
+            is_vararg,
+        );
         if lambda.is_vararg {
             lambda.emit(OpCode::VarArg);
         }
@@ -489,60 +573,6 @@ impl Vm {
             }
         }
         *lambda.bc.get_mut(jmp_operand).unwrap() = VCell::ptr(lambda.bc.len());
-        Ok(())
-    }
-
-    /// Set
-    ///
-    /// Set is a primitive that provides support for the set! procedure.
-    pub fn compile_set(
-        &mut self,
-        lambda: &mut Lambda,
-        _tail: bool,
-        expr: &Cell,
-    ) -> Result<(), Error> {
-        let rest = cdr!(expr);
-        let (variable, expression) = match rest.collect_vec().as_slice() {
-            [variable, expression] => (*variable, *expression),
-            _ => {
-                return Err(InvalidNumArgs("set!".into()));
-            }
-        };
-
-        if !variable.is_symbol() || variable.is_primitive_symbol() {
-            return Err(InvalidSyntax(format!(
-                "expected variable, but got {}",
-                variable
-            )));
-        }
-
-        self.compile_expression(lambda, false, expression)?;
-
-        let sym_ref = self.heap.put_cell(variable);
-        match lambda.binding_location(&sym_ref) {
-            BindingLocation::Global => {
-                let sym_ref = sym_ref.as_ptr().expect("expected ptr");
-                let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
-                lambda.emit(OpCode::Mov);
-                lambda.emit(VCell::Acc);
-                lambda.emit(env_slot);
-            }
-            BindingLocation::Argument(n) => {
-                let arg_offset = 0_i64 - lambda.argc() as i64 + n as i64 + 1;
-                lambda.emit(OpCode::Mov);
-                lambda.emit(VCell::Acc);
-                lambda.emit(BasePointerOffset(arg_offset));
-            }
-            BindingLocation::Environment(n) => {
-                lambda.emit(OpCode::Mov);
-                lambda.emit(VCell::Acc);
-                lambda.emit(LexicalEnvSlot(n));
-            }
-        }
-
-        lambda.emit(OpCode::Mov);
-        lambda.emit(self.heap.put(VCell::Void));
-        lambda.emit(VCell::Acc);
         Ok(())
     }
 
