@@ -1,5 +1,3 @@
-(define (list . l) l)
-
 (define-syntax let
     (syntax-rules ()
     [(let ((name val) ...) body1 body2 ...)
@@ -72,3 +70,23 @@
          (if test
              (begin result1 result2 ...)
              (cond clause1 clause2 ...)))))
+
+(define (list . l) l)
+
+(define (memq obj list)
+    (cond
+      ((null? list) #f)
+      ((eq? (car list) obj) list)
+      (else (memq obj (cdr list)))))
+
+(define (memv obj list)
+    (cond
+      ((null? list) #f)
+      ((eqv? (car list) obj) list)
+      (else (memv obj (cdr list)))))
+
+(define (member obj list)
+    (cond
+      ((null? list) #f)
+      ((equal? (car list) obj) list)
+      (else (member obj (cdr list)))))

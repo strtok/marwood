@@ -54,11 +54,6 @@ impl Vm {
     /// When applied to pairs, vectors and strings it recursively compares them.
     /// If applied to any other type, it compares with eqv?.
     pub fn equal(&self, left: &VCell, right: &VCell) -> Result<bool, Error> {
-        println!(
-            "{} vs {}",
-            self.heap.get_as_cell(left),
-            self.heap.get_as_cell(right)
-        );
         let mut left = left.clone();
         let mut right = right.clone();
         loop {
