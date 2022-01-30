@@ -456,7 +456,7 @@ fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {
 
 fn vector_set(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 3, Some(3), "vector-set!")?;
-    let value = vm.heap.get(vm.stack.pop()?);
+    let value = vm.stack.pop()?.clone();
     let idx = pop_vector_index(vm)?;
     let vector = pop_vector(vm)?;
     if idx > vector.len() - 1 {
