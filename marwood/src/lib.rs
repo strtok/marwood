@@ -567,4 +567,37 @@ mod integration_test {
         fails!["(list->vector #(1 2 3))" =>
             ExpectedPairButFound("#(1 2 3)".into())];
     }
+
+    #[test]
+    fn find_primes() {
+        evals![
+            r#"
+            (define (find-primes n)
+                (define (make-sieve n)
+                    (define (init-sieve v n)
+                        (cond
+                            ((zero? n) v)
+                            (else (vector-set! v (- n 1) (- n 1)) (init-sieve v (- n 1)))))
+                    (init-sieve (make-vector n) n))
+                (define (mark-multiples-of v m i)
+                    (cond
+                        ((>= (* m i) (vector-length v)) v)
+                        (else (vector-set! v (* m i) #f) (mark-multiples-of v m (+ i 1)))))
+                (define (sieve v i)
+                    (cond
+                        ((>= i (vector-length v)) v)
+                        ((eq? (vector-ref v i) #f) (sieve v (+ i 1)))
+                        (else (sieve (mark-multiples-of v i i) (+ i 1)))))
+                (define (sieve->list v)
+                    (define (sieve->list v i)
+                        (cond
+                            ((= i (vector-length v)) '())
+                            ((eq? (vector-ref v i) #f) (sieve->list v (+ i 1)))
+                            (else (cons i (sieve->list v (+ i 1))))))
+                    (sieve->list v 0))
+                (sieve->list (sieve (make-sieve n) 2)))
+            "# => "#<void>",
+            "(find-primes 100)" => "(0 1 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97)"
+        ];
+    }
 }
