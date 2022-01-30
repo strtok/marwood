@@ -47,7 +47,7 @@ impl Vm {
         trace!("main: \n{}", self.decompile_text(&lambda));
         let lambda = self.heap.put(lambda);
         entry_lambda.emit(OpCode::PushImmediate);
-        entry_lambda.emit(VCell::FixedNum(0));
+        entry_lambda.emit(VCell::ArgumentCount(0));
         entry_lambda.emit(OpCode::MovImmediate);
         entry_lambda.emit(lambda);
         entry_lambda.emit(VCell::Acc);
@@ -489,7 +489,7 @@ impl Vm {
         let proc = car!(expr);
         let mut rest = cdr!(expr);
         // Evaluate and push each argument left-to-right
-        let mut n: i64 = 0;
+        let mut n = 0;
         while rest.is_pair() {
             self.compile_expression(lambda, false, rest.car().unwrap())?;
             lambda.emit(OpCode::PushAcc);
@@ -499,7 +499,7 @@ impl Vm {
 
         // Push the argument count
         lambda.emit(OpCode::PushImmediate);
-        lambda.emit(VCell::FixedNum(n));
+        lambda.emit(VCell::ArgumentCount(n));
 
         // Evaluate the procedure to call, and emit a CALL instruction
         self.compile_expression(lambda, false, proc)?;

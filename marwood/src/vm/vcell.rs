@@ -21,28 +21,37 @@ use std::rc::Rc;
 /// * Other runtime sentinel values, such as Undefined and Void.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum VCell {
-    Acc,
-    BasePointer(usize),
-    BasePointerOffset(i64),
+    // Scheme primitive types
     Bool(bool),
-    BuiltInProc(BuiltInProc),
+    FixedNum(i64),
+    Nil,
+    Pair(usize, usize),
+    Symbol(Rc<String>),
+    Vector(Rc<Vector>),
+
+    // other scheme values
+    Undefined,
+    Void,
+
+    // lambda, closure and lexical environments
     Closure(usize, usize),
-    GlobalEnvSlot(usize),
+    Lambda(Rc<Lambda>),
     LexicalEnv(Rc<LexicalEnvironment>),
     LexicalEnvSlot(usize),
     LexicalEnvPtr(usize, usize),
-    FixedNum(i64),
-    InstructionPointer(usize, usize),
     Macro(Rc<Transform>),
-    Lambda(Rc<Lambda>),
-    Nil,
+
+    // VM registers and stack values
+    Acc,
+    ArgumentCount(usize),
+    BasePointer(usize),
+    BasePointerOffset(i64),
+    BuiltInProc(BuiltInProc),
+    EnvironmentPointer(usize),
+    GlobalEnvSlot(usize),
+    InstructionPointer(usize, usize),
     OpCode(OpCode),
-    Pair(usize, usize),
     Ptr(usize),
-    Symbol(Rc<String>),
-    Undefined,
-    Vector(Rc<Vector>),
-    Void,
 }
 
 #[derive(Clone)]
@@ -63,11 +72,13 @@ impl PartialEq<Self> for BuiltInProc {
 impl Eq for BuiltInProc {}
 
 pub const ACC_TYPE_TEXT: &str = "#<acc>";
+pub const ARGUMENT_COUNT_TYPE_TEXT: &str = "#<argument-count>";
 pub const BASE_POINTER_TYPE_TEXT: &str = "#<base-pointer>";
 pub const BASE_POINTER_OFFSET_TYPE_TEXT: &str = "#<base-pointer-offset>";
 pub const BOOL_TYPE_TEXT: &str = "#<bool>";
 pub const CLOSURE_TYPE_TEXT: &str = "#<closure>";
 pub const GLOBAL_ENV_SLOT_TYPE_TEXT: &str = "#<global-environment-slot>";
+pub const ENVIRONMENT_POINTER_TYPE_TEXT: &str = "#<environment-pointer>";
 pub const MACRO_TYPE_TEXT: &str = "#<macro>";
 pub const LEXICAL_ENV_TYPE_TEXT: &str = "#<lexical-environment>";
 pub const LEXICAL_ENV_TYPE_SLOT: &str = "#<lexical-environment-slot>";
@@ -93,10 +104,12 @@ impl VCell {
     pub fn type_text(&self) -> &'static str {
         match self {
             VCell::Acc => ACC_TYPE_TEXT,
+            VCell::ArgumentCount(_) => ARGUMENT_COUNT_TYPE_TEXT,
             VCell::BasePointer(_) => BASE_POINTER_TYPE_TEXT,
             VCell::BasePointerOffset(_) => BASE_POINTER_OFFSET_TYPE_TEXT,
             VCell::Bool(_) => BOOL_TYPE_TEXT,
             VCell::Closure(_, _) => CLOSURE_TYPE_TEXT,
+            VCell::EnvironmentPointer(_) => ENVIRONMENT_POINTER_TYPE_TEXT,
             VCell::GlobalEnvSlot(_) => GLOBAL_ENV_SLOT_TYPE_TEXT,
             VCell::LexicalEnv(_) => LEXICAL_ENV_TYPE_TEXT,
             VCell::LexicalEnvSlot(_) => LEXICAL_ENV_TYPE_SLOT,
@@ -310,6 +323,13 @@ impl VCell {
         }
     }
 
+    pub fn as_argc(&self) -> Result<usize, Error> {
+        match self {
+            VCell::ArgumentCount(bp) => Ok(*bp),
+            _ => Err(ExpectedType(ARGUMENT_COUNT_TYPE_TEXT, self.type_text())),
+        }
+    }
+
     pub fn as_ip(&self) -> Result<(usize, usize), Error> {
         match self {
             VCell::InstructionPointer(lambda, ip) => Ok((*lambda, *ip)),
@@ -324,6 +344,16 @@ impl VCell {
         match self {
             VCell::BasePointer(bp) => Ok(*bp),
             _ => Err(ExpectedType(BASE_POINTER_TYPE_TEXT, self.type_text())),
+        }
+    }
+
+    pub fn as_ep(&self) -> Result<usize, Error> {
+        match self {
+            VCell::EnvironmentPointer(bp) => Ok(*bp),
+            _ => Err(ExpectedType(
+                ENVIRONMENT_POINTER_TYPE_TEXT,
+                self.type_text(),
+            )),
         }
     }
 
@@ -366,11 +396,13 @@ impl fmt::Display for VCell {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             VCell::Acc => write!(f, "%acc"),
+            VCell::ArgumentCount(argc) => write!(f, "%argc[{}]", argc),
             VCell::BasePointer(bp) => write!(f, "%bp[${:02x}]", bp),
             VCell::BasePointerOffset(offset) => write!(f, "%bp[{:+}]", *offset),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
             VCell::Closure(_, _) => write!(f, "#<closure>"),
+            VCell::EnvironmentPointer(ep) => write!(f, "%ep[${:02x}]", ep),
             VCell::GlobalEnvSlot(slot) => write!(f, "genv[${:02x}]", slot),
             VCell::FixedNum(val) => write!(f, "{}", val),
             VCell::InstructionPointer(lambda, ip) => {

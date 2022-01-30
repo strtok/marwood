@@ -82,7 +82,7 @@ impl Vm {
 /// Pop the number of arguments applied to a procedure off the top of
 /// the stack. Return an error if they don't match the expected.
 fn pop_argc(vm: &mut Vm, min: usize, max: Option<usize>, proc: &str) -> Result<usize, Error> {
-    let argc = vm.stack.pop()?.as_fixed_num()? as usize;
+    let argc = vm.stack.pop()?.as_argc()?;
     if argc < min || (max.is_some() && argc > max.unwrap()) {
         Err(InvalidNumArgs(proc.into()))
     } else {

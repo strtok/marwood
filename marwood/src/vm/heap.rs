@@ -197,8 +197,10 @@ impl Heap {
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
             VCell::Acc
+            | VCell::ArgumentCount(_)
             | VCell::BasePointer(_)
             | VCell::BasePointerOffset(_)
+            | VCell::EnvironmentPointer(_)
             | VCell::GlobalEnvSlot(_)
             | VCell::LexicalEnv(_)
             | VCell::LexicalEnvSlot(_)
@@ -262,7 +264,9 @@ impl Heap {
                         self.mark_vcell(&vcell);
                     }
                 }
+                VCell::EnvironmentPointer(ptr) => self.mark(ptr),
                 VCell::Acc
+                | VCell::ArgumentCount(_)
                 | VCell::BasePointer(_)
                 | VCell::BasePointerOffset(_)
                 | VCell::Bool(_)
@@ -308,7 +312,9 @@ impl Heap {
                     self.mark_vcell(&vcell);
                 }
             }
+            VCell::EnvironmentPointer(ep) => self.mark(*ep),
             VCell::Acc
+            | VCell::ArgumentCount(_)
             | VCell::BasePointer(_)
             | VCell::BasePointerOffset(_)
             | VCell::Bool(_)

@@ -115,7 +115,7 @@ impl Vm {
                         return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
                     }
                 };
-                self.stack.push(VCell::Ptr(self.ep));
+                self.stack.push(VCell::EnvironmentPointer(self.ep));
                 self.stack
                     .push(VCell::InstructionPointer(self.ip.0, self.ip.1));
                 self.ip.0 = lambda;
@@ -137,8 +137,8 @@ impl Vm {
                     }
                 };
 
-                let argc = self.stack.get_offset(0)?.as_fixed_num()? as usize;
-                let frame_argc = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
+                let argc = self.stack.get_offset(0)?.as_argc()?;
+                let frame_argc = self.stack.get(self.bp + 1)?.as_argc()?;
 
                 if argc == frame_argc {
                     let saved_bp = self.stack.get(self.bp + 4)?.clone();
@@ -162,7 +162,7 @@ impl Vm {
                         self.stack.push(val);
                     }
 
-                    self.stack.push(VCell::FixedNum(argc as i64));
+                    self.stack.push(VCell::ArgumentCount(argc));
                     self.stack.push(saved_ep);
                     self.stack.push(saved_ip);
                     self.bp = saved_bp.as_bp()?;
@@ -180,7 +180,7 @@ impl Vm {
                 };
                 let lambda = self.heap.get_at_index(lambda);
                 let lambda = lambda.as_lambda()?;
-                if self.stack.get_offset(-2)?.as_fixed_num()? as usize != lambda.args.len() {
+                if self.stack.get_offset(-2)?.as_argc()? != lambda.args.len() {
                     return Err(InvalidNumArgs("procedure".into()));
                 }
 
@@ -199,10 +199,10 @@ impl Vm {
                 }
             }
             OpCode::Ret => {
-                let n = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
+                let n = self.stack.get(self.bp + 1)?.as_argc()?;
 
                 *self.stack.get_sp_mut() = self.bp - n;
-                self.ep = self.stack.get(self.bp + 2)?.as_ptr()?;
+                self.ep = self.stack.get(self.bp + 2)?.as_ep()?;
                 self.ip = self.stack.get(self.bp + 3)?.as_ip()?;
                 self.bp = self.stack.get(self.bp + 4)?.as_bp()?;
             }
@@ -211,7 +211,7 @@ impl Vm {
                 // This requires popping off every optional argument, forming a list on the heap,
                 // and placing the list at the top of the argument stack.
                 let req_argc = self.lambda().args.len() - 1;
-                let argc = self.stack.get_offset(-2)?.as_fixed_num()? as usize;
+                let argc = self.stack.get_offset(-2)?.as_argc()?;
                 if argc < req_argc {
                     return Err(InvalidNumArgs("procedure".into()));
                 }
@@ -240,7 +240,7 @@ impl Vm {
                     // Push the list on the stack, a new argc, and restore the caller's
                     // frame
                     self.stack.push(VCell::ptr(varargs));
-                    self.stack.push(VCell::FixedNum((req_argc + 1) as i64));
+                    self.stack.push(VCell::ArgumentCount(req_argc + 1));
                     self.stack.push(saved_ip);
                     self.stack.push(saved_ep);
                 }
@@ -394,7 +394,7 @@ impl Vm {
     /// Load an argument from the current stack frame given the argument
     /// index.
     fn load_arg(&self, index: usize) -> Result<&VCell, Error> {
-        let arg_count = self.stack.get(self.bp + 1)?.as_fixed_num()? as usize;
+        let arg_count = self.stack.get(self.bp + 1)?.as_argc()?;
         let offset = self.bp;
         let offset = (offset - arg_count) + index + 1;
         self.stack.get(offset)
@@ -492,7 +492,7 @@ impl Vm {
                 VCell::InstructionPointer(self.ip.0, self.ip.1),
                 VCell::Ptr(self.stack.get_sp()),
                 VCell::BasePointer(self.bp),
-                VCell::Ptr(self.ep)
+                VCell::EnvironmentPointer(self.ep)
             )
         );
     }
