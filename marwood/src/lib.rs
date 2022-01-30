@@ -489,6 +489,20 @@ mod integration_test {
     }
 
     #[test]
+    fn internal_define_is_lexical() {
+        evals![
+            "(define y 100)" => "#<void>",
+            "((lambda (x) (define y 10) (+ x y)) 20)" => "30",
+            "y" => "100"
+        ];
+        evals![
+            "(define (y) 100)" => "#<void>",
+            "((lambda (x) (define (y) 10) (+ x (y))) 20)" => "30",
+            "(y)" => "100"
+        ];
+    }
+
+    #[test]
     fn vector_and_make_vector() {
         evals![
             "(vector)" => "#()",

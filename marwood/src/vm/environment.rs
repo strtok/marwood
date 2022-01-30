@@ -464,8 +464,13 @@ pub fn internally_defined_symbols(body: &Cell) -> Result<HashSet<&Cell>, Error> 
                 return Err(InvalidDefineSyntax(format!("out of context: {}", expr)));
             }
             let expr = expr.cdr().unwrap();
-            if expr.is_pair() && expr.car().unwrap().is_symbol() {
-                symbols.insert(expr.car().unwrap());
+            if expr.is_pair() {
+                let expr = expr.car().unwrap();
+                if expr.is_symbol() {
+                    symbols.insert(expr);
+                } else if expr.is_pair() && expr.car().unwrap().is_symbol() {
+                    symbols.insert(expr.car().unwrap());
+                }
             }
             continue;
         } else {
@@ -572,5 +577,17 @@ mod tests {
     #[test]
     fn free_syms_returns_errors() {
         assert!(free_symbols(&parse!["(define)"]).is_err());
+    }
+
+    #[test]
+    fn internally_defined_symbols_returns_vec() {
+        assert_eq!(
+            internally_defined_symbols(&parse!["((define foo 10)(define (bar baz) 10))"]),
+            Ok(HashSet::from([&cell!["foo"], &cell!["bar"]]))
+        );
+        assert!(internally_defined_symbols(&parse![
+            "((define foo 10)(set! foo 5)(define (bar baz) 10))"
+        ])
+        .is_err());
     }
 }
