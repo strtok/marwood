@@ -467,6 +467,7 @@ impl Vm {
         self.stack.iter().for_each(|it| self.heap.mark_vcell(it));
         self.heap.mark_vcell(&self.acc);
         self.heap.mark(self.ip.0);
+        self.heap.mark(self.ep);
         self.heap.sweep();
     }
 

@@ -21,7 +21,7 @@ pub mod transform;
 pub mod vcell;
 pub mod vector;
 
-const HEAP_SIZE: usize = 1024;
+const HEAP_SIZE: usize = 4096;
 
 #[derive(Debug)]
 pub struct Vm {
