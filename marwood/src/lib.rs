@@ -125,7 +125,9 @@ mod integration_test {
             "(eq? '() '())" => "#t",
             "(eq? #f #f)" => "#t",
             "(eq? #t #t)" => "#t",
-            "(eq? 'foo 'foo)" => "#t"
+            "(eq? 'foo 'foo)" => "#t",
+            "(eq? '(1 2 3) '(1 2 3))" => "#f",
+            "(eq? #(1 2 3) #(1 2 3))" => "#f"
         ];
     }
 
@@ -144,7 +146,8 @@ mod integration_test {
             "(equal? '() '())" => "#t",
             "(equal? #f #f)" => "#t",
             "(equal? #t #t)" => "#t",
-            "(equal? 'foo 'foo)" => "#t"
+            "(equal? 'foo 'foo)" => "#t",
+            "(equal? #(1 2 3) #(1 2 3))" => "#t"
         ];
     }
 

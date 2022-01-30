@@ -56,18 +56,28 @@ impl Vm {
     pub fn equal(&self, left: &VCell, right: &VCell) -> Result<bool, Error> {
         let mut left = left.clone();
         let mut right = right.clone();
+        if self.eqv(&left, &right)? {
+            return Ok(true);
+        }
+        left = match left {
+            VCell::Ptr(ptr) => self.heap.get_at_index(ptr).clone(),
+            _ => left.clone(),
+        };
+        right = match right {
+            VCell::Ptr(ptr) => self.heap.get_at_index(ptr).clone(),
+            _ => right.clone(),
+        };
+        if left.is_pair() && right.is_pair() {
+            return self.compare_pair(left, right);
+        }
+        if left.is_vector() && right.is_vector() {
+            return self.compare_vector(left, right);
+        }
+        self.eqv(&left, &right)
+    }
+
+    pub fn compare_pair(&self, mut left: VCell, mut right: VCell) -> Result<bool, Error> {
         loop {
-            if self.eqv(&left, &right)? {
-                return Ok(true);
-            }
-            left = match left {
-                VCell::Ptr(ptr) => self.heap.get_at_index(ptr).clone(),
-                _ => left.clone(),
-            };
-            right = match right {
-                VCell::Ptr(ptr) => self.heap.get_at_index(ptr).clone(),
-                _ => right.clone(),
-            };
             if !left.is_pair() || !right.is_pair() {
                 return self.eqv(&left, &right);
             }
@@ -79,6 +89,20 @@ impl Vm {
             left = self.heap.get(&left.as_cdr()?);
             right = self.heap.get(&right.as_cdr()?);
         }
+    }
+
+    pub fn compare_vector(&self, left: VCell, right: VCell) -> Result<bool, Error> {
+        let left = left.as_vector()?;
+        let right = right.as_vector()?;
+        if left.len() != right.len() {
+            return Ok(false);
+        }
+        for idx in 0..left.len() {
+            if !self.equal(&left.get(idx).unwrap(), &right.get(idx).unwrap())? {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     }
 }
 
