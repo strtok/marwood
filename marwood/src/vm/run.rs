@@ -3,9 +3,7 @@ use crate::vm::environment::{BindingSource, EnvironmentMap, LexicalEnvironment};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::{BuiltInProc, VCell};
-use crate::vm::Error::{
-    InvalidArgs, InvalidBytecode, InvalidNumArgs, InvalidProcedure, VariableNotBound,
-};
+use crate::vm::Error::{InvalidBytecode, InvalidNumArgs, InvalidProcedure, VariableNotBound};
 use crate::vm::{Error, Vm};
 use log::trace;
 use std::rc::Rc;
@@ -247,42 +245,6 @@ impl Vm {
                     self.stack.push(saved_ep);
                 }
             }
-            // Numbers
-            //
-            // The opcodes in this section provide primitives for monipulating numbers,
-            // including primitives for addition, substraction, etc.
-            //
-            OpCode::Add | OpCode::Sub | OpCode::Mul => {
-                let proc_name = match op_code {
-                    OpCode::Add => "+",
-                    OpCode::Sub => "-",
-                    OpCode::Mul => "*",
-                    _ => return Err(InvalidBytecode),
-                };
-                let x = self.heap.get(&self.acc);
-                let y = self.pop_stack()?;
-                let y = self.heap.get(&y);
-                let x = x.as_fixed_num().map_err(|_| {
-                    InvalidArgs(
-                        proc_name.to_string(),
-                        "number".to_string(),
-                        self.heap.get_as_cell(&x).to_string(),
-                    )
-                })?;
-                let y = y.as_fixed_num().map_err(|_| {
-                    InvalidArgs(
-                        proc_name.to_string(),
-                        "number".to_string(),
-                        self.heap.get_as_cell(&y).to_string(),
-                    )
-                })?;
-                match op_code {
-                    OpCode::Add => self.acc = self.heap.put(VCell::fixed_num(x + y)),
-                    OpCode::Sub => self.acc = self.heap.put(VCell::fixed_num(y - x)),
-                    OpCode::Mul => self.acc = self.heap.put(VCell::fixed_num(x * y)),
-                    _ => return Err(InvalidBytecode),
-                };
-            }
         }
 
         Ok(false)
@@ -318,13 +280,6 @@ impl Vm {
                 .into(),
             _ => "#<undefined>".into(),
         }
-    }
-
-    /// Pop Stack
-    ///
-    /// Pop a value off the stack. Error if the stack is empty.
-    fn pop_stack(&mut self) -> Result<VCell, Error> {
-        self.stack.pop().map(|it| it.clone())
     }
 
     /// Lambda

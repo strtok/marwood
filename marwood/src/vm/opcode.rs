@@ -26,11 +26,6 @@ pub enum OpCode {
     Ret,
     TCallAcc,
     VarArg,
-
-    //Numbers
-    Add,
-    Mul,
-    Sub,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -95,7 +90,6 @@ impl Schema {
 fn schema() -> &'static HashMap<OpCode, Schema> {
     lazy_static! {
         static ref SCHEMA: HashMap<OpCode, Schema> = HashMap::from([
-            (OpCode::Add, Schema::new("ADD", vec![])),
             (OpCode::CallAcc, Schema::new("CALL", vec![Operand::Acc])),
             (OpCode::ClosureAcc, Schema::new("CLOSURE", vec![Operand::Acc])),
             (OpCode::Enter, Schema::new("ENTER", vec![])),
@@ -104,12 +98,10 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::Jnt, Schema::new("JNT", vec![Operand::Immediate])),
             (OpCode::Mov, Schema::new("MOV", vec![Operand::LoadReference, Operand::StoreReference])),
             (OpCode::MovImmediate, Schema::new("MOV", vec![Operand::Immediate, Operand::StoreReference])),
-            (OpCode::Mul, Schema::new("MUL", vec![])),
             (OpCode::Push, Schema::new("PUSH", vec![Operand::LoadReference])),
             (OpCode::PushImmediate, Schema::new("PUSH", vec![Operand::Immediate])),
             (OpCode::PushAcc, Schema::new("PUSH", vec![Operand::Acc])),
             (OpCode::Ret, Schema::new("RET", vec![])),
-            (OpCode::Sub, Schema::new("SUB", vec![])),
             (OpCode::TCallAcc, Schema::new("TCALL", vec![Operand::Acc])),
             (OpCode::VarArg, Schema::new("VARARG", vec![]))
         ]);
