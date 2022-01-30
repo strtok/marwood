@@ -64,6 +64,7 @@ impl Vm {
         self.load_builtin("list->vector", list_to_vector);
         self.load_builtin("vector-ref", vector_ref);
         self.load_builtin("vector-set!", vector_set);
+        self.load_builtin("vector-fill!", vector_fill);
         self.load_builtin("vector?", is_vector);
         self.load_builtin("zero?", zero);
     }
@@ -462,6 +463,16 @@ fn vector_set(vm: &mut Vm) -> Result<VCell, Error> {
         return Err(InvalidVectorIndex(idx, vector.len()));
     }
     vector.put(idx, value);
+    Ok(VCell::Void)
+}
+
+fn vector_fill(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "vector-fill!")?;
+    let value = vm.heap.get(vm.stack.pop()?);
+    let vector = pop_vector(vm)?;
+    for idx in 0..vector.len() {
+        vector.put(idx, value.clone());
+    }
     Ok(VCell::Void)
 }
 

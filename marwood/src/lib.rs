@@ -525,7 +525,13 @@ mod integration_test {
                "(vector-set! v 0 42)" => "#<void>",
                "v" => "#(42 2 3)"
         ];
+        evals!["(define v #(1 2 3))" => "#<void>",
+               "(vector-fill! v 42)" => "#<void>",
+               "v" => "#(42 42 42)"
+        ];
         fails!["(vector-set! '(1 2 3) 0 0))" =>
+            InvalidSyntax("(1 2 3) is not a vector".into())];
+        fails!["(vector-fill! '(1 2 3) 0))" =>
             InvalidSyntax("(1 2 3) is not a vector".into())];
         fails!["(vector-set! #(1 2 3) 10 0))" =>
             InvalidVectorIndex(10, 3)];
