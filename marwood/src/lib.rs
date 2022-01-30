@@ -530,4 +530,18 @@ mod integration_test {
         fails!["(vector-set! #(1 2 3) 10 0))" =>
             InvalidVectorIndex(10, 3)];
     }
+
+    #[test]
+    fn list_vector_conversions() {
+        evals!["(vector->list #(1 2 3))" => "(1 2 3)",
+               "(vector->list #())" => "()"
+        ];
+        evals!["(list->vector '(1 2 3))" => "#(1 2 3)",
+               "(list->vector '())" => "#()"
+        ];
+        fails!["(vector->list '(1 2 3))" =>
+            InvalidSyntax("(1 2 3) is not a vector".into())];
+        fails!["(list->vector #(1 2 3))" =>
+            ExpectedPairButFound("#(1 2 3)".into())];
+    }
 }

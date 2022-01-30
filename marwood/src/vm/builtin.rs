@@ -60,6 +60,8 @@ impl Vm {
         self.load_builtin("symbol?", is_symbol);
         self.load_builtin("vector", vector);
         self.load_builtin("vector-length", vector_length);
+        self.load_builtin("vector->list", vector_to_list);
+        self.load_builtin("list->vector", list_to_vector);
         self.load_builtin("vector-ref", vector_ref);
         self.load_builtin("vector-set!", vector_set);
         self.load_builtin("vector?", is_vector);
@@ -442,7 +444,7 @@ fn vector_length(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {
-    pop_argc(vm, 2, Some(2), "vector-length")?;
+    pop_argc(vm, 2, Some(2), "vector-ref")?;
     let idx = pop_vector_index(vm)?;
     let vector = pop_vector(vm)?;
     match vector.get(idx) {
@@ -452,7 +454,7 @@ fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 fn vector_set(vm: &mut Vm) -> Result<VCell, Error> {
-    pop_argc(vm, 3, Some(3), "vector-length")?;
+    pop_argc(vm, 3, Some(3), "vector-set!")?;
     let value = vm.heap.get(vm.stack.pop()?);
     let idx = pop_vector_index(vm)?;
     let vector = pop_vector(vm)?;
@@ -461,4 +463,33 @@ fn vector_set(vm: &mut Vm) -> Result<VCell, Error> {
     }
     vector.put(idx, value);
     Ok(VCell::Void)
+}
+
+fn vector_to_list(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "vector->list")?;
+    let vector = pop_vector(vm)?;
+    let mut tail = vm.heap.put(VCell::Nil);
+    for idx in (0..vector.len()).rev() {
+        let car = vector.get(idx).unwrap();
+        tail = vm.heap.put(VCell::Pair(car.as_ptr()?, tail.as_ptr()?));
+    }
+    Ok(tail)
+}
+
+fn list_to_vector(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "list->vector")?;
+    let mut list = vm.heap.get(vm.stack.pop()?);
+    if !list.is_pair() {
+        if list.is_nil() {
+            return Ok(VCell::vector(vec![]));
+        } else {
+            return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
+        }
+    }
+    let mut outv = vec![];
+    while list.is_pair() {
+        outv.push(list.as_car()?);
+        list = vm.heap.get(&list.as_cdr()?);
+    }
+    Ok(VCell::vector(outv))
 }
