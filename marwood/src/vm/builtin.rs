@@ -321,7 +321,7 @@ fn minus(vm: &mut Vm) -> Result<VCell, Error> {
             VCell::FixedNum(n) => n,
             vcell => {
                 return Err(InvalidArgs(
-                    "+".to_string(),
+                    "-".to_string(),
                     "number".to_string(),
                     vm.heap.get_as_cell(&vcell).to_string(),
                 ));
@@ -348,7 +348,7 @@ fn multiply(vm: &mut Vm) -> Result<VCell, Error> {
             VCell::FixedNum(n) => n,
             vcell => {
                 return Err(InvalidArgs(
-                    "+".to_string(),
+                    "*".to_string(),
                     "number".to_string(),
                     vm.heap.get_as_cell(&vcell).to_string(),
                 ));
