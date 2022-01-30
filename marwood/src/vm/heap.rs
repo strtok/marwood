@@ -236,7 +236,7 @@ impl Heap {
                 self.heap_map.mark(ptr);
             }
 
-            trace!("mark {} => {}", ptr, vcell);
+            //trace!("mark {} => {}", ptr, vcell);
             match vcell {
                 VCell::Pair(car, cdr) => {
                     self.mark(car);
