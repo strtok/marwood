@@ -55,6 +55,7 @@ impl Vm {
         self.load_builtin("port?", is_port);
         self.load_builtin("positive?", positive);
         self.load_builtin("procedure?", is_procedure);
+        self.load_builtin("reverse", reverse);
         self.load_builtin("set-car!", set_car);
         self.load_builtin("set-cdr!", set_cdr);
         self.load_builtin("string?", is_string);
@@ -198,6 +199,37 @@ fn append(vm: &mut Vm) -> Result<VCell, Error> {
         tail = head;
     }
 
+    Ok(tail)
+}
+
+fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
+    let _ = pop_argc(vm, 1, Some(1), "reverse")?;
+    let list = vm.heap.get(vm.stack.pop()?);
+    let mut rest = list.clone();
+    if !rest.is_pair() {
+        return if rest.is_nil() {
+            Ok(rest)
+        } else {
+            Err(ExpectedPairButFound(vm.heap.get_as_cell(&rest).to_string()))
+        };
+    }
+    let mut tail = vm.heap.put(VCell::Nil);
+    loop {
+        tail = vm
+            .heap
+            .put(VCell::Pair(rest.as_car()?.as_ptr()?, tail.as_ptr()?));
+        rest = vm.heap.get(&rest.as_cdr()?);
+        if !rest.is_pair() {
+            if rest.is_nil() {
+                break;
+            } else {
+                return Err(InvalidSyntax(format!(
+                    "{} is an improper list",
+                    vm.heap.get_as_cell(&list).to_string()
+                )));
+            }
+        }
+    }
     Ok(tail)
 }
 

@@ -581,6 +581,14 @@ mod integration_test {
     }
 
     #[test]
+    fn reverse() {
+        evals!["(reverse '())" => "()",
+               "(reverse '(1 2 3))" => "(3 2 1)"
+        ];
+        fails!["(reverse '(1 2 . 3))" => InvalidSyntax("(1 2 . 3) is an improper list".into())]
+    }
+
+    #[test]
     fn find_primes() {
         evals![
             r#"
