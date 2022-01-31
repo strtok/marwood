@@ -46,6 +46,7 @@ impl Vm {
         self.load_builtin("even?", even);
         self.load_builtin("make-vector", make_vector);
         self.load_builtin("list?", is_list);
+        self.load_builtin("list-ref", list_ref);
         self.load_builtin("list-tail", list_tail);
         self.load_builtin("negative?", negative);
         self.load_builtin("not", not);
@@ -234,10 +235,11 @@ fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
     Ok(tail)
 }
 
-fn list_tail(vm: &mut Vm) -> Result<VCell, Error> {
-    let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
-    let idx = pop_index(vm)?;
-    let list = vm.heap.get(vm.stack.pop()?);
+/// Get List Tail
+///
+/// Return the list tail at the given index, or an error if the
+/// index is invalid.
+fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> {
     if !list.is_pair() && !list.is_nil() {
         return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
     }
@@ -258,6 +260,34 @@ fn list_tail(vm: &mut Vm) -> Result<VCell, Error> {
             )));
         }
     }
+}
+
+fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
+    let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
+    let idx = pop_index(vm)?;
+    let list = vm.heap.get(vm.stack.pop()?);
+    if !list.is_pair() && !list.is_nil() {
+        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
+    }
+    let tail = get_list_tail(vm, &list, idx)?;
+    match tail {
+        VCell::Pair(car, _) => Ok(VCell::Ptr(car)),
+        _ => Err(InvalidSyntax(format!(
+            "{} is out of range for {}",
+            idx,
+            vm.heap.get_as_cell(&list).to_string()
+        ))),
+    }
+}
+
+fn list_tail(vm: &mut Vm) -> Result<VCell, Error> {
+    let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
+    let idx = pop_index(vm)?;
+    let list = vm.heap.get(vm.stack.pop()?);
+    if !list.is_pair() && !list.is_nil() {
+        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
+    }
+    get_list_tail(vm, &list, idx)
 }
 
 ///

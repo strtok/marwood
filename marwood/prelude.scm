@@ -78,9 +78,6 @@
       ((null? list) 0)
       (else (+ (length (cdr list)) 1))))
 
-(define (list-ref list n)
-    (car (list-tail list n)))
-
 (define (memq obj list)
     (cond
       ((null? list) #f)
