@@ -46,6 +46,7 @@ impl Vm {
         self.load_builtin("even?", even);
         self.load_builtin("make-vector", make_vector);
         self.load_builtin("list?", is_list);
+        self.load_builtin("list-tail", list_tail);
         self.load_builtin("negative?", negative);
         self.load_builtin("not", not);
         self.load_builtin("null?", is_null);
@@ -231,6 +232,32 @@ fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
         }
     }
     Ok(tail)
+}
+
+fn list_tail(vm: &mut Vm) -> Result<VCell, Error> {
+    let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
+    let idx = pop_index(vm)?;
+    let list = vm.heap.get(vm.stack.pop()?);
+    if !list.is_pair() && !list.is_nil() {
+        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
+    }
+
+    let mut rest = list.clone();
+    let mut rest_idx = idx;
+    loop {
+        if rest_idx == 0 {
+            return Ok(rest);
+        }
+        rest_idx -= 1;
+        rest = vm.heap.get(&rest.as_cdr()?);
+        if !rest.is_pair() && rest_idx != 0 {
+            return Err(InvalidSyntax(format!(
+                "{} is out of range for {}",
+                idx,
+                vm.heap.get_as_cell(&list).to_string()
+            )));
+        }
+    }
 }
 
 ///
@@ -525,12 +552,12 @@ fn pop_vector(vm: &mut Vm) -> Result<Rc<Vector>, Error> {
     }
 }
 
-fn pop_vector_index(vm: &mut Vm) -> Result<usize, Error> {
+fn pop_index(vm: &mut Vm) -> Result<usize, Error> {
     match vm.heap.get(vm.stack.pop()?) {
         VCell::FixedNum(idx) if idx >= 0 => Ok(idx as usize),
         vcell => {
             return Err(InvalidSyntax(format!(
-                "{} is not a valid vector index",
+                "{} is not a valid index",
                 vm.heap.get_as_cell(&vcell)
             )))
         }
@@ -569,7 +596,7 @@ fn vector_length(vm: &mut Vm) -> Result<VCell, Error> {
 
 fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "vector-ref")?;
-    let idx = pop_vector_index(vm)?;
+    let idx = pop_index(vm)?;
     let vector = pop_vector(vm)?;
     match vector.get(idx) {
         Some(value) => Ok(value),
@@ -580,7 +607,7 @@ fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {
 fn vector_set(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 3, Some(3), "vector-set!")?;
     let value = vm.stack.pop()?.clone();
-    let idx = pop_vector_index(vm)?;
+    let idx = pop_index(vm)?;
     let vector = pop_vector(vm)?;
     if idx > vector.len() - 1 {
         return Err(InvalidVectorIndex(idx, vector.len()));

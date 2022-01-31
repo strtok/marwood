@@ -589,6 +589,33 @@ mod integration_test {
     }
 
     #[test]
+    fn list_tail() {
+        evals!["(list-tail '() 0)" => "()",
+                "(list-tail '(1 2 3) 0)" => "(1 2 3)",
+                "(list-tail '(1 2 3) 1)" => "(2 3)",
+                "(list-tail '(1 2 3) 2)" => "(3)",
+                "(list-tail '(1 2 3) 3)" => "()",
+                "(list-tail '(1 2 . 3) 2)" => "3"
+        ];
+        fails![
+            "(list-tail '(1 2 3) 4) " => InvalidSyntax("4 is out of range for (1 2 3)".into())
+        ];
+    }
+
+    #[test]
+    fn list_ref() {
+        evals!["(list-ref '(1 2 3) 0)" => "1",
+                "(list-ref '(1 2 3) 1)" => "2",
+                "(list-ref '(1 2 3) 2)" => "3"
+        ];
+        fails![
+            "(list-ref '() 0)" => ExpectedPairButFound("()".into()),
+            "(list-ref '(1 2 3) 3)" => ExpectedPairButFound("()".into()),
+            "(list-ref '(1 2 3) 4)" => InvalidSyntax("4 is out of range for (1 2 3)".into())
+        ];
+    }
+
+    #[test]
     fn find_primes() {
         evals![
             r#"
