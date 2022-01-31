@@ -616,6 +616,26 @@ mod integration_test {
     }
 
     #[test]
+    fn assoc() {
+        evals!["(assoc 0 '((0 foo) (1 bar) (2 baz)))" => "(0 foo)",
+               "(assoc 2 '((0 foo) (1 bar) (2 baz)))" => "(2 baz)",
+               "(assoc 3 '((0 foo) (1 bar) (2 baz)))" => "#f",
+               "(assoc '(1 2) '((0 foo) ((1 2) bar) (2 baz)))" => "((1 2) bar)"
+        ];
+        evals!["(assq 0 '((0 foo) (1 bar) (2 baz)))" => "(0 foo)",
+               "(assq 2 '((0 foo) (1 bar) (2 baz)))" => "(2 baz)",
+               "(assq 3 '((0 foo) (1 bar) (2 baz)))" => "#f",
+               "(assq '(1 2) '((0 foo) ((1 2) bar) (2 baz)))" => "#f"
+
+        ];
+        evals!["(assv 0 '((0 foo) (1 bar) (2 baz)))" => "(0 foo)",
+               "(assv 2 '((0 foo) (1 bar) (2 baz)))" => "(2 baz)",
+               "(assv 3 '((0 foo) (1 bar) (2 baz)))" => "#f",
+               "(assv '(1 2) '((0 foo) ((1 2) bar) (2 baz)))" => "#f"
+        ];
+    }
+
+    #[test]
     fn find_primes() {
         evals![
             r#"

@@ -71,6 +71,11 @@
              (begin result1 result2 ...)
              (cond clause1 clause2 ...)))))
 
+(define (caar obj) (car (car obj)))
+(define (cadr obj) (car (cdr obj)))
+(define (cdar obj) (cdr (car obj)))
+(define (cddr obj) (cdr (cdr obj)))
+
 (define (list . l) l)
 
 (define (length list)
@@ -95,3 +100,24 @@
       ((null? list) #f)
       ((equal? (car list) obj) list)
       (else (member obj (cdr list)))))
+
+(define (assq obj alist)
+    (cond
+    ((null? alist) #f)
+    ((and (pair? (car alist))
+          (eq? (caar alist) obj)) (car alist))
+    (else (assq obj (cdr alist)))))
+
+(define (assv obj alist)
+    (cond
+    ((null? alist) #f)
+    ((and (pair? (car alist))
+          (eqv? (caar alist) obj)) (car alist))
+    (else (assv obj (cdr alist)))))
+
+(define (assoc obj alist)
+    (cond
+    ((null? alist) #f)
+    ((and (pair? (car alist))
+          (equal? (caar alist) obj)) (car alist))
+    (else (assoc obj (cdr alist)))))

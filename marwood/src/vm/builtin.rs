@@ -241,7 +241,7 @@ fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
 /// index is invalid.
 fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> {
     if !list.is_pair() && !list.is_nil() {
-        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
+        return Err(ExpectedPairButFound(vm.heap.get_as_cell(list).to_string()));
     }
 
     let mut rest = list.clone();
@@ -256,7 +256,7 @@ fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> 
             return Err(InvalidSyntax(format!(
                 "{} is out of range for {}",
                 idx,
-                vm.heap.get_as_cell(&list).to_string()
+                vm.heap.get_as_cell(list).to_string()
             )));
         }
     }
