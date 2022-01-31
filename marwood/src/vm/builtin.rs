@@ -34,6 +34,7 @@ impl Vm {
         self.load_builtin("=", num_equal);
         self.load_builtin(">", gt);
         self.load_builtin(">=", gteq);
+        self.load_builtin("append", append);
         self.load_builtin("boolean?", is_boolean);
         self.load_builtin("car", car);
         self.load_builtin("cdr", cdr);
@@ -90,6 +91,9 @@ fn pop_argc(vm: &mut Vm, min: usize, max: Option<usize>, proc: &str) -> Result<u
     }
 }
 
+///
+/// List Procedures
+///
 fn car(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "car")?;
     Ok(match vm.heap.get(vm.stack.pop()?) {
@@ -113,6 +117,93 @@ fn cons(vm: &mut Vm) -> Result<VCell, Error> {
     Ok(VCell::Pair(car, cdr))
 }
 
+/// Clone List
+///
+/// This function clones list, returning an error if list is
+/// not a list or is improper.
+///
+/// # Arguments
+/// `vm` - The vm in which to allocate the list
+/// `list` - The list to clone
+fn clone_list(vm: &mut Vm, list: VCell) -> Result<(VCell, VCell), Error> {
+    let mut rest = list.clone();
+    if !rest.is_pair() {
+        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&rest).to_string()));
+    }
+
+    let mut head = VCell::Nil;
+    let mut tail = VCell::Nil;
+
+    let nil = vm.heap.put(VCell::Nil).as_ptr()?;
+
+    loop {
+        let pair = vm.heap.put(VCell::Pair(rest.as_car()?.as_ptr()?, nil));
+        if head.is_nil() {
+            head = pair.clone();
+        }
+        if tail.is_nil() {
+            tail = pair.clone();
+        } else {
+            let last_pair = vm.heap.get(&tail);
+            *vm.heap.get_at_index_mut(tail.as_ptr()?) =
+                VCell::Pair(last_pair.as_car()?.as_ptr()?, pair.as_ptr()?);
+            tail = pair;
+        }
+        rest = vm.heap.get(&rest.as_cdr()?);
+        if !rest.is_pair() {
+            if rest.is_nil() {
+                return Ok((head, tail));
+            } else {
+                return Err(InvalidSyntax(format!(
+                    "{} is an improper list",
+                    vm.heap.get_as_cell(&list).to_string()
+                )));
+            }
+        }
+    }
+}
+
+fn append(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 0, None, "append")?;
+    if argc == 0 {
+        return Ok(VCell::Nil);
+    }
+    let mut tail = vm.stack.pop()?.clone();
+    match vm.heap.get(&tail) {
+        VCell::Nil | VCell::Pair(_, _) => {}
+        vcell => {
+            return Err(ExpectedPairButFound(
+                vm.heap.get_as_cell(&vcell).to_string(),
+            ));
+        }
+    }
+
+    for _ in 0..(argc - 1) {
+        let list = vm.heap.get(&vm.stack.pop()?.clone());
+        match list {
+            VCell::Nil => {
+                continue;
+            }
+            VCell::Pair(_, _) => {}
+            vcell => {
+                return Err(ExpectedPairButFound(
+                    vm.heap.get_as_cell(&vcell).to_string(),
+                ));
+            }
+        }
+        let (head, sub_tail) = clone_list(vm, list)?;
+        let sub_pair = vm.heap.get(&sub_tail);
+        *vm.heap.get_at_index_mut(sub_tail.as_ptr()?) =
+            VCell::Pair(sub_pair.as_car()?.as_ptr()?, tail.as_ptr()?);
+        tail = head;
+    }
+
+    Ok(tail)
+}
+
+///
+/// Predicates
+///
 fn is_boolean(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "boolean?")?;
     let result = vm.heap.get(vm.stack.pop()?);

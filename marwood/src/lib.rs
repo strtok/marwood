@@ -569,6 +569,18 @@ mod integration_test {
     }
 
     #[test]
+    fn append() {
+        evals!["(append '())" => "()",
+               "(append '(1 2 3))" => "(1 2 3)",
+               "(append '(1 2 3) '(4 5 6))" => "(1 2 3 4 5 6)",
+               "(append '(1 2 3) '() '(4 5 6))" => "(1 2 3 4 5 6)",
+               "(append '(1 2 3) '() '(4 5 6 . 7))" => "(1 2 3 4 5 6 . 7)",
+               "(append '(1) '(2) '(3))" => "(1 2 3)"
+        ];
+        fails!["(append '(1 2 . 3) '())" => InvalidSyntax("(1 2 . 3) is an improper list".into())]
+    }
+
+    #[test]
     fn find_primes() {
         evals![
             r#"
