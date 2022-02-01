@@ -73,7 +73,7 @@
 
 (define (atom? obj)
     (and (not (pair? obj)) (not (vector? obj))))
-    
+
 (define (caar obj) (car (car obj)))
 (define (cadr obj) (car (cdr obj)))
 (define (cdar obj) (cdr (car obj)))

@@ -11,6 +11,7 @@ pub enum TokenType {
     False,
     LeftParen,
     Number,
+    NumberPrefix,
     RightParen,
     SingleQuote,
     Symbol,
@@ -148,6 +149,9 @@ fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
         't' => Ok(Token::new((start, start + 2), TokenType::True)),
         'f' => Ok(Token::new((start, start + 2), TokenType::False)),
         '(' => Ok(Token::new((start, start + 2), TokenType::HashParen)),
+        'e' | 'i' | 'b' | 'o' | 'd' | 'x' => {
+            Ok(Token::new((start, start + 2), TokenType::NumberPrefix))
+        }
         _ => Err(Error::UnexpectedToken('#')),
     }
 }
@@ -183,7 +187,7 @@ fn is_initial_number(c: char) -> bool {
 }
 
 fn is_subsequent_number(c: char) -> bool {
-    c.is_digit(10) || c == '.'
+    c.is_digit(10) || c.is_digit(16) || c == '.'
 }
 
 fn is_initial_identifier(c: char) -> bool {
@@ -317,7 +321,7 @@ mod tests {
         };
 
         fails! {
-            "#b" => Error::UnexpectedToken('#')
+            "#p" => Error::UnexpectedToken('#')
         };
     }
 }

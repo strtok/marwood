@@ -172,13 +172,14 @@ impl Default for Stack {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::number::Number;
 
     #[test]
     fn stack_grows_on_push() {
         let mut stack = Stack::new();
         assert_eq!(stack.len(), 256);
         for i in 0..1024 {
-            stack.push(VCell::FixedNum(i));
+            stack.push(VCell::Number(Number::from(i)));
         }
         assert_eq!(stack.len(), 2048)
     }
@@ -186,24 +187,24 @@ mod tests {
     #[test]
     fn relative_access() {
         let mut stack = Stack::new();
-        stack.push(VCell::FixedNum(0));
-        stack.push(VCell::FixedNum(1));
-        stack.push(VCell::FixedNum(2));
+        stack.push(VCell::number(0));
+        stack.push(VCell::number(1));
+        stack.push(VCell::number(2));
         assert_eq!(stack.get_offset(2), Ok(&VCell::Undefined));
         assert_eq!(stack.get_offset(1), Ok(&VCell::Undefined));
-        assert_eq!(stack.get_offset(0), Ok(&VCell::FixedNum(2)));
-        assert_eq!(stack.get_offset(-1), Ok(&VCell::FixedNum(1)));
-        assert_eq!(stack.get_offset(-2), Ok(&VCell::FixedNum(0)));
+        assert_eq!(stack.get_offset(0), Ok(&VCell::number(2)));
+        assert_eq!(stack.get_offset(-1), Ok(&VCell::number(1)));
+        assert_eq!(stack.get_offset(-2), Ok(&VCell::number(0)));
         assert_eq!(stack.get_offset(-3), Ok(&VCell::Undefined));
     }
 
     #[test]
     fn push_and_pop() {
         let mut stack = Stack::new();
-        stack.push(VCell::FixedNum(1));
-        stack.push(VCell::FixedNum(2));
-        assert_eq!(stack.pop(), Ok(&VCell::FixedNum(2)));
-        assert_eq!(stack.pop(), Ok(&VCell::FixedNum(1)));
+        stack.push(VCell::number(1));
+        stack.push(VCell::number(2));
+        assert_eq!(stack.pop(), Ok(&VCell::number(2)));
+        assert_eq!(stack.pop(), Ok(&VCell::number(1)));
         assert_eq!(stack.pop(), Err(InvalidStackIndex(0)));
     }
 }

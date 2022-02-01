@@ -1,3 +1,4 @@
+use crate::number::Number;
 use crate::vm::vcell::VCell;
 use crate::vm::vector::Vector;
 use crate::vm::Error::{
@@ -414,27 +415,30 @@ fn gteq(vm: &mut Vm) -> Result<VCell, Error> {
     num_comp(vm, ">=", |x, y| x >= y)
 }
 
-fn num_comp(vm: &mut Vm, name: &str, comp: impl Fn(i64, i64) -> bool) -> Result<VCell, Error> {
+fn num_comp(
+    vm: &mut Vm,
+    name: &str,
+    comp: impl Fn(&Number, &Number) -> bool,
+) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 1, None, name)?;
     let mut result = true;
 
     let mut y = match vm.heap.get(vm.stack.pop()?) {
-        VCell::FixedNum(val) => val,
+        VCell::Number(val) => val,
         _ => {
             result = false;
-            0
+            Number::from(0)
         }
     };
 
     for _ in 0..argc - 1 {
         match vm.heap.get(vm.stack.pop()?) {
-            VCell::FixedNum(x) if comp(x, y) => {
+            VCell::Number(x) if comp(&x, &y) => {
                 y = x;
                 continue;
             }
             _ => {
                 result = false;
-                0
             }
         };
     }
@@ -443,44 +447,44 @@ fn num_comp(vm: &mut Vm, name: &str, comp: impl Fn(i64, i64) -> bool) -> Result<
 }
 
 fn zero(vm: &mut Vm) -> Result<VCell, Error> {
-    num_unary_predicate(vm, "zero?", |x| x == 0)
+    num_unary_predicate(vm, "zero?", |x| x == &Number::from(0))
 }
 
 fn positive(vm: &mut Vm) -> Result<VCell, Error> {
-    num_unary_predicate(vm, "positive?", |x| x > 0)
+    num_unary_predicate(vm, "positive?", |x| x > &Number::from(0))
 }
 
 fn negative(vm: &mut Vm) -> Result<VCell, Error> {
-    num_unary_predicate(vm, "negative?", |x| x < 0)
+    num_unary_predicate(vm, "negative?", |x| x < &Number::from(0))
 }
 
 fn odd(vm: &mut Vm) -> Result<VCell, Error> {
-    num_unary_predicate(vm, "odd?", |x| x % 2 != 0)
+    num_unary_predicate(vm, "odd?", |x| x % &Number::from(2) != Number::from(0))
 }
 
 fn even(vm: &mut Vm) -> Result<VCell, Error> {
-    num_unary_predicate(vm, "even?", |x| x % 2 == 0)
+    num_unary_predicate(vm, "even?", |x| x % &Number::from(2) == Number::from(0))
 }
 
 fn num_unary_predicate(
     vm: &mut Vm,
     name: &str,
-    predicate: impl Fn(i64) -> bool,
+    predicate: impl Fn(&Number) -> bool,
 ) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), name)?;
     let x = match vm.heap.get(vm.stack.pop()?) {
-        VCell::FixedNum(val) => val,
+        VCell::Number(val) => val,
         _ => return Ok(false.into()),
     };
-    Ok(predicate(x).into())
+    Ok(predicate(&x).into())
 }
 
 fn plus(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 0, None, "+")?;
-    let mut sum = 0_i64;
+    let mut sum = Number::from(0);
     for _ in 0..argc {
         sum += match vm.heap.get(vm.stack.pop()?) {
-            VCell::FixedNum(n) => n,
+            VCell::Number(n) => n,
             vcell => {
                 return Err(InvalidArgs(
                     "+".to_string(),
@@ -490,15 +494,15 @@ fn plus(vm: &mut Vm) -> Result<VCell, Error> {
             }
         }
     }
-    Ok(VCell::FixedNum(sum))
+    Ok(sum.into())
 }
 
 fn minus(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 1, None, "-")?;
-    let mut result = 0_i64;
+    let mut result = Number::from(0);
     for _ in 0..(argc - 1) {
         result += match vm.heap.get(vm.stack.pop()?) {
-            VCell::FixedNum(n) => n,
+            VCell::Number(n) => n,
             vcell => {
                 return Err(InvalidArgs(
                     "-".to_string(),
@@ -509,23 +513,23 @@ fn minus(vm: &mut Vm) -> Result<VCell, Error> {
         }
     }
 
-    if let VCell::FixedNum(n) = vm.heap.get(vm.stack.pop()?) {
+    if let VCell::Number(n) = vm.heap.get(vm.stack.pop()?) {
         result = n - result;
     }
 
     if argc == 1 {
-        result *= -1;
+        result *= Number::from(-1);
     }
 
-    Ok(VCell::FixedNum(result))
+    Ok(VCell::Number(result))
 }
 
 fn multiply(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 0, None, "*")?;
-    let mut result = 1_i64;
+    let mut result = Number::from(1);
     for _ in 0..argc {
         result *= match vm.heap.get(vm.stack.pop()?) {
-            VCell::FixedNum(n) => n,
+            VCell::Number(n) => n,
             vcell => {
                 return Err(InvalidArgs(
                     "*".to_string(),
@@ -535,7 +539,7 @@ fn multiply(vm: &mut Vm) -> Result<VCell, Error> {
             }
         }
     }
-    Ok(VCell::FixedNum(result))
+    Ok(VCell::Number(result))
 }
 
 fn set_car(vm: &mut Vm) -> Result<VCell, Error> {
@@ -584,7 +588,9 @@ fn pop_vector(vm: &mut Vm) -> Result<Rc<Vector>, Error> {
 
 fn pop_index(vm: &mut Vm) -> Result<usize, Error> {
     match vm.heap.get(vm.stack.pop()?) {
-        VCell::FixedNum(idx) if idx >= 0 => Ok(idx as usize),
+        VCell::Number(num) => num
+            .to_usize()
+            .ok_or_else(|| InvalidSyntax(format!("{} is not a valid index", num))),
         vcell => {
             return Err(InvalidSyntax(format!(
                 "{} is not a valid index",
@@ -604,14 +610,16 @@ fn vector(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 fn make_vector(vm: &mut Vm) -> Result<VCell, Error> {
+    let err = || InvalidSyntax("make-vector requires an integer size".into());
     let argc = pop_argc(vm, 1, Some(2), "make-vector")?;
     let fill = match argc {
         2 => vm.stack.pop()?.clone(),
-        _ => vm.heap.put(VCell::FixedNum(0)),
+        _ => vm.heap.put(VCell::Number(Number::from(0))),
     };
+
     let len = match vm.heap.get(vm.stack.pop()?) {
-        VCell::FixedNum(n) if n >= 0 => n as usize,
-        _ => return Err(InvalidSyntax("make-vector requires an integer size".into())),
+        VCell::Number(num) => num.to_usize().ok_or_else(err)?,
+        _ => return Err(err()),
     };
 
     let outv = vec![fill; len];
@@ -621,7 +629,7 @@ fn make_vector(vm: &mut Vm) -> Result<VCell, Error> {
 fn vector_length(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "vector-length")?;
     let vector = pop_vector(vm)?;
-    Ok(VCell::FixedNum(vector.len() as i64))
+    Ok(Number::from(vector.len() as i64).into())
 }
 
 fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {

@@ -1,7 +1,9 @@
 use crate::cell::Cell;
+use crate::lex::TokenType::NumberPrefix;
 use crate::lex::{Token, TokenType};
 use crate::list;
-use crate::parse::Error::{ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken};
+use crate::number::{Exactness, Number};
+use crate::parse::Error::{Eof, ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken};
 use std::iter::Peekable;
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
@@ -18,6 +20,8 @@ pub enum Error {
     ExpectedListTerminator(char, char),
     #[error("expected vector terminator ), but encountered {0}")]
     ExpectedVectorTerminator(char),
+    #[error("syntax error parsing {0}")]
+    SyntaxError(String),
 }
 
 /// Parse one expression from the token stream.
@@ -42,7 +46,7 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
         TokenType::True => Ok(Cell::Bool(true)),
         TokenType::False => Ok(Cell::Bool(false)),
         TokenType::Symbol => Ok(Cell::new_symbol(token.span(text))),
-        TokenType::Number => parse_number(text, token),
+        TokenType::NumberPrefix | TokenType::Number => parse_number(text, cur, token),
         TokenType::Dot | TokenType::WhiteSpace => {
             Err(Error::UnexpectedToken(token.span(text).into()))
         }
@@ -178,14 +182,31 @@ fn parse_vector<'a, T: Iterator<Item = &'a Token>>(
 /// *`cur` - an iterator over the token stream. The parser will only
 ///          advance the iterator enough to satisfy one expression.
 /// *`text` - the text backed by the token spans.
-fn parse_number(text: &str, token: &Token) -> Result<Cell, Error> {
+fn parse_number<'a, T: Iterator<Item = &'a Token>>(
+    text: &str,
+    cur: &mut Peekable<T>,
+    mut token: &'a Token,
+) -> Result<Cell, Error> {
+    let mut exactness = Exactness::Unspecified;
+    let mut radix = 10;
+
+    while token.token_type == NumberPrefix {
+        match token.span(text) {
+            "#e" => exactness = Exactness::Exact,
+            "#i" => exactness = Exactness::Inexact,
+            "#d" => radix = 10,
+            "#b" => radix = 2,
+            "#o" => radix = 8,
+            "#x" => radix = 16,
+            _ => panic!("unexpected number prefix {}", token.span(text)),
+        }
+        token = cur.next().ok_or(Eof)?;
+    }
+
     let span = token.span(text);
-    match span.parse::<i64>() {
-        Ok(n) => Ok(Cell::Number(n)),
-        Err(_) => match span.parse::<f64>() {
-            Ok(n) => Ok(Cell::Number(n as i64)),
-            Err(_) => Ok(Cell::Symbol(span.into())),
-        },
+    match Number::parse(span, exactness, radix) {
+        Some(num) => Ok(Cell::Number(num)),
+        None => Ok(Cell::Symbol(span.to_string())),
     }
 }
 

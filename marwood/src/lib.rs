@@ -1,5 +1,6 @@
 pub mod cell;
 pub mod lex;
+pub mod number;
 pub mod parse;
 pub mod vm;
 
@@ -438,6 +439,10 @@ mod integration_test {
           "(>= 5 4)" => "#t",
           "(>= 5 4 3 3 2 1)" => "#t",
           "(>= 5 4 3 2 3 1)" => "#f"
+        ];
+        evals![
+            "(> 2.0 1)" => "#t",
+            "(> 2 1.0)" => "#t"
         ];
     }
 

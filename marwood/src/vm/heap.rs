@@ -90,7 +90,7 @@ impl Heap {
             cell::Cell::Undefined => self.put(VCell::Undefined),
             cell::Cell::Void => self.put(VCell::Void),
             cell::Cell::Nil => self.put(VCell::Nil),
-            cell::Cell::Number(val) => self.put(VCell::FixedNum(val)),
+            cell::Cell::Number(ref val) => self.put(VCell::Number(val.clone())),
             cell::Cell::Bool(val) => self.put(VCell::Bool(val)),
             cell::Cell::Pair(ref car, ref cdr) => {
                 match (self.put_cell(car.deref()), self.put_cell(cdr.deref())) {
@@ -173,7 +173,7 @@ impl Heap {
     pub fn get_as_cell(&self, vcell: &VCell) -> Cell {
         match vcell {
             VCell::Bool(val) => Cell::Bool(*val),
-            VCell::FixedNum(val) => Cell::Number(*val),
+            VCell::Number(val) => Cell::Number(val.clone()),
             VCell::Nil => Cell::Nil,
             VCell::Pair(ref car, cdr) => Cell::new_pair(
                 self.get_as_cell(&VCell::Ptr(*car)),
@@ -274,9 +274,9 @@ impl Heap {
                 | VCell::GlobalEnvSlot(_)
                 | VCell::LexicalEnvSlot(_)
                 | VCell::LexicalEnvPtr(_, _)
-                | VCell::FixedNum(_)
                 | VCell::InstructionPointer(_, _)
                 | VCell::Nil
+                | VCell::Number(_)
                 | VCell::OpCode(_)
                 | VCell::Symbol(_)
                 | VCell::Macro(_)
@@ -319,10 +319,10 @@ impl Heap {
             | VCell::BasePointerOffset(_)
             | VCell::Bool(_)
             | VCell::GlobalEnvSlot(_)
-            | VCell::FixedNum(_)
             | VCell::LexicalEnv(_)
             | VCell::LexicalEnvSlot(_)
             | VCell::Nil
+            | VCell::Number(_)
             | VCell::OpCode(_)
             | VCell::Symbol(_)
             | VCell::BuiltInProc(_)
@@ -381,7 +381,9 @@ impl Heap {
 mod tests {
     use super::*;
     use crate::cell::Cell;
+    use crate::number::Number;
     use crate::{cell, cons};
+
     const CHUNK_SIZE: usize = 1024;
 
     #[test]
@@ -393,10 +395,10 @@ mod tests {
         assert_eq!(heap.heap_map.get(0), Some(State::Allocated));
         assert_eq!(heap.alloc(), 1);
         assert_eq!(heap.heap_map.get(1), Some(State::Allocated));
-        *heap.get_at_index_mut(0) = VCell::FixedNum(42.into());
-        *heap.get_at_index_mut(1) = VCell::FixedNum(43.into());
-        assert_eq!(heap.get_at_index(0), &VCell::FixedNum(42.into()));
-        assert_eq!(heap.get_at_index(1), &VCell::FixedNum(43.into()));
+        *heap.get_at_index_mut(0) = VCell::Number(Number::from(42));
+        *heap.get_at_index_mut(1) = VCell::Number(Number::from(43));
+        assert_eq!(heap.get_at_index(0), &VCell::Number(Number::from(42)));
+        assert_eq!(heap.get_at_index(1), &VCell::Number(Number::from(43)));
     }
 
     #[test]

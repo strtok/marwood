@@ -40,7 +40,7 @@ impl Vm {
         };
         match (left, right) {
             (VCell::Bool(left), VCell::Bool(right)) => Ok(left == right),
-            (VCell::FixedNum(left), VCell::FixedNum(right)) => Ok(left == right),
+            (VCell::Number(left), VCell::Number(right)) => Ok(left == right),
             (VCell::Nil, VCell::Nil) => Ok(true),
             (VCell::Pair(_, _), VCell::Pair(_, _)) => Ok(left == right),
             _ => Ok(false),

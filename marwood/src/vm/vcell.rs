@@ -1,3 +1,4 @@
+use crate::number::Number;
 use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
@@ -23,8 +24,8 @@ use std::rc::Rc;
 pub enum VCell {
     // Scheme primitive types
     Bool(bool),
-    FixedNum(i64),
     Nil,
+    Number(Number),
     Pair(usize, usize),
     Symbol(Rc<String>),
     Vector(Rc<Vector>),
@@ -85,6 +86,7 @@ pub const LEXICAL_ENV_TYPE_SLOT: &str = "#<lexical-environment-slot>";
 pub const LEXICAL_ENV_POINTER_TYPE_TEXT: &str = "#<lexical-environment-pointer>";
 pub const FIXEDNUM_TYPE_TEXT: &str = "#<fixednum>";
 pub const INSTRUCTION_POINTER_TYPE_TEXT: &str = "#<instruction-pointer>";
+pub const NUMBER_TYPE_TEXT: &str = "#<number>";
 pub const LAMBDA_TYPE_TEXT: &str = "#<lambda>";
 pub const NIL_TYPE_TEXT: &str = "#<nil>";
 pub const OPCODE_TYPE_TEXT: &str = "#<opcode>";
@@ -114,10 +116,10 @@ impl VCell {
             VCell::LexicalEnv(_) => LEXICAL_ENV_TYPE_TEXT,
             VCell::LexicalEnvSlot(_) => LEXICAL_ENV_TYPE_SLOT,
             VCell::LexicalEnvPtr(_, _) => LEXICAL_ENV_POINTER_TYPE_TEXT,
-            VCell::FixedNum(_) => FIXEDNUM_TYPE_TEXT,
             VCell::InstructionPointer(_, _) => INSTRUCTION_POINTER_TYPE_TEXT,
             VCell::Lambda(_) => LAMBDA_TYPE_TEXT,
             VCell::Nil => NIL_TYPE_TEXT,
+            VCell::Number(_) => NUMBER_TYPE_TEXT,
             VCell::OpCode(_) => OPCODE_TYPE_TEXT,
             VCell::Pair(_, _) => PAIR_TYPE_TEXT,
             VCell::Ptr(_) => PTR_TYPE_TEXT,
@@ -130,6 +132,10 @@ impl VCell {
         }
     }
 
+    pub fn number<T: Into<Number>>(num: T) -> VCell {
+        VCell::Number(num.into())
+    }
+
     pub fn syscall(func: fn(&mut Vm) -> Result<VCell, Error>) -> VCell {
         VCell::BuiltInProc(BuiltInProc(func))
     }
@@ -140,10 +146,6 @@ impl VCell {
 
     pub fn void() -> VCell {
         VCell::Void
-    }
-
-    pub fn fixed_num<T: Into<i64>>(val: T) -> VCell {
-        VCell::FixedNum(val.into())
     }
 
     pub fn ptr(val: usize) -> VCell {
@@ -178,12 +180,8 @@ impl VCell {
         matches!(self, VCell::Bool(_))
     }
 
-    pub fn is_fixednum(&self) -> bool {
-        matches!(self, VCell::FixedNum(_))
-    }
-
     pub fn is_number(&self) -> bool {
-        self.is_fixednum()
+        matches!(self, VCell::Number(_))
     }
 
     pub fn is_pair(&self) -> bool {
@@ -264,13 +262,6 @@ impl VCell {
         match self {
             VCell::Pair(_, cdr) => Ok(VCell::Ptr(*cdr)),
             _ => Err(ExpectedType(PAIR_TYPE_TEXT, self.type_text())),
-        }
-    }
-
-    pub fn as_fixed_num(&self) -> Result<i64, Error> {
-        match self {
-            VCell::FixedNum(val) => Ok(*val),
-            _ => Err(ExpectedType(FIXEDNUM_TYPE_TEXT, self.type_text())),
         }
     }
 
@@ -387,8 +378,14 @@ impl From<bool> for VCell {
 }
 
 impl From<i64> for VCell {
-    fn from(val: i64) -> Self {
-        VCell::FixedNum(val)
+    fn from(num: i64) -> Self {
+        VCell::Number(Number::from(num))
+    }
+}
+
+impl From<Number> for VCell {
+    fn from(num: Number) -> Self {
+        VCell::Number(num)
     }
 }
 
@@ -404,7 +401,6 @@ impl fmt::Display for VCell {
             VCell::Closure(_, _) => write!(f, "#<closure>"),
             VCell::EnvironmentPointer(ep) => write!(f, "%ep[${:02x}]", ep),
             VCell::GlobalEnvSlot(slot) => write!(f, "genv[${:02x}]", slot),
-            VCell::FixedNum(val) => write!(f, "{}", val),
             VCell::InstructionPointer(lambda, ip) => {
                 write!(f, "%ip[${:02x}][${:02x}]", *lambda, *ip)
             }
@@ -414,6 +410,7 @@ impl fmt::Display for VCell {
             VCell::LexicalEnvPtr(env, slot) => write!(f, "env[${:02x}][${:02x}]", env, slot),
             VCell::Lambda(_) => write!(f, "#<lambda>"),
             VCell::Nil => write!(f, "()"),
+            VCell::Number(number) => write!(f, "{:?}", number),
             VCell::OpCode(val) => write!(f, "{:?}", val),
             VCell::Pair(car, cdr) => write!(f, "(${:02x} . ${:02x})", car, cdr),
             VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),

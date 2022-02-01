@@ -1,3 +1,4 @@
+use crate::number::Number;
 use ::lazy_static::lazy_static;
 use std::borrow::Borrow;
 use std::collections::HashSet;
@@ -8,7 +9,7 @@ use std::ops::DerefMut;
 pub enum Cell {
     Bool(bool),
     Nil,
-    Number(i64),
+    Number(Number),
     Pair(Box<Cell>, Box<Cell>),
     Symbol(String),
     Vector(Vec<Cell>),
@@ -215,9 +216,9 @@ impl Cell {
         }
     }
 
-    pub fn as_number(&self) -> Option<i64> {
+    pub fn as_number(&self) -> Option<Number> {
         match self {
-            Cell::Number(val) => Some(*val),
+            Cell::Number(val) => Some(val.clone()),
             _ => None,
         }
     }
@@ -251,7 +252,7 @@ impl From<&str> for Cell {
 
 impl From<i64> for Cell {
     fn from(val: i64) -> Self {
-        Cell::Number(val)
+        Cell::Number(Number::Fixnum(val))
     }
 }
 
@@ -344,14 +345,10 @@ impl IntoIterator for Cell {
 
 impl Display for Cell {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        lazy_static! {
-            static ref QUOTE: Cell = Cell::Symbol("quote".into());
-        }
-
         match self {
             Cell::Pair(car, cdr) => {
                 // sugar quote any list in the exact form (quote x)
-                if **car == *QUOTE && (*cdr).is_pair() && (*cdr).cdr().unwrap().is_nil() {
+                if car.is_quote() && (*cdr).is_pair() && (*cdr).cdr().unwrap().is_nil() {
                     write!(f, "'")?;
                     return std::fmt::Display::fmt(cdr.car().unwrap(), f);
                 }
@@ -481,7 +478,10 @@ mod tests {
 
     #[test]
     fn eq() {
-        assert_eq!(Cell::Number(16), Cell::Number(16));
+        assert_eq!(
+            Cell::Number(Number::Fixnum(16)),
+            Cell::Number(Number::Fixnum(16))
+        );
         assert_eq!(Cell::new_symbol("foo"), Cell::new_symbol("foo"));
         assert_eq!(
             Cell::new_list(vec!(Cell::new_symbol("foo"), Cell::new_symbol("bar"))),
@@ -494,21 +494,32 @@ mod tests {
     fn cell_macro() {
         assert_eq!(cell![], Cell::Nil);
         assert_eq!(cell!["foo"], Cell::Symbol("foo".into()));
-        assert_eq!(cell![42], Cell::Number(42));
-        assert_eq!(cell![-42], Cell::Number(-42));
+        assert_eq!(cell![42], Cell::Number(Number::Fixnum(42)));
+        assert_eq!(cell![-42], Cell::Number(Number::Fixnum(-42)));
         assert_eq!(
             cell![0, 1, 2],
-            Cell::new_list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
+            Cell::new_list(vec!(
+                Cell::Number(Number::Fixnum(0)),
+                Cell::Number(Number::Fixnum(1)),
+                Cell::Number(Number::Fixnum(2))
+            ))
         );
         assert_eq!(
             cell!["foo", 42],
-            Cell::new_list(vec!(Cell::new_symbol("foo"), Cell::Number(42)))
+            Cell::new_list(vec!(
+                Cell::new_symbol("foo"),
+                Cell::Number(Number::Fixnum(42))
+            ))
         );
         assert_eq!(
             cell!["foo", cell![0, 1, 2]],
             Cell::new_list(vec!(
                 Cell::new_symbol("foo"),
-                Cell::new_list(vec!(Cell::Number(0), Cell::Number(1), Cell::Number(2)))
+                Cell::new_list(vec!(
+                    Cell::Number(Number::Fixnum(0)),
+                    Cell::Number(Number::Fixnum(1)),
+                    Cell::Number(Number::Fixnum(2))
+                ))
             ))
         );
         assert_eq!(list![], Cell::new_list(vec!()));
