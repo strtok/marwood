@@ -77,10 +77,12 @@ impl Number {
             Some(Number::from(num))
         } else if let Ok(num) = BigInt::from_str_radix(text, radix) {
             Some(Number::from(num))
+        } else if let Some(num) = Self::parse_rational(text, radix) {
+            Some(num)
         } else if let Ok(num) = f64::from_str_radix(text, radix) {
             Some(Number::from(num))
         } else {
-            Self::parse_rational(text, radix)
+            None
         }
     }
 
