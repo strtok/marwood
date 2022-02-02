@@ -339,6 +339,20 @@ mod tests {
             "-42" => cell![-42],
             "42..1" => cell!["42..1"]
         };
+        parses! {
+            "#xff" => cell![255],
+            "#b11111111" => cell![255],
+            "#o377" => cell![255]
+        };
+        parses! {
+            "4/2" => cell![2],
+            "1.0" => cell![1]
+        }
+
+        parses! {
+            "#x7fffffff/1" => cell![0x7fffffff],
+            "#xffffffff/1" => cell![0xffffffff]
+        }
     }
 
     #[test]

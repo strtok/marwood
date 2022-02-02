@@ -187,7 +187,7 @@ fn is_initial_number(c: char) -> bool {
 }
 
 fn is_subsequent_number(c: char) -> bool {
-    c.is_digit(10) || c.is_digit(16) || c == '.'
+    c.is_digit(10) || c.is_digit(16) || c == '.' || c == '/'
 }
 
 fn is_initial_identifier(c: char) -> bool {

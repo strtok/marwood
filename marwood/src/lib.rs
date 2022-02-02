@@ -125,6 +125,21 @@ mod integration_test {
                "(+ 10 '(10))" => InvalidArgs("+".into(), "number".into(), "(10)".into()),
                "(-)" => InvalidNumArgs("-".into())
         ];
+
+        evals![
+            "(/ 10 5)" => "2",
+            "(/ 10 3)" => "10/3"
+        ];
+        fails![
+            "(/ 10 0)" => InvalidSyntax("/ is undefined for 0".into())
+        ];
+
+        evals![
+            "(remainder 10 7)" => "3"
+        ];
+        fails![
+            "(remainder 10 0)" => InvalidSyntax("remainder is undefined for 0".into())
+        ];
     }
 
     #[test]

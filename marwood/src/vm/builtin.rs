@@ -28,6 +28,7 @@ use std::rc::Rc;
 impl Vm {
     pub fn load_builtins(&mut self) {
         self.load_builtin("*", multiply);
+        self.load_builtin("/", divide);
         self.load_builtin("+", plus);
         self.load_builtin("-", minus);
         self.load_builtin("<", lt);
@@ -35,6 +36,7 @@ impl Vm {
         self.load_builtin("=", num_equal);
         self.load_builtin(">", gt);
         self.load_builtin(">=", gteq);
+        self.load_builtin("%", remainder);
         self.load_builtin("append", append);
         self.load_builtin("boolean?", is_boolean);
         self.load_builtin("car", car);
@@ -49,6 +51,7 @@ impl Vm {
         self.load_builtin("list?", is_list);
         self.load_builtin("list-ref", list_ref);
         self.load_builtin("list-tail", list_tail);
+        self.load_builtin("mod", remainder);
         self.load_builtin("negative?", negative);
         self.load_builtin("not", not);
         self.load_builtin("null?", is_null);
@@ -58,6 +61,7 @@ impl Vm {
         self.load_builtin("port?", is_port);
         self.load_builtin("positive?", positive);
         self.load_builtin("procedure?", is_procedure);
+        self.load_builtin("remainder", remainder);
         self.load_builtin("reverse", reverse);
         self.load_builtin("set-car!", set_car);
         self.load_builtin("set-cdr!", set_cdr);
@@ -160,7 +164,7 @@ fn clone_list(vm: &mut Vm, list: VCell) -> Result<(VCell, VCell), Error> {
             } else {
                 return Err(InvalidSyntax(format!(
                     "{} is an improper list",
-                    vm.heap.get_as_cell(&list).to_string()
+                    vm.heap.get_as_cell(&list)
                 )));
             }
         }
@@ -228,7 +232,7 @@ fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
             } else {
                 return Err(InvalidSyntax(format!(
                     "{} is an improper list",
-                    vm.heap.get_as_cell(&list).to_string()
+                    vm.heap.get_as_cell(&list)
                 )));
             }
         }
@@ -257,7 +261,7 @@ fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> 
             return Err(InvalidSyntax(format!(
                 "{} is out of range for {}",
                 idx,
-                vm.heap.get_as_cell(list).to_string()
+                vm.heap.get_as_cell(list)
             )));
         }
     }
@@ -276,7 +280,7 @@ fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
         _ => Err(InvalidSyntax(format!(
             "{} is out of range for {}",
             idx,
-            vm.heap.get_as_cell(&list).to_string()
+            vm.heap.get_as_cell(&list)
         ))),
     }
 }
@@ -395,6 +399,31 @@ fn not(vm: &mut Vm) -> Result<VCell, Error> {
     .into())
 }
 
+///
+/// Numerical Procedures
+///
+///
+
+fn pop_number(vm: &mut Vm) -> Result<Number, Error> {
+    match vm.heap.get(vm.stack.pop()?) {
+        VCell::Number(num) => Ok(num),
+        vcell => {
+            return Err(InvalidSyntax(format!(
+                "{} is not a valid number",
+                vm.heap.get_as_cell(&vcell)
+            )))
+        }
+    }
+}
+
+fn pop_integer(vm: &mut Vm) -> Result<Number, Error> {
+    match pop_number(vm) {
+        Ok(num) if num.is_integer() => Ok(num),
+        Ok(num) => return Err(InvalidSyntax(format!("{} is not a valid integer", num))),
+        Err(e) => Err(e),
+    }
+}
+
 fn num_equal(vm: &mut Vm) -> Result<VCell, Error> {
     num_comp(vm, "=", |x, y| x == y)
 }
@@ -459,11 +488,15 @@ fn negative(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 fn odd(vm: &mut Vm) -> Result<VCell, Error> {
-    num_unary_predicate(vm, "odd?", |x| x % &Number::from(2) != Number::from(0))
+    num_unary_predicate(vm, "odd?", |x| {
+        x % &Number::from(2) != Some(Number::from(0))
+    })
 }
 
 fn even(vm: &mut Vm) -> Result<VCell, Error> {
-    num_unary_predicate(vm, "even?", |x| x % &Number::from(2) == Number::from(0))
+    num_unary_predicate(vm, "even?", |x| {
+        x % &Number::from(2) == Some(Number::from(0))
+    })
 }
 
 fn num_unary_predicate(
@@ -540,6 +573,45 @@ fn multiply(vm: &mut Vm) -> Result<VCell, Error> {
         }
     }
     Ok(VCell::Number(result))
+}
+
+fn divide(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, Some(2), "/")?;
+    let y = pop_number(vm)?;
+
+    if y.is_zero() {
+        return Err(InvalidSyntax("/ is undefined for 0".into()));
+    }
+
+    if argc == 1 {
+        let result = Number::from(1) / y;
+        Ok(result.into())
+    } else {
+        let x = pop_number(vm)?;
+        let result = x / y;
+        Ok(result.into())
+    }
+}
+
+fn remainder(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "remainder")?;
+    let y = pop_integer(vm)?;
+    let x = pop_integer(vm)?;
+
+    if y.is_zero() {
+        return Err(InvalidSyntax("remainder is undefined for 0".into()));
+    }
+
+    let result = match &x % &y {
+        Some(num) => num,
+        None => {
+            return Err(InvalidSyntax(format!(
+                "remainder is undefined for {} % {}",
+                x, y
+            )))
+        }
+    };
+    Ok(result.into())
 }
 
 fn set_car(vm: &mut Vm) -> Result<VCell, Error> {

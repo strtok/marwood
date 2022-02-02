@@ -125,7 +125,7 @@ impl Display for DecompiledInstruction {
             .map(|it| match it.1 {
                 Operand::StoreReference | Operand::LoadReference => match it.0 {
                     VCell::Acc => it.0.to_string(),
-                    _ => format!("[{}]", it.0.to_string()),
+                    _ => format!("[{}]", it.0),
                 },
                 _ => it.0.to_string(),
             })
