@@ -636,6 +636,56 @@ impl Div for &Number {
     }
 }
 
+impl Number {
+    pub fn quotient(&self, rhs: &Self) -> Option<Number> {
+        match self {
+            Number::Fixnum(lhs) => match rhs {
+                Number::Fixnum(rhs) => Some((lhs / rhs).into()),
+                Number::BigInt(rhs) => Some((BigInt::from(*lhs) / &**rhs).into()),
+                Number::Float(_) => None,
+                Number::Rational(rhs) => {
+                    if rhs.is_integer() {
+                        Some((*lhs / rhs.to_i64().unwrap()).into())
+                    } else {
+                        None
+                    }
+                }
+            },
+            Number::BigInt(lhs) => match rhs {
+                Number::Fixnum(rhs) => Some((&**lhs / rhs).into()),
+                Number::BigInt(rhs) => Some((&**lhs / &**rhs).into()),
+                Number::Float(_) => None,
+                Number::Rational(rhs) => {
+                    if rhs.is_integer() {
+                        Some((&**lhs / BigInt::from(rhs.to_i32().unwrap())).into())
+                    } else {
+                        None
+                    }
+                }
+            },
+            Number::Float(_) => match rhs {
+                Number::Fixnum(_) => None,
+                Number::Float(_) => None,
+                Number::BigInt(_) => None,
+                Number::Rational(_) => None,
+            },
+            Number::Rational(lhs) if lhs.is_integer() => match rhs {
+                Number::Fixnum(rhs) => Some((lhs.to_i64().unwrap() / *rhs).into()),
+                Number::Float(_) => None,
+                Number::BigInt(rhs) => Some((BigInt::from(lhs.to_i64().unwrap()) / &**rhs).into()),
+                Number::Rational(rhs) => {
+                    if rhs.is_integer() {
+                        Some((lhs / rhs).into())
+                    } else {
+                        None
+                    }
+                }
+            },
+            Number::Rational(_) => None,
+        }
+    }
+}
+
 impl Rem for Number {
     type Output = Option<Number>;
     fn rem(self, rhs: Self) -> Self::Output {

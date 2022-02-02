@@ -147,10 +147,15 @@ mod integration_test {
         ];
 
         evals![
-            "(remainder 10 7)" => "3"
+            "(quotient 10 3)" => "3",
+            "(remainder 10 3)" => "1",
+            "(quotient 10/1 3/1)" => "3",
+            "(remainder 10/1 3/1)" => "1"
         ];
+
         fails![
-            "(remainder 10 0)" => InvalidSyntax("remainder is undefined for 0".into())
+            "(remainder 10 0)" => InvalidSyntax("remainder is undefined for 0".into()),
+            "(quotient 10 0)" => InvalidSyntax("quotient is undefined for 0".into())
         ];
     }
 

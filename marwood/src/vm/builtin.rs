@@ -63,6 +63,7 @@ impl Vm {
         self.load_builtin("port?", is_port);
         self.load_builtin("positive?", positive);
         self.load_builtin("procedure?", is_procedure);
+        self.load_builtin("quotient", quotient);
         self.load_builtin("remainder", remainder);
         self.load_builtin("reverse", reverse);
         self.load_builtin("set-car!", set_car);
@@ -637,6 +638,27 @@ fn remainder(vm: &mut Vm) -> Result<VCell, Error> {
         None => {
             return Err(InvalidSyntax(format!(
                 "remainder is undefined for {} % {}",
+                x, y
+            )))
+        }
+    };
+    Ok(result.into())
+}
+
+fn quotient(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "quotient")?;
+    let y = pop_integer(vm)?;
+    let x = pop_integer(vm)?;
+
+    if y.is_zero() {
+        return Err(InvalidSyntax("quotient is undefined for 0".into()));
+    }
+
+    let result = match x.quotient(&y) {
+        Some(num) => num,
+        None => {
+            return Err(InvalidSyntax(format!(
+                "quotient is undefined for {} % {}",
                 x, y
             )))
         }
