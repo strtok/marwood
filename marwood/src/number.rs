@@ -1,5 +1,5 @@
 use num::bigint::BigInt;
-use num::{BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimitive};
+use num::{BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimitive, Signed};
 use num::{Num, Rational32, ToPrimitive};
 use std::cmp::Ordering;
 use std::fmt;
@@ -154,6 +154,15 @@ impl Number {
                 None => Some((*num).into()),
             },
             Number::BigInt(_) | Number::Rational(_) | Number::Fixnum(_) => Some(self.clone()),
+        }
+    }
+
+    pub fn abs(&self) -> Number {
+        match self {
+            Number::Fixnum(num) => num.abs().into(),
+            Number::Float(num) => num.abs().into(),
+            Number::BigInt(num) => num.abs().into(),
+            Number::Rational(num) => num.abs().into(),
         }
     }
 }

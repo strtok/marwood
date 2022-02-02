@@ -155,6 +155,18 @@ mod integration_test {
     }
 
     #[test]
+    fn abs() {
+        evals![
+            "(abs -10)" => "10",
+            "(abs  10)" => "10",
+            "(abs -10.0)" => "10",
+            "(abs  10.0)" => "10",
+            "(abs -1/2)" => "1/2",
+            "(abs  1/2)" => "1/2"
+        ];
+    }
+
+    #[test]
     fn eqv() {
         evals![
             "(define foo '(1 2 3))" => "#<void>",

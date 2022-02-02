@@ -37,6 +37,7 @@ impl Vm {
         self.load_builtin(">", gt);
         self.load_builtin(">=", gteq);
         self.load_builtin("%", remainder);
+        self.load_builtin("abs", abs);
         self.load_builtin("append", append);
         self.load_builtin("boolean?", is_boolean);
         self.load_builtin("car", car);
@@ -660,6 +661,13 @@ fn inexact_exact(vm: &mut Vm) -> Result<VCell, Error> {
         Some(num) => Ok(num.into()),
         None => Ok(x.into()),
     }
+}
+
+fn abs(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "exact->inexact")?;
+    let x = pop_number(vm)?;
+    let x = x.abs();
+    Ok(x.into())
 }
 
 ///
