@@ -54,7 +54,6 @@ impl Vm {
         self.load_builtin("list?", is_list);
         self.load_builtin("list-ref", list_ref);
         self.load_builtin("list-tail", list_tail);
-        self.load_builtin("mod", remainder);
         self.load_builtin("negative?", negative);
         self.load_builtin("not", not);
         self.load_builtin("null?", is_null);
