@@ -6,10 +6,9 @@
 [Test]: https://github.com/strtok/marwood/actions/workflows/test.yml
 [Deploy Badge]: https://github.com/strtok/marwood/actions/workflows/deploy.yml/badge.svg
 [Deploy]: https://github.com/strtok/marwood/actions/workflows/deploy.yml
-Marwood is a [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) implementation for rust, featuring:
+Marwood is an embeddable [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) implementation, featuring:
 
 * a scheme r5rs compiler & 64 bit runtime composed of 3x64bit cells
-* mark & sweep garbage collection
 * a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
 * a WebAssembly repl at [repl.marwood.io](https://repl.marwood.io).
 
