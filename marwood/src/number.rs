@@ -7,19 +7,26 @@ use std::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, Sub};
 use std::rc::Rc;
 
+/// Exactness
+///
+/// Exactness represents preferred exactness when parsing
+/// a textual representation of a number.
+///
+/// * Exact - Exactness is preferred in cases where the result
+///   would have been inexact. This usually means trying to
+///   convert a float to its rational counterpart.
+///
+/// * Inexact - Inexactness is preferred in cases where
+///   an exact form is given, even if the exact form was an
+///   integer.
+///
+/// * Unspecified - Exactness is not specified. Prefer to
+///   keep inexact values inexact, and exact exact.
 #[derive(Debug)]
 pub enum Exactness {
     Exact,
     Inexact,
     Unspecified,
-}
-
-#[derive(Clone, Debug)]
-pub enum Number {
-    Fixnum(i64),
-    Float(f64),
-    BigInt(Rc<BigInt>),
-    Rational(Rational32),
 }
 
 /// Number
@@ -36,6 +43,14 @@ pub enum Number {
 /// for a rational composed of a 32 bit numerator and denominator.
 /// If a rational exceeds these limits, the resulting operation
 /// falls back to "inexact" (float).
+#[derive(Clone, Debug)]
+pub enum Number {
+    Fixnum(i64),
+    Float(f64),
+    BigInt(Rc<BigInt>),
+    Rational(Rational32),
+}
+
 impl Number {
     pub fn new_bigint<T: Into<BigInt>>(num: T) -> Number {
         Number::BigInt(Rc::new(num.into()))
