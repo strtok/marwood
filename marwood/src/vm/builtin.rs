@@ -47,6 +47,8 @@ impl Vm {
         self.load_builtin("equal?", equal);
         self.load_builtin("eqv?", eqv);
         self.load_builtin("even?", even);
+        self.load_builtin("exact->inexact", exact_inexact);
+        self.load_builtin("inexact->exact", inexact_exact);
         self.load_builtin("make-vector", make_vector);
         self.load_builtin("list?", is_list);
         self.load_builtin("list-ref", list_ref);
@@ -123,6 +125,34 @@ fn cons(vm: &mut Vm) -> Result<VCell, Error> {
     let cdr = vm.stack.pop()?.as_ptr()?;
     let car = vm.stack.pop()?.as_ptr()?;
     Ok(VCell::Pair(car, cdr))
+}
+
+fn set_car(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "set-car!")?;
+    let obj = vm.stack.pop()?.clone();
+    let pair = vm.stack.pop()?.clone();
+    let new_pair = match vm.heap.get(&pair) {
+        VCell::Pair(_, cdr) => VCell::Pair(obj.as_ptr()?, cdr),
+        _ => {
+            return Err(InvalidSyntax("set-car! expected a pair".into()));
+        }
+    };
+    *vm.heap.get_at_index_mut(pair.as_ptr()?) = new_pair;
+    Ok(VCell::Void)
+}
+
+fn set_cdr(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "set-cdr!")?;
+    let obj = vm.stack.pop()?.clone();
+    let pair = vm.stack.pop()?.clone();
+    let new_pair = match vm.heap.get(&pair) {
+        VCell::Pair(car, _) => VCell::Pair(car, obj.as_ptr()?),
+        _ => {
+            return Err(InvalidSyntax("set-cdr! expected a pair".into()));
+        }
+    };
+    *vm.heap.get_at_index_mut(pair.as_ptr()?) = new_pair;
+    Ok(VCell::Void)
 }
 
 /// Clone List
@@ -614,32 +644,22 @@ fn remainder(vm: &mut Vm) -> Result<VCell, Error> {
     Ok(result.into())
 }
 
-fn set_car(vm: &mut Vm) -> Result<VCell, Error> {
-    pop_argc(vm, 2, Some(2), "set-car!")?;
-    let obj = vm.stack.pop()?.clone();
-    let pair = vm.stack.pop()?.clone();
-    let new_pair = match vm.heap.get(&pair) {
-        VCell::Pair(_, cdr) => VCell::Pair(obj.as_ptr()?, cdr),
-        _ => {
-            return Err(InvalidSyntax("set-car! expected a pair".into()));
-        }
-    };
-    *vm.heap.get_at_index_mut(pair.as_ptr()?) = new_pair;
-    Ok(VCell::Void)
+fn exact_inexact(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "exact->inexact")?;
+    let x = pop_number(vm)?;
+    match x.to_inexact() {
+        Some(num) => Ok(num.into()),
+        None => Ok(x.into()),
+    }
 }
 
-fn set_cdr(vm: &mut Vm) -> Result<VCell, Error> {
-    pop_argc(vm, 2, Some(2), "set-cdr!")?;
-    let obj = vm.stack.pop()?.clone();
-    let pair = vm.stack.pop()?.clone();
-    let new_pair = match vm.heap.get(&pair) {
-        VCell::Pair(car, _) => VCell::Pair(car, obj.as_ptr()?),
-        _ => {
-            return Err(InvalidSyntax("set-cdr! expected a pair".into()));
-        }
-    };
-    *vm.heap.get_at_index_mut(pair.as_ptr()?) = new_pair;
-    Ok(VCell::Void)
+fn inexact_exact(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "inexact->exact")?;
+    let x = pop_number(vm)?;
+    match x.to_exact() {
+        Some(num) => Ok(num.into()),
+        None => Ok(x.into()),
+    }
 }
 
 ///

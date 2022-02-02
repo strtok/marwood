@@ -204,7 +204,7 @@ fn parse_number<'a, T: Iterator<Item = &'a Token>>(
     }
 
     let span = token.span(text);
-    match Number::parse(span, exactness, radix) {
+    match Number::parse_with_exactness(span, exactness, radix) {
         Some(num) => Ok(Cell::Number(num)),
         None => Ok(Cell::Symbol(span.to_string())),
     }

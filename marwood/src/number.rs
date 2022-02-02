@@ -1,5 +1,5 @@
 use num::bigint::BigInt;
-use num::{BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
+use num::{BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimitive};
 use num::{Num, Rational32, ToPrimitive};
 use std::cmp::Ordering;
 use std::fmt;
@@ -59,26 +59,28 @@ impl Number {
     /// Parse
     ///
     /// Parse the text given the desired exactness and radix.
-    pub fn parse(text: &str, exactness: Exactness, radix: u32) -> Option<Number> {
+    pub fn parse_with_exactness(text: &str, exactness: Exactness, radix: u32) -> Option<Number> {
         match exactness {
-            Exactness::Exact | Exactness::Unspecified => {
-                if let Ok(num) = i64::from_str_radix(text, radix) {
-                    Some(Number::from(num))
-                } else if let Ok(num) = BigInt::from_str_radix(text, radix) {
-                    Some(Number::from(num))
-                } else if let Ok(num) = f64::from_str_radix(text, radix) {
-                    Some(Number::from(num))
-                } else {
-                    Self::parse_rational(text, radix)
-                }
-            }
-            Exactness::Inexact => {
-                if let Ok(num) = f64::from_str_radix(text, radix) {
-                    Some(Number::from(num))
-                } else {
-                    None
-                }
-            }
+            Exactness::Unspecified => Self::parse(text, radix),
+            Exactness::Exact => Self::parse(text, radix).map(|num| match num.to_exact() {
+                Some(num) => num,
+                None => num,
+            }),
+            Exactness::Inexact => Self::parse(text, radix)
+                .map(|num| num.to_inexact())
+                .map(|it| it.unwrap()),
+        }
+    }
+
+    pub fn parse(text: &str, radix: u32) -> Option<Number> {
+        if let Ok(num) = i64::from_str_radix(text, radix) {
+            Some(Number::from(num))
+        } else if let Ok(num) = BigInt::from_str_radix(text, radix) {
+            Some(Number::from(num))
+        } else if let Ok(num) = f64::from_str_radix(text, radix) {
+            Some(Number::from(num))
+        } else {
+            Self::parse_rational(text, radix)
         }
     }
 
@@ -134,6 +136,25 @@ impl Number {
 
     pub fn is_zero(&self) -> bool {
         self == &Number::from(0)
+    }
+
+    pub fn to_inexact(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => Some((*num as f64).into()),
+            Number::Float(num) => Some((*num).into()),
+            Number::BigInt(num) => Some(num.to_f64().unwrap().into()),
+            Number::Rational(num) => Some(num.to_f64().unwrap().into()),
+        }
+    }
+
+    pub fn to_exact(&self) -> Option<Number> {
+        match self {
+            Number::Float(num) => match Rational32::from_f64(*num) {
+                Some(num) => Some(num.into()),
+                None => Some((*num).into()),
+            },
+            Number::BigInt(_) | Number::Rational(_) | Number::Fixnum(_) => Some(self.clone()),
+        }
     }
 }
 

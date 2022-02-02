@@ -106,6 +106,18 @@ mod integration_test {
     }
 
     #[test]
+    fn exact_vs_inexact() {
+        evals![
+            "#i1/2" => "0.5",
+            "#e0.5" => "1/2"
+        ];
+        evals![
+            "(exact->inexact 1/2)" => "0.5",
+            "(inexact->exact 0.5)" => "1/2"
+        ];
+    }
+
+    #[test]
     fn arithmetic() {
         evals![
             "(+)" => "0",
