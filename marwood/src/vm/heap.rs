@@ -13,7 +13,7 @@ pub struct Heap {
     free_list: Vec<usize>,
     heap: Vec<VCell>,
     heap_map: gc::Map,
-    str_map: HashMap<String, usize>,
+    symbol_table: HashMap<String, usize>,
 }
 
 impl Heap {
@@ -26,7 +26,7 @@ impl Heap {
             heap: vec![VCell::undefined(); chunk_size],
             free_list: (0..chunk_size).rev().into_iter().collect(),
             heap_map: gc::Map::new(chunk_size),
-            str_map: HashMap::new(),
+            symbol_table: HashMap::new(),
         }
     }
 
@@ -46,7 +46,7 @@ impl Heap {
     pub fn free(&mut self, ptr: usize) {
         self.heap_map.set(ptr, State::Free);
         if let Some(VCell::Symbol(sym)) = self.heap.get(ptr) {
-            self.str_map.remove(&**sym);
+            self.symbol_table.remove(&**sym);
         }
         *self.heap.get_mut(ptr).unwrap() = VCell::Undefined;
         self.free_list.push(ptr);
@@ -60,12 +60,12 @@ impl Heap {
         let vcell = vcell.into();
         match &vcell {
             VCell::Ptr(_) => panic!("put() on {} would double box", vcell),
-            VCell::Symbol(sym) => match self.str_map.get(sym.deref()) {
+            VCell::Symbol(sym) => match self.symbol_table.get(sym.deref()) {
                 Some(ptr) => VCell::ptr(*ptr),
                 None => {
                     let ptr = self.alloc();
                     *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
-                    self.str_map.insert(sym.deref().into(), ptr);
+                    self.symbol_table.insert(sym.deref().into(), ptr);
                     VCell::ptr(ptr)
                 }
             },
@@ -148,14 +148,14 @@ impl Heap {
 
     /// Get Sym Ref
     ///
-    /// Return a Some(VCell) ptr to the given sym reference if sym is interned, otherwise
+    /// Return a Some(VCell) ptr to the given sym reference if sym is known, otherwise
     /// None.
     ///
     /// # Arguments
     /// `sym` - The symbol to lookup
     pub fn get_sym_ref(&self, sym: &Cell) -> Option<VCell> {
         if let Cell::Symbol(sym) = sym {
-            self.str_map.get(sym).map(|it| VCell::ptr(*it))
+            self.symbol_table.get(sym).map(|it| VCell::ptr(*it))
         } else {
             None
         }
