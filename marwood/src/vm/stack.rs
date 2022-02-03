@@ -49,6 +49,13 @@ impl Stack {
         self.stack.iter()
     }
 
+    /// Iter
+    ///
+    /// Return an iterator to the stack vector up to the stack pointer
+    pub fn iter_to_sp(&self) -> impl Iterator<Item = &VCell> {
+        self.stack[0..self.sp].iter()
+    }
+
     /// Get
     ///
     /// Get a VC at the given stack location.
