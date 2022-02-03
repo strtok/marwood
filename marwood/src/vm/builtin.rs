@@ -208,14 +208,13 @@ fn append(vm: &mut Vm) -> Result<VCell, Error> {
         return Ok(VCell::Nil);
     }
     let mut tail = vm.stack.pop()?.clone();
-    match vm.heap.get(&tail) {
-        VCell::Nil | VCell::Pair(_, _) => {}
-        vcell => {
-            return Err(ExpectedPairButFound(
-                vm.heap.get_as_cell(&vcell).to_string(),
-            ));
+    tail = match vm.heap.get(&tail) {
+        VCell::Nil | VCell::Pair(_, _) => tail,
+        _ => {
+            let nil = vm.heap.put(VCell::Nil).as_ptr()?;
+            vm.heap.put(VCell::Pair(tail.as_ptr()?, nil))
         }
-    }
+    };
 
     for _ in 0..(argc - 1) {
         let list = vm.heap.get(&vm.stack.pop()?.clone());
