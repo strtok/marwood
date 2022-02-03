@@ -109,21 +109,43 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
     Ok(tokens)
 }
 
+/// Scan Dot
+///
+/// Scan dot follows these rules:
+///
+/// * If a dot is not immediately followed by a subsequent number or
+///   identifier character, then it is a lone dot.
+/// * If a dot is followed by a subsequent number then it is parsed as
+///   a number. This allows numbers such as .333 without the leading 0.
+/// * If a number has any subsequent ., then it is downgraded to a symbol.
+/// * Anything else is a symbol.
 fn scan_dot(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
-    let start = cur.peek().unwrap().0;
-    let mut end = start;
+    let start = cur.next().unwrap().0;
+    let mut end = start + '.'.len_utf8();
+
+    let mut token_type = match cur.peek() {
+        Some(c) if is_subsequent_number(c.1) => TokenType::Number,
+        Some(c) if is_subsequent_identifier(c.1) => TokenType::Symbol,
+        _ => TokenType::Dot,
+    };
+
     while let Some(&(offset, c)) = cur.peek() {
-        if !is_subsequent_identifier(c) && start != end {
+        if c == '.' {
+            token_type = TokenType::Symbol;
+        }
+        let check = match token_type {
+            TokenType::Symbol => is_subsequent_identifier(c),
+            TokenType::Number => is_subsequent_number(c),
+            _ => false,
+        };
+        if !check && start != end {
             break;
         }
         end = offset + c.len_utf8();
         cur.next();
     }
-    if end - start == 1 {
-        Ok(Token::new((start, end), TokenType::Dot))
-    } else {
-        Ok(Token::new((start, end), TokenType::Symbol))
-    }
+
+    Ok(Token::new((start, end), token_type))
 }
 
 fn scan_simple_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
@@ -292,6 +314,9 @@ mod tests {
             "." => TokenType::Dot,
             ".." => TokenType::Symbol,
             "..." => TokenType::Symbol
+        };
+        lexes! {
+            ".100" => TokenType::Number
         };
     }
 
