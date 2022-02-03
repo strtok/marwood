@@ -1,19 +1,33 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use marwood::cell::Cell;
 use marwood::vm::Vm;
-use marwood::{lex, parse};
+use marwood::{cell, lex, parse};
 
-fn factorial(n: u64) -> Cell {
+fn sum_of_triangles(n: u64) -> Cell {
     let mut vm = Vm::new();
     vm.eval(&parse!(
-        "(define (factorial n) (if (eq? n 0) 1 (* n (factorial (- n 1)))))"
+        r#"
+    (define (sum-of-triangles n)
+         (define (triangle n) (/ (* n (+ n 1)) 2))
+         (define (sum-of-triangles n acc)
+            (cond
+               ((zero? n) acc)
+               (else (sum-of-triangles (- n 1) (+ acc (triangle n))))))
+     (sum-of-triangles n 0))
+    "#
     ))
     .unwrap();
-    vm.eval(&parse!(&format!("(factorial {})", n))).unwrap()
+    let result = vm
+        .eval(&parse!(&format!("(sum-of-triangles {})", n)))
+        .unwrap();
+    assert_eq!(result, cell![167167000]);
+    result
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("factorial 20", |b| b.iter(|| factorial(black_box(20))));
+    c.bench_function("sum-of-triangles 1000", |b| {
+        b.iter(|| sum_of_triangles(black_box(1000)))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);
