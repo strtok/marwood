@@ -8,9 +8,6 @@ const terminal = require("jquery.terminal");
 
 const vm = Marwood.new();
 
-// export function greet() {
-//     return marwood.greet();
-// }
 var term = $('#terminal').terminal((command) => {
     if (command.length > 0) {
         let result = vm.eval(command);
