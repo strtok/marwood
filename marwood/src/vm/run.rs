@@ -419,7 +419,9 @@ impl Vm {
             .filter_map(|it| it.as_ptr().ok())
             .for_each(|it| self.heap.mark(it));
 
-        self.stack.iter().for_each(|it| self.heap.mark_vcell(it));
+        self.stack
+            .iter_to_sp()
+            .for_each(|it| self.heap.mark_vcell(it));
         self.heap.mark_vcell(&self.acc);
         self.heap.mark(self.ip.0);
         self.heap.mark(self.ep);

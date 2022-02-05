@@ -53,7 +53,7 @@ impl Stack {
     ///
     /// Return an iterator to the stack vector up to the stack pointer
     pub fn iter_to_sp(&self) -> impl Iterator<Item = &VCell> {
-        self.stack[0..self.sp].iter()
+        self.stack[0..self.sp + 1].iter()
     }
 
     /// Get
