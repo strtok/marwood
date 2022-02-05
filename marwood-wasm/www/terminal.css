@@ -1,0 +1,11 @@
+.terminal {
+  --color: #F5F2E7;
+  --background: #2C3333;
+  --animation: terminal-underline;
+  --size: 1.5;
+  /* better then return false in onBlur */
+  height: 100vh;
+}
+body {
+  maring: 0;
+}

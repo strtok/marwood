@@ -1,7 +1,7 @@
 {
   "name": "marwood",
   "version": "0.1.0",
-  "description": "marwood wasm repl",
+  "description": "marwood web repl",
   "main": "index.js",
   "bin": {
     "create-wasm-app": ".bin/create-wasm-app.js"
@@ -28,16 +28,16 @@
   "homepage": "https://github.com/strtok/marwood",
   "dependencies": {
     "marwood": "file:../pkg",
-    "xterm": "^4.15.0",
-    "xterm-addon-fit": "^0.5.0"
+    "jquery": "^3.6.0",
+    "jquery.terminal": "^2.31.1"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^5.0.0",
     "css-loader": "^3.5.3",
     "file-loader": "^6.0.0",
     "style-loader": "^1.2.1",
-    "webpack": "^4.29.3",
-    "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.5"
+    "webpack": "^5.68.0",
+    "webpack-cli": "^4.9.2",
+    "webpack-dev-server": "^4.7.4"
   }
 }
