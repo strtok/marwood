@@ -2,15 +2,14 @@ import "./node_modules/jquery.terminal/css/jquery.terminal.css";
 import "./terminal.css"
 import { Marwood } from "marwood";
 import * as parens from "./parens.js";
-
 const $ = require("jquery");
 const terminal = require("jquery.terminal");
 
 const vm = Marwood.new();
 
-var term = $('#terminal').terminal((command) => {
-    if (command.length > 0) {
-        let result = vm.eval(command);
+var term = $('#terminal').terminal((text) => {
+    if (text.length > 0) {
+        let result = vm.eval(text);
         if (result.length > 0) {
             term.echo(result, { typing: true, delay: 5 });
         }
