@@ -106,7 +106,7 @@ mark & sweep on Marwood's roots:
 ## Global Environment
 
 Marwood maintains a global [environment](marwood/src/vm/environment.rs), which may
-be manipulated by the scheme `define` procedure. This environment represents a global
+be manipulated by a top level `define` call. This environment represents a global
 mapping of symbol => heap reference for the compiler, which in turn emits O(1) shallow
 bindings (environment slot references) for the runtime.
 
