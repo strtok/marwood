@@ -2,6 +2,7 @@ use crate::cell;
 use crate::cell::Cell;
 use crate::vm::Error;
 use crate::vm::Error::{InvalidDefineSyntax, InvalidSyntax};
+use log::trace;
 
 macro_rules! car {
     ($cell:expr) => {{
@@ -64,6 +65,10 @@ impl Pattern {
 
     pub fn is_variable(&self, cell: &Cell) -> bool {
         self.variables.iter().any(|it| it == cell)
+    }
+
+    pub fn is_expanded_variable(&self, cell: &Cell) -> bool {
+        self.expanded_variables.iter().any(|it| it == cell)
     }
 
     fn is_variable_candidate(&self, cell: &Cell) -> bool {
@@ -300,7 +305,7 @@ impl Transform {
         }
 
         for rule in &self.syntax_rules {
-            let mut env = PatternEnvironment::new();
+            let mut env = PatternEnvironment::new(&rule.0);
             if self.pattern_match(cdr!(&rule.0.expr), cdr!(expr), &mut env) {
                 return self
                     .expand(&rule.1, &rule.0, &mut env)
@@ -432,6 +437,7 @@ impl Transform {
         pattern: &Pattern,
         env: &mut PatternEnvironment,
     ) -> Option<Cell> {
+        trace!("expand {}\n\t\t{:?}\n\t\t{:?}", template, pattern, env);
         match template {
             Cell::Symbol(_) => {
                 return if pattern.is_variable(template) {
@@ -485,22 +491,72 @@ impl Transform {
 struct PatternEnvironment<'a> {
     /// Bindings are pairs of matched (pattern expr)
     bindings: Vec<(&'a Cell, &'a Cell)>,
+
+    /// A copy of the pattern, which is used to determine what
+    /// type of bindings a variable is
+    pattern: &'a Pattern,
+
+    /// Position of expanded bindings (bindings that were captured
+    /// and expanded with the ellipsis)
+    iters: Vec<(&'a Cell, Option<usize>)>,
 }
 
 impl<'a> PatternEnvironment<'a> {
-    fn new() -> PatternEnvironment<'a> {
-        PatternEnvironment { bindings: vec![] }
+    fn new(pattern: &'a Pattern) -> PatternEnvironment<'a> {
+        PatternEnvironment {
+            bindings: vec![],
+            pattern,
+            iters: pattern
+                .expanded_variables
+                .iter()
+                .map(|it| (it, None))
+                .collect(),
+        }
     }
 
     fn add_binding(&mut self, pattern: &'a Cell, expr: &'a Cell) {
         self.bindings.push((pattern, expr));
     }
 
-    fn get_binding(&mut self, pattern: &Cell) -> Option<&'a Cell> {
-        if let Some(idx) = self.bindings.iter().position(|it| it.0 == pattern) {
-            Some(self.bindings.remove(idx).1)
-        } else {
+    fn get_binding(&mut self, symbol: &Cell) -> Option<&'a Cell> {
+        if !self.pattern.is_variable(symbol) {
             None
+        } else if self.pattern.is_expanded_variable(symbol) {
+            self.get_expanded_binding(symbol)
+        } else {
+            self.bindings
+                .iter()
+                .find(|it| it.0 == symbol)
+                .map(|it| it.1)
+        }
+    }
+
+    fn get_expanded_binding(&mut self, symbol: &Cell) -> Option<&'a Cell> {
+        let iter = match self.iters.iter_mut().find(|it| it.0 == symbol) {
+            Some((_, iter)) => iter,
+            None => {
+                return None;
+            }
+        };
+
+        let start = match iter {
+            Some(position) => *position,
+            None => 0_usize,
+        };
+
+        match self.bindings[start..self.bindings.len()]
+            .iter()
+            .enumerate()
+            .find(|it| it.1 .0 == symbol)
+        {
+            Some(binding) => {
+                *iter = Some(start + binding.0 + 1);
+                Some(binding.1 .1)
+            }
+            None => {
+                *iter = None;
+                None
+            }
         }
     }
 }
@@ -845,6 +901,45 @@ mod tests {
             assert_eq!(
                 transform.transform(&parse!("(sum 10 20 30)")),
                 Ok(parse!("(+ 10 20 30)"))
+            );
+        }
+        {
+            let transform = Transform::try_new(&parse!(
+                r#"
+            (define-syntax square
+                  (syntax-rules ()
+                    [(_ a) (* a a)]
+            ))
+            "#
+            ))
+            .unwrap();
+            assert_eq!(
+                transform.transform(&parse!("(square 10)")),
+                Ok(parse!("(* 10 10)"))
+            );
+        }
+        {
+            let transform = Transform::try_new(&parse!(
+                r#"
+            (define-syntax square-of-sums
+                  (syntax-rules ()
+                    [(_ a1 a* ...)
+                     (* (+ a1 a* ...) (+ a1 a* ...))]
+            ))
+            "#
+            ))
+            .unwrap();
+            assert_eq!(
+                transform.transform(&parse!("(square-of-sums 10)")),
+                Ok(parse!("(* (+ 10) (+ 10))"))
+            );
+            assert_eq!(
+                transform.transform(&parse!("(square-of-sums 10 20)")),
+                Ok(parse!("(* (+ 10 20) (+ 10 20))"))
+            );
+            assert_eq!(
+                transform.transform(&parse!("(square-of-sums 10 20 30)")),
+                Ok(parse!("(* (+ 10 20 30) (+ 10 20 30))"))
             );
         }
     }
