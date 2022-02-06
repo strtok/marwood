@@ -1,3 +1,5 @@
+#![allow(clippy::unused_unit)]
+
 use marwood::cell::Cell;
 use marwood::lex::scan;
 use marwood::parse::parse;
@@ -10,6 +12,7 @@ use web_sys::console;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
+#[derive(Default)]
 pub struct Marwood {
     vm: Vm,
 }
@@ -54,7 +57,7 @@ impl Marwood {
             }
 
             if cur.peek().is_some() {
-                result.push_str("\n");
+                result.push('\n');
             }
         }
 
