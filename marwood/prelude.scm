@@ -3,6 +3,33 @@
     [(let ((name val) ...) body1 body2 ...)
         ((lambda (name ...) body1 body2 ...) val ...)]))
 
+(define-syntax letrec*
+  (syntax-rules ()
+    ((letrec* ((var1 init1) ...) body1 body2 ...)
+     (let ((var1 <undefined>) ...)
+       (set! var1 init1)
+       ...
+       (let () body1 body2 ...)))))
+
+(define-syntax letrec
+  (syntax-rules ()
+    ((letrec* ((var1 init1) ...) body1 body2 ...)
+     (let ((var1 #f) ...)
+       (set! var1 init1)
+       ...
+       (let () body1 body2 ...)))))
+
+(define-syntax let
+    (syntax-rules ()
+      ((let ((name val) ...) body1 body2 ...)
+       ((lambda (name ...) body1 body2 ...)
+        val ...))
+    ((let tag ((name val) ...) body1 body2 ...)
+       ((letrec ((tag (lambda (name ...)
+               body1 body2 ...)))
+         tag)
+       val ...))))
+
 (define-syntax or
   (syntax-rules ()
     [(or) #f]
