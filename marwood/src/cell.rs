@@ -349,8 +349,8 @@ impl IntoIterator for Cell {
     }
 }
 
-impl Display for Cell {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl Cell {
+    fn print(&self, f: &mut Formatter<'_>, is_display: bool) -> std::fmt::Result {
         match self {
             Cell::Pair(car, cdr) => {
                 // sugar quote any list in the exact form (quote x)
@@ -382,28 +382,34 @@ impl Display for Cell {
             Cell::Bool(val) => {
                 write!(f, "{}", if *val { "#t" } else { "#f" })
             }
-            Cell::Char(char) => match char {
-                ' ' => write!(f, "\\#space"),
-                '\n' => write!(f, "\\#newline"),
-                c => write!(f, "\\#{}", c),
+            Cell::Char(c) => match is_display {
+                true => write!(f, "{}", c),
+                false => match c {
+                    ' ' => write!(f, "\\#space"),
+                    '\n' => write!(f, "\\#newline"),
+                    c => write!(f, "\\#{}", c),
+                },
             },
             Cell::Number(val) => {
                 write!(f, "{}", val)
             }
-            Cell::String(val) => {
-                write!(f, "\"")?;
-                for it in val.chars() {
-                    match it {
-                        '"' | '\\' => {
-                            write!(f, "\\{}", it)?;
-                        }
-                        it => {
-                            write!(f, "{}", it)?;
+            Cell::String(val) => match is_display {
+                true => write!(f, "{}", val),
+                false => {
+                    write!(f, "\"")?;
+                    for it in val.chars() {
+                        match it {
+                            '"' | '\\' => {
+                                write!(f, "\\{}", it)?;
+                            }
+                            it => {
+                                write!(f, "{}", it)?;
+                            }
                         }
                     }
+                    write!(f, "\"")
                 }
-                write!(f, "\"")
-            }
+            },
             Cell::Symbol(val) => {
                 write!(f, "{}", val)
             }
@@ -437,6 +443,12 @@ impl Display for Cell {
                 write!(f, "#<void>")
             }
         }
+    }
+}
+
+impl Display for Cell {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.print(f, false)
     }
 }
 
