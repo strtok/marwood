@@ -12,7 +12,7 @@ var term = $('#terminal').terminal((text) => {
     if (text.length > 0) {
         let result = vm.eval(text);
         if (result.length > 0) {
-            term.echo(result, { typing: true, delay: 5 });
+            term.echo(result);
         }
     }
 }, {
@@ -23,7 +23,7 @@ var term = $('#terminal').terminal((text) => {
     keypress: function (e) { parens.paren_match(term, e) }
 });
 
-globalThis.marwood_display = (text) => term.echo(text, { typing: true, delay: 100 });
+globalThis.marwood_display = (text) => term.echo(text);
 
 term.echo("λMARWOOD", { typing: true, delay: 100 });
 term.echo("");
