@@ -364,16 +364,16 @@ impl Display for Cell {
                 loop {
                     match (*cdr).as_ref() {
                         Cell::Nil => {
-                            write!(f, "{})", car)?;
+                            write!(f, "{:#})", car)?;
                             return Ok(());
                         }
                         Cell::Pair(ncar, ncdr) => {
-                            write!(f, "{} ", car)?;
+                            write!(f, "{:#} ", car)?;
                             car = ncar;
                             cdr = ncdr;
                         }
                         _ => {
-                            write!(f, "{} . {})", car, cdr)?;
+                            write!(f, "{:#} . {:#})", car, cdr)?;
                             return Ok(());
                         }
                     }
@@ -420,9 +420,9 @@ impl Display for Cell {
                 write!(f, "#(")?;
                 for (idx, cell) in vector.iter().enumerate() {
                     if idx == vector.len() - 1 {
-                        write!(f, "{}", cell)?;
+                        write!(f, "{:#}", cell)?;
                     } else {
-                        write!(f, "{} ", cell)?;
+                        write!(f, "{:#} ", cell)?;
                     }
                 }
                 write!(f, ")")
