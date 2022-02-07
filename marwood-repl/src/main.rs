@@ -92,7 +92,9 @@ fn parse_and_eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
         Ok(cell) => {
             trace!("parser: {}", cell);
             match vm.eval(&cell) {
-                Ok(Cell::Void) => {}
+                Ok(Cell::Void) => {
+                    println!();
+                }
                 Ok(cell) => {
                     println!("{:#}", cell);
                 }

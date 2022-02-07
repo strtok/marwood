@@ -11,9 +11,7 @@ const vm = Marwood.new((text) => console.log(text));
 var term = $('#terminal').terminal((text) => {
     if (text.length > 0) {
         let result = vm.eval(text);
-        if (result.length > 0) {
-            term.echo(result);
-        }
+        term.echo(result);
     }
 }, {
     name: 'marwood',
@@ -23,8 +21,8 @@ var term = $('#terminal').terminal((text) => {
     keypress: function (e) { parens.paren_match(term, e) }
 });
 
-globalThis.marwood_display = (text) => term.echo(text);
-
+globalThis.marwood_display = (text) => term.echo(text, { newline: false });
+term.echo
 term.echo("λMARWOOD", { typing: true, delay: 100 });
 term.echo("");
 term.set_prompt(">");

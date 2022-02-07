@@ -57,7 +57,7 @@ impl Vm {
             ep: usize::MAX,
             acc: VCell::undefined(),
             bp: 0,
-            display: Display(Box::new(|cell| println!("{}", cell))),
+            display: Display(Box::new(|cell| print!("{}", cell))),
         };
         vm.load_builtins();
         vm.load_prelude();
