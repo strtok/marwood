@@ -22,6 +22,8 @@ pub enum Error {
     ExpectedVectorTerminator(char),
     #[error("syntax error parsing {0}")]
     SyntaxError(String),
+    #[error("unknown character {0}")]
+    UnknownChar(String),
 }
 
 /// Parse one expression from the token stream.
@@ -45,6 +47,8 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
         TokenType::HashParen => parse_vector(text, cur),
         TokenType::True => Ok(Cell::Bool(true)),
         TokenType::False => Ok(Cell::Bool(false)),
+        TokenType::Char => parse_char(text, token),
+        TokenType::String => parse_string(text, token),
         TokenType::Symbol => Ok(Cell::new_symbol(token.span(text))),
         TokenType::NumberPrefix | TokenType::Number => parse_number(text, cur, token),
         TokenType::Dot | TokenType::WhiteSpace => {
@@ -168,6 +172,49 @@ fn parse_vector<'a, T: Iterator<Item = &'a Token>>(
             }
         }
     }
+}
+
+/// Parse Char
+///
+/// Parse the character token, skipping the character prefix
+/// #\. If only one character is present after the prefix then
+/// this is a literal character. If not, then treat this as a
+/// "named" character of which only 'space' and 'newline' are
+/// recognized.
+fn parse_char(text: &str, token: &Token) -> Result<Cell, Error> {
+    let span = token.span(text);
+    let span = &span[2..span.len()];
+    if span.chars().count() == 1 {
+        Ok(Cell::Char(span.chars().next().unwrap()))
+    } else {
+        match span {
+            "space" => Ok(Cell::Char(' ')),
+            "newline" => Ok(Cell::Char('\n')),
+            _ => Err(Error::UnknownChar(span.into())),
+        }
+    }
+}
+
+/// Parse String
+///
+/// Parse the literal string, processing any espace (e.g. \").
+fn parse_string(text: &str, token: &Token) -> Result<Cell, Error> {
+    let span = token.span(text);
+    let mut cur = span.chars().peekable();
+
+    let mut output = String::new();
+    while let Some(c) = cur.next() {
+        if c == '\\' {
+            if let Some('\\') = cur.peek() {
+                output.push('\\');
+                cur.next();
+            }
+        } else {
+            output.push(c);
+        }
+    }
+
+    Ok(Cell::String(output))
 }
 
 /// Parse Number

@@ -53,6 +53,21 @@ mod integration_test {
     }
 
     #[test]
+    fn eval_string_char_literals() {
+        evals![
+           "#\\a" => "#\\a",
+           "#\\)" => "#\\)",
+           "#\\(" => "#\\(",
+           "#\\newline" => "#\\newline",
+           "#\\space" => "#\\space"
+        ];
+
+        evals![
+            r#""foo \"bar\" baz""# => r#""foo \"bar\" baz""#
+        ]
+    }
+
+    #[test]
     fn eval_quote() {
         evals![
             "'1" => "1",

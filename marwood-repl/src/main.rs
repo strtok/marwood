@@ -2,9 +2,9 @@ use crate::syntax::ReplHighlighter;
 use log::trace;
 use marwood::cell::Cell;
 use marwood::lex::{scan, Token};
-use marwood::parse;
 use marwood::parse::parse;
 use marwood::vm::Vm;
+use marwood::{lex, parse};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
@@ -27,6 +27,7 @@ impl Validator for InputValidator {
                 Err(parse::Error::Eof) => Ok(ValidationResult::Incomplete),
                 Err(_) => Ok(ValidationResult::Valid(None)),
             },
+            Err(lex::Error::Eof) => Ok(ValidationResult::Incomplete),
             Err(_) => Ok(ValidationResult::Valid(None)),
         }
     }

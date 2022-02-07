@@ -92,12 +92,14 @@ impl Heap {
             cell::Cell::Nil => self.put(VCell::Nil),
             cell::Cell::Number(ref val) => self.put(VCell::Number(val.clone())),
             cell::Cell::Bool(val) => self.put(VCell::Bool(val)),
+            cell::Cell::Char(val) => self.put(VCell::Char(val)),
             cell::Cell::Pair(ref car, ref cdr) => {
                 match (self.put_cell(car.deref()), self.put_cell(cdr.deref())) {
                     (VCell::Ptr(car), VCell::Ptr(cdr)) => self.put(VCell::Pair(car, cdr)),
                     _ => panic!("expected ptr, got {:?}", ast),
                 }
             }
+            cell::Cell::String(ref s) => self.put(VCell::string(s.clone())),
             cell::Cell::Symbol(ref sym) => self.put(VCell::symbol(sym.clone())),
             cell::Cell::Closure => panic!("unexpected closure"),
             cell::Cell::Macro => panic!("unexpected macro"),
@@ -173,6 +175,7 @@ impl Heap {
     pub fn get_as_cell(&self, vcell: &VCell) -> Cell {
         match vcell {
             VCell::Bool(val) => Cell::Bool(*val),
+            VCell::Char(val) => Cell::Char(*val),
             VCell::Number(val) => Cell::Number(val.clone()),
             VCell::Nil => Cell::Nil,
             VCell::Pair(ref car, cdr) => Cell::new_pair(
@@ -180,6 +183,7 @@ impl Heap {
                 self.get_as_cell(&VCell::Ptr(*cdr)),
             ),
             VCell::Ptr(ptr) => self.get_as_cell(self.get_at_index(*ptr)),
+            VCell::String(s) => Cell::String(s.deref().into()),
             VCell::Symbol(s) => Cell::Symbol(s.deref().into()),
             VCell::Undefined => Cell::Undefined,
             VCell::Void => Cell::Void,
@@ -270,6 +274,7 @@ impl Heap {
                 | VCell::BasePointer(_)
                 | VCell::BasePointerOffset(_)
                 | VCell::Bool(_)
+                | VCell::Char(_)
                 | VCell::BuiltInProc(_)
                 | VCell::GlobalEnvSlot(_)
                 | VCell::LexicalEnvSlot(_)
@@ -278,6 +283,7 @@ impl Heap {
                 | VCell::Nil
                 | VCell::Number(_)
                 | VCell::OpCode(_)
+                | VCell::String(_)
                 | VCell::Symbol(_)
                 | VCell::Macro(_)
                 | VCell::Undefined
@@ -318,12 +324,14 @@ impl Heap {
             | VCell::BasePointer(_)
             | VCell::BasePointerOffset(_)
             | VCell::Bool(_)
+            | VCell::Char(_)
             | VCell::GlobalEnvSlot(_)
             | VCell::LexicalEnv(_)
             | VCell::LexicalEnvSlot(_)
             | VCell::Nil
             | VCell::Number(_)
             | VCell::OpCode(_)
+            | VCell::String(_)
             | VCell::Symbol(_)
             | VCell::BuiltInProc(_)
             | VCell::Macro(_)

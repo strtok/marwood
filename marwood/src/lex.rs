@@ -7,6 +7,7 @@ use std::str::CharIndices;
 /// by the scanner.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TokenType {
+    Char,
     Dot,
     False,
     LeftParen,
@@ -14,6 +15,7 @@ pub enum TokenType {
     NumberPrefix,
     RightParen,
     SingleQuote,
+    String,
     Symbol,
     True,
     WhiteSpace,
@@ -61,6 +63,8 @@ impl Token {
 /// The type of error encountered by the scanner.
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum Error {
+    #[error("unexpected EOF")]
+    Eof,
     #[error("unexpected character '{0}'")]
     UnexpectedToken(char),
 }
@@ -96,6 +100,7 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
             '(' | ')' | '[' | ']' | '{' | '}' | '\'' => scan_simple_token(&mut cur)?,
             '#' => scan_hash_token(&mut cur)?,
             '.' => scan_dot(&mut cur)?,
+            '"' => scan_string(&mut cur)?,
             _ if is_initial_identifier(c) => scan_symbol(&mut cur)?,
             _ if is_initial_number(c) => scan_number(&mut cur)?,
             _ if c.is_whitespace() => {
@@ -174,6 +179,7 @@ fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
         'e' | 'i' | 'b' | 'o' | 'd' | 'x' => {
             Ok(Token::new((start, start + 2), TokenType::NumberPrefix))
         }
+        '\\' => scan_char(cur, start),
         _ => Err(Error::UnexpectedToken('#')),
     }
 }
@@ -189,6 +195,71 @@ fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
         cur.next();
     }
     Ok(Token::new((start, end), TokenType::Symbol))
+}
+
+fn scan_string(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
+    // Advance past opening "
+    cur.next();
+
+    let start = cur.peek().ok_or(Error::Eof)?.0;
+    let mut end = start;
+    let mut escape_next = false;
+    let mut terminated = false;
+    while let Some(&(offset, c)) = cur.peek() {
+        let escaping = escape_next;
+        if c == '"' && start != end && !escaping {
+            terminated = true;
+            break;
+        }
+        if c == '\\' && !escaping {
+            escape_next = true;
+        } else {
+            escape_next = false;
+        }
+        end = offset + c.len_utf8();
+        cur.next();
+    }
+    if !terminated {
+        return Err(Error::Eof);
+    }
+    cur.next();
+    Ok(Token::new((start, end), TokenType::String))
+}
+
+/// Scan Char
+///
+/// Scan char is called when the scanner has encountered the char prefix
+/// #\. It will have called scan_char after incrementing cursor past the
+/// character prefix, both start and end signifying the start and end of
+/// the prefix token, where end = start+2.
+///
+/// In the example #\space, cur.next() should be 's' and start points to
+/// the the very first character of the prefix '#'.
+///
+/// # Arguments
+/// `cur` - The cursor, pointing at the first character of the
+///   actual character.
+/// `start` - The start of the token.
+fn scan_char(cur: &mut Peekable<CharIndices>, start: usize) -> Result<Token, Error> {
+    let mut end;
+    if let Some((offset, c)) = cur.next() {
+        end = offset + c.len_utf8();
+        if !c.is_ascii_alphabetic() {
+            return Ok(Token::new((start, end), TokenType::Char));
+        }
+    } else {
+        return Err(Error::Eof);
+    }
+
+    while let Some(&(offset, c)) = cur.peek() {
+        if !c.is_ascii_alphabetic() {
+            break;
+        }
+        end = offset + c.len_utf8();
+        cur.next();
+    }
+
+    Ok(Token::new((start, end), TokenType::Char))
 }
 
 fn scan_number(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
@@ -285,6 +356,39 @@ mod tests {
         lexes! {
             "foo" => TokenType::Symbol
         };
+    }
+
+    #[test]
+    fn chars() {
+        lexes! {
+            "#\\a" => TokenType::Char,
+            "#\\space" => TokenType::Char,
+            "#\\newline" => TokenType::Char
+        };
+    }
+
+    #[test]
+    fn strings() {
+        assert_eq!(
+            expand(scan(r#""foo bar baz""#).unwrap(), r#""foo bar baz""#),
+            [("foo bar baz", TokenType::String)]
+        );
+
+        assert_eq!(
+            expand(
+                scan(r#""The word \"recursion\" has many meanings.""#).unwrap(),
+                r#""The word \"recursion\" has many meanings.""#
+            ),
+            [(
+                r#"The word \"recursion\" has many meanings."#,
+                TokenType::String
+            )]
+        );
+
+        assert_eq!(
+            expand(scan(r#""\\\\""#).unwrap(), r#""\\\\""#),
+            [((r#"\\\\"#), TokenType::String)]
+        );
     }
 
     #[test]

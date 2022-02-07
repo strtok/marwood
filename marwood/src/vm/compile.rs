@@ -75,12 +75,14 @@ impl Vm {
             Cell::Pair(_, _) => self.compile_procedure_application(lambda, tail, expr),
             Cell::Symbol(_) => self.compile_symbol_expression(lambda, expr),
             Cell::Nil => Err(UnquotedNil),
-            Cell::Number(_)
-            | Cell::Vector(_)
-            | Cell::Bool(_)
+            Cell::Bool(_)
+            | Cell::Char(_)
+            | Cell::Number(_)
             | Cell::Closure
             | Cell::Macro
+            | Cell::String(_)
             | Cell::Undefined
+            | Cell::Vector(_)
             | Cell::Void
             | Cell::Lambda => self.compile_quote(lambda, expr),
         }

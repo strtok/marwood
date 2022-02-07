@@ -8,9 +8,11 @@ use std::ops::DerefMut;
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum Cell {
     Bool(bool),
+    Char(char),
     Nil,
     Number(Number),
     Pair(Box<Cell>, Box<Cell>),
+    String(String),
     Symbol(String),
     Vector(Vec<Cell>),
 
@@ -26,6 +28,10 @@ pub enum Cell {
 impl Cell {
     pub fn new_symbol(val: &str) -> Cell {
         Cell::Symbol(val.into())
+    }
+
+    pub fn new_string(val: &str) -> Cell {
+        Cell::String(val.into())
     }
 
     pub fn new_list<T: IntoIterator<Item = Cell>>(iter: T) -> Cell {
@@ -376,8 +382,27 @@ impl Display for Cell {
             Cell::Bool(val) => {
                 write!(f, "{}", if *val { "#t" } else { "#f" })
             }
+            Cell::Char(char) => match char {
+                ' ' => write!(f, "\\#space"),
+                '\n' => write!(f, "\\#newline"),
+                c => write!(f, "\\#{}", c),
+            },
             Cell::Number(val) => {
                 write!(f, "{}", val)
+            }
+            Cell::String(val) => {
+                write!(f, "\"")?;
+                for it in val.chars() {
+                    match it {
+                        '"' | '\\' => {
+                            write!(f, "\\{}", it)?;
+                        }
+                        it => {
+                            write!(f, "{}", it)?;
+                        }
+                    }
+                }
+                write!(f, "\"")
             }
             Cell::Symbol(val) => {
                 write!(f, "{}", val)

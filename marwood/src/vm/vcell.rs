@@ -24,10 +24,12 @@ use std::rc::Rc;
 pub enum VCell {
     // Scheme primitive types
     Bool(bool),
+    Char(char),
     Nil,
     Number(Number),
     Pair(usize, usize),
     Symbol(Rc<String>),
+    String(Rc<String>),
     Vector(Rc<Vector>),
 
     // other scheme values
@@ -77,6 +79,7 @@ pub const ARGUMENT_COUNT_TYPE_TEXT: &str = "#<argument-count>";
 pub const BASE_POINTER_TYPE_TEXT: &str = "#<base-pointer>";
 pub const BASE_POINTER_OFFSET_TYPE_TEXT: &str = "#<base-pointer-offset>";
 pub const BOOL_TYPE_TEXT: &str = "#<bool>";
+pub const CHAR_TYPE_TEXT: &str = "#<char>";
 pub const CLOSURE_TYPE_TEXT: &str = "#<closure>";
 pub const GLOBAL_ENV_SLOT_TYPE_TEXT: &str = "#<global-environment-slot>";
 pub const ENVIRONMENT_POINTER_TYPE_TEXT: &str = "#<environment-pointer>";
@@ -92,6 +95,7 @@ pub const NIL_TYPE_TEXT: &str = "#<nil>";
 pub const OPCODE_TYPE_TEXT: &str = "#<opcode>";
 pub const PAIR_TYPE_TEXT: &str = "#<pair>";
 pub const PTR_TYPE_TEXT: &str = "#<ptr>";
+pub const STRING_TYPE_TEXT: &str = "#<string>";
 pub const SYMBOL_TYPE_TEXT: &str = "#<symbol>";
 pub const SYSCALL_TYPE_TEXT: &str = "#<syscall>";
 pub const UNDEFINED_TYPE_TEXT: &str = "#<undefined>";
@@ -110,6 +114,7 @@ impl VCell {
             VCell::BasePointer(_) => BASE_POINTER_TYPE_TEXT,
             VCell::BasePointerOffset(_) => BASE_POINTER_OFFSET_TYPE_TEXT,
             VCell::Bool(_) => BOOL_TYPE_TEXT,
+            VCell::Char(_) => CHAR_TYPE_TEXT,
             VCell::Closure(_, _) => CLOSURE_TYPE_TEXT,
             VCell::EnvironmentPointer(_) => ENVIRONMENT_POINTER_TYPE_TEXT,
             VCell::GlobalEnvSlot(_) => GLOBAL_ENV_SLOT_TYPE_TEXT,
@@ -123,6 +128,7 @@ impl VCell {
             VCell::OpCode(_) => OPCODE_TYPE_TEXT,
             VCell::Pair(_, _) => PAIR_TYPE_TEXT,
             VCell::Ptr(_) => PTR_TYPE_TEXT,
+            VCell::String(_) => STRING_TYPE_TEXT,
             VCell::Symbol(_) => SYMBOL_TYPE_TEXT,
             VCell::BuiltInProc(_) => SYSCALL_TYPE_TEXT,
             VCell::Macro(_) => MACRO_TYPE_TEXT,
@@ -160,8 +166,12 @@ impl VCell {
         VCell::GlobalEnvSlot(slot.into())
     }
 
-    pub fn symbol<T: Into<String>>(ptr: T) -> VCell {
-        VCell::Symbol(Rc::new(ptr.into()))
+    pub fn string<T: Into<String>>(s: T) -> VCell {
+        VCell::String(Rc::new(s.into()))
+    }
+
+    pub fn symbol<T: Into<String>>(sym: T) -> VCell {
+        VCell::Symbol(Rc::new(sym.into()))
     }
 
     pub fn vector<T: Into<Vec<VCell>>>(vector: T) -> VCell {
@@ -398,6 +408,11 @@ impl fmt::Display for VCell {
             VCell::BasePointerOffset(offset) => write!(f, "%bp[{:+}]", *offset),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
+            VCell::Char(c) => match c {
+                ' ' => write!(f, "\\#space"),
+                '\n' => write!(f, "\\#newline"),
+                c => write!(f, "\\#{}", c),
+            },
             VCell::Closure(_, _) => write!(f, "#<closure>"),
             VCell::EnvironmentPointer(ep) => write!(f, "%ep[${:02x}]", ep),
             VCell::GlobalEnvSlot(slot) => write!(f, "genv[${:02x}]", slot),
@@ -414,6 +429,7 @@ impl fmt::Display for VCell {
             VCell::OpCode(val) => write!(f, "{:?}", val),
             VCell::Pair(car, cdr) => write!(f, "(${:02x} . ${:02x})", car, cdr),
             VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
+            VCell::String(s) => write!(f, "\"{}\"", *s),
             VCell::Symbol(s) => write!(f, "{}", *s),
             VCell::BuiltInProc(_) => write!(f, "#<syscall>"),
             VCell::Undefined => write!(f, "undefined"),
