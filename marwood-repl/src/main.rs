@@ -94,7 +94,7 @@ fn parse_and_eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
             match vm.eval(&cell) {
                 Ok(Cell::Void) => {}
                 Ok(cell) => {
-                    println!("{}", cell);
+                    println!("{:#}", cell);
                 }
                 Err(e) => {
                     println!("error: {}", e);

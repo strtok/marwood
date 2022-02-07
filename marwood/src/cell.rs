@@ -349,8 +349,8 @@ impl IntoIterator for Cell {
     }
 }
 
-impl Cell {
-    fn print(&self, f: &mut Formatter<'_>, is_display: bool) -> std::fmt::Result {
+impl Display for Cell {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Cell::Pair(car, cdr) => {
                 // sugar quote any list in the exact form (quote x)
@@ -382,9 +382,9 @@ impl Cell {
             Cell::Bool(val) => {
                 write!(f, "{}", if *val { "#t" } else { "#f" })
             }
-            Cell::Char(c) => match is_display {
-                true => write!(f, "{}", c),
-                false => match c {
+            Cell::Char(c) => match f.alternate() {
+                false => write!(f, "{}", c),
+                true => match c {
                     ' ' => write!(f, "\\#space"),
                     '\n' => write!(f, "\\#newline"),
                     c => write!(f, "\\#{}", c),
@@ -393,9 +393,9 @@ impl Cell {
             Cell::Number(val) => {
                 write!(f, "{}", val)
             }
-            Cell::String(val) => match is_display {
-                true => write!(f, "{}", val),
-                false => {
+            Cell::String(val) => match f.alternate() {
+                false => write!(f, "{}", val),
+                true => {
                     write!(f, "\"")?;
                     for it in val.chars() {
                         match it {
@@ -443,12 +443,6 @@ impl Cell {
                 write!(f, "#<void>")
             }
         }
-    }
-}
-
-impl Display for Cell {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.print(f, false)
     }
 }
 

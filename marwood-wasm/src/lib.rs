@@ -54,7 +54,7 @@ impl Marwood {
                 Ok(cell) => {
                     match self.vm.eval(&cell) {
                         Ok(Cell::Void) => {}
-                        Ok(cell) => result.push_str(&format!("{}", cell)),
+                        Ok(cell) => result.push_str(&format!("{:#}", cell)),
                         Err(e) => result.push_str(&format!("error: {}", e)),
                     };
                 }
