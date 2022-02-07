@@ -2,7 +2,6 @@ use crate::cell;
 use crate::cell::Cell;
 use crate::vm::Error;
 use crate::vm::Error::{InvalidDefineSyntax, InvalidSyntax};
-use log::trace;
 
 macro_rules! car {
     ($cell:expr) => {{
@@ -437,7 +436,6 @@ impl Transform {
         pattern: &Pattern,
         env: &mut PatternEnvironment,
     ) -> Option<Cell> {
-        trace!("expand {}\n\t\t{:?}\n\t\t{:?}", template, pattern, env);
         match template {
             Cell::Symbol(_) => {
                 return if pattern.is_variable(template) {

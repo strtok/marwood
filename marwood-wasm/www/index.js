@@ -2,10 +2,11 @@ import "./node_modules/jquery.terminal/css/jquery.terminal.css";
 import "./terminal.css"
 import { Marwood } from "marwood";
 import * as parens from "./parens.js";
+
 const $ = require("jquery");
 const terminal = require("jquery.terminal");
 
-const vm = Marwood.new();
+const vm = Marwood.new((text) => console.log(text));
 
 var term = $('#terminal').terminal((text) => {
     if (text.length > 0) {
@@ -21,6 +22,8 @@ var term = $('#terminal').terminal((text) => {
     keydown: function () { parens.set_position(term) },
     keypress: function (e) { parens.paren_match(term, e) }
 });
+
+globalThis.marwood_display = (text) => term.echo(text, { typing: true, delay: 100 });
 
 term.echo("λMARWOOD", { typing: true, delay: 100 });
 term.echo("");

@@ -6,6 +6,7 @@ use crate::vm::heap::Heap;
 use crate::vm::stack::Stack;
 use crate::vm::vcell::VCell;
 use log::trace;
+use std::fmt::{Debug, Formatter};
 
 pub mod builtin;
 pub mod compare;
@@ -22,6 +23,7 @@ pub mod vcell;
 pub mod vector;
 
 const HEAP_SIZE: usize = 4096;
+struct Display(Box<dyn Fn(&Cell)>);
 
 #[derive(Debug)]
 pub struct Vm {
@@ -37,6 +39,9 @@ pub struct Vm {
     ep: usize,
     ip: (usize, usize),
     bp: usize,
+
+    /// Display Callback
+    display: Display,
 }
 
 impl Vm {
@@ -52,6 +57,7 @@ impl Vm {
             ep: usize::MAX,
             acc: VCell::undefined(),
             bp: 0,
+            display: Display(Box::new(|cell| println!("{}", cell))),
         };
         vm.load_builtins();
         vm.load_prelude();
@@ -86,11 +92,31 @@ impl Vm {
         self.ip.1 = 0;
         self.run()
     }
+
+    pub fn set_display_fn(&mut self, func: Box<dyn Fn(&Cell)>) {
+        self.display = Display(func);
+    }
+
+    pub fn display(&self, cell: &Cell) {
+        self.display.display(cell)
+    }
 }
 
 impl Default for Vm {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Display {
+    fn display(&self, cell: &Cell) {
+        self.0(cell)
+    }
+}
+
+impl Debug for Display {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Display{{}}")
     }
 }
 

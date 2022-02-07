@@ -44,6 +44,7 @@ impl Vm {
         self.load_builtin("cdr", cdr);
         self.load_builtin("char?", is_char);
         self.load_builtin("cons", cons);
+        self.load_builtin("display", display);
         self.load_builtin("eq?", eq);
         self.load_builtin("equal?", equal);
         self.load_builtin("eqv?", eqv);
@@ -100,6 +101,17 @@ fn pop_argc(vm: &mut Vm, min: usize, max: Option<usize>, proc: &str) -> Result<u
     } else {
         Ok(argc)
     }
+}
+
+///
+/// System Functions
+///
+
+fn display(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 0, Some(1), "car")?;
+    let obj = vm.heap.get_as_cell(vm.stack.pop()?);
+    vm.display(&obj);
+    Ok(VCell::Void)
 }
 
 ///

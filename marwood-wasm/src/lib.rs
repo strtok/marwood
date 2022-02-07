@@ -11,6 +11,11 @@ use web_sys::console;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+#[wasm_bindgen(module = "/display.js")]
+extern "C" {
+    fn display(text: &str);
+}
+
 #[wasm_bindgen]
 #[derive(Default)]
 pub struct Marwood {
@@ -20,7 +25,9 @@ pub struct Marwood {
 #[wasm_bindgen]
 impl Marwood {
     pub fn new() -> Marwood {
-        Marwood { vm: Vm::new() }
+        let mut vm = Vm::new();
+        vm.set_display_fn(Box::new(|cell| display(&cell.to_string())));
+        Marwood { vm }
     }
 
     pub fn eval(&mut self, text: &str) -> String {
