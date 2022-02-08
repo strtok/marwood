@@ -262,6 +262,12 @@ impl From<i64> for Cell {
     }
 }
 
+impl From<char> for Cell {
+    fn from(val: char) -> Self {
+        Cell::Char(val)
+    }
+}
+
 impl From<Vec<Cell>> for Cell {
     fn from(val: Vec<Cell>) -> Self {
         Cell::new_list(val)

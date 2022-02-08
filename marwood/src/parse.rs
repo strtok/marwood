@@ -403,6 +403,24 @@ mod tests {
     }
 
     #[test]
+    fn characters() {
+        parses! {
+            "#\\c" => cell!['c'],
+            "#\\space" => cell![' '],
+            "#\\newline" => cell!['\n']
+        }
+    }
+
+    #[test]
+    fn strings() {
+        parses! {
+            r#""foo""# => Cell::new_string("foo"),
+            r#""foo \"bar\" baz""# => Cell::new_string("foo \"bar\" baz"),
+            r#""foo \\ baz""# => Cell::new_string("foo \\ baz")
+        }
+    }
+
+    #[test]
     fn expressions() {
         parses! {
             "foo" => cell!["foo"],
