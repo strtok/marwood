@@ -4,6 +4,36 @@ use crate::vm::vcell::VCell;
 use crate::vm::Error::InvalidSyntax;
 use crate::vm::{Error, Vm};
 
+pub fn is_alphabetic(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "char-alphabetic?")?;
+    let c = pop_char(vm)?;
+    Ok(c.is_alphabetic().into())
+}
+
+pub fn is_numeric(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "char-numeric?")?;
+    let c = pop_char(vm)?;
+    Ok(c.is_numeric().into())
+}
+
+pub fn is_lower_case(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "char-lower-case?")?;
+    let c = pop_char(vm)?;
+    Ok(c.is_lowercase().into())
+}
+
+pub fn is_upper_case(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "char-upper-case?")?;
+    let c = pop_char(vm)?;
+    Ok(c.is_uppercase().into())
+}
+
+pub fn is_whtespace(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "char-whitespace?")?;
+    let c = pop_char(vm)?;
+    Ok(c.is_whitespace().into())
+}
+
 pub fn integer_to_char(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "integer->char")?;
     let err = |num: Number| Err(InvalidSyntax(format!("{} is not valid unicode", num)));

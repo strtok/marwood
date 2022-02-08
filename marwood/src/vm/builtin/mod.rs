@@ -49,6 +49,11 @@ impl Vm {
         self.load_builtin("cdr", list::cdr);
         self.load_builtin("char?", predicate::is_char);
         self.load_builtin("char->integer", char::char_to_integer);
+        self.load_builtin("char-alphabetic?", char::is_alphabetic);
+        self.load_builtin("char-lower-case?", char::is_lower_case);
+        self.load_builtin("char-numeric?", char::is_numeric);
+        self.load_builtin("char-upper-case?", char::is_upper_case);
+        self.load_builtin("char-whitespace?", char::is_whtespace);
         self.load_builtin("cons", list::cons);
         self.load_builtin("display", ports::display);
         self.load_builtin("eq?", predicate::eq);

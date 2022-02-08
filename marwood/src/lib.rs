@@ -87,6 +87,19 @@ mod integration_test {
         fails![
             "(integer->char #xffffffffff)" => InvalidSyntax("4294967295 is not valid unicode".into())
         ];
+        evals![
+            "(char-alphabetic? #\\a)" => "#t",
+            "(char-alphabetic? #\\A)" => "#t",
+            "(char-alphabetic? #\\1)" => "#f",
+            "(char-numeric? #\\1)" => "#t",
+            "(char-numeric? #\\a)" => "#f",
+            "(char-whitespace? #\\space)" => "#t",
+            "(char-whitespace? #\\tab)" => "#t",
+            "(char-upper-case? #\\a)" => "#f",
+            "(char-upper-case? #\\A)" => "#t",
+            "(char-lower-case? #\\a)" => "#t",
+            "(char-lower-case? #\\A)" => "#f"
+        ]
     }
 
     #[test]
