@@ -3,7 +3,9 @@ use crate::lex::TokenType::NumberPrefix;
 use crate::lex::{Token, TokenType};
 use crate::list;
 use crate::number::{Exactness, Number};
-use crate::parse::Error::{Eof, ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken};
+use crate::parse::Error::{
+    Eof, ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken, UnknownChar,
+};
 use std::iter::Peekable;
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
@@ -186,6 +188,13 @@ fn parse_char(text: &str, token: &Token) -> Result<Cell, Error> {
     let span = &span[2..span.len()];
     if span.chars().count() == 1 {
         Ok(Cell::Char(span.chars().next().unwrap()))
+    } else if span.chars().next().unwrap() == 'x'
+        && span[1..span.len()].chars().all(|it| it.is_ascii_hexdigit())
+    {
+        let c =
+            u32::from_str_radix(&span[1..span.len()], 16).map_err(|_| UnknownChar(span.into()))?;
+        let c = char::from_u32(c).ok_or_else(|| UnknownChar(span.into()))?;
+        Ok(Cell::Char(c))
     } else {
         match span {
             "space" => Ok(Cell::Char(' ')),
@@ -407,7 +416,10 @@ mod tests {
         parses! {
             "#\\c" => cell!['c'],
             "#\\space" => cell![' '],
-            "#\\newline" => cell!['\n']
+            "#\\newline" => cell!['\n'],
+            "#\\x03bb" => cell!['λ'],
+            "#\\x03BB" => cell!['λ'],
+            "#\\x3bb" => cell!['λ']
         }
     }
 

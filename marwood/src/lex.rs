@@ -252,7 +252,7 @@ fn scan_char(cur: &mut Peekable<CharIndices>, start: usize) -> Result<Token, Err
     }
 
     while let Some(&(offset, c)) = cur.peek() {
-        if !c.is_ascii_alphabetic() {
+        if !c.is_ascii_alphanumeric() {
             break;
         }
         end = offset + c.len_utf8();
