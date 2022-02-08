@@ -32,10 +32,10 @@
     "jquery.terminal": "^2.31.1"
   },
   "devDependencies": {
-    "copy-webpack-plugin": "^5.0.0",
-    "css-loader": "^3.5.3",
-    "file-loader": "^6.0.0",
-    "style-loader": "^1.2.1",
+    "copy-webpack-plugin": "^10.2.4",
+    "css-loader": "^6.6.0",
+    "file-loader": "^6.2.0",
+    "style-loader": "^3.3.1",
     "webpack": "^5.68.0",
     "webpack-cli": "^4.9.2",
     "webpack-dev-server": "^4.7.4"
