@@ -68,6 +68,7 @@ impl Vm {
         self.load_builtin("char-downcase", char::char_downcase);
         self.load_builtin("char-foldcase", char::char_foldcase);
         self.load_builtin("cons", list::cons);
+        self.load_builtin("digit-value", char::digit_value);
         self.load_builtin("display", ports::display);
         self.load_builtin("eq?", predicate::eq);
         self.load_builtin("equal?", predicate::equal);

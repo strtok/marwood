@@ -89,6 +89,16 @@ pub fn char_foldcase(vm: &mut Vm) -> Result<VCell, Error> {
     }
 }
 
+pub fn digit_value(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "digit-value")?;
+    let c = pop_char(vm)?;
+    if !c.is_digit(10) {
+        Ok(false.into())
+    } else {
+        Ok(Number::from(c.to_digit(10).unwrap()).into())
+    }
+}
+
 pub fn char_eq(vm: &mut Vm) -> Result<VCell, Error> {
     char_comp(vm, "char=?", |x, y| x == y)
 }

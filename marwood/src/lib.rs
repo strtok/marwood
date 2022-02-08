@@ -129,7 +129,12 @@ mod integration_test {
             // ß -> SS
             "(char-downcase #\\ß)" => "#\\ß",
             "(char-foldcase #\\Σ)" => "#\\σ"
-        ]
+        ];
+
+        evals![
+            "(digit-value #\\9)" => "9",
+            "(digit-value #\\a)" => "#f"
+        ];
     }
 
     #[test]
