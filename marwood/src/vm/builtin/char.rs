@@ -53,6 +53,42 @@ pub fn char_to_integer(vm: &mut Vm) -> Result<VCell, Error> {
     Ok(Number::from(c as u32).into())
 }
 
+pub fn char_upcase(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "char-upcase")?;
+    let c = pop_char(vm)?;
+    if c.is_ascii() {
+        Ok(c.to_ascii_uppercase().into())
+    } else if c.to_uppercase().into_iter().count() == 1 {
+        Ok(c.to_uppercase().into_iter().next().unwrap().into())
+    } else {
+        Ok(c.into())
+    }
+}
+
+pub fn char_downcase(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "char-downcase")?;
+    let c = pop_char(vm)?;
+    if c.is_ascii() {
+        Ok(c.to_ascii_lowercase().into())
+    } else if c.to_lowercase().into_iter().count() == 1 {
+        Ok(c.to_lowercase().into_iter().next().unwrap().into())
+    } else {
+        Ok(c.into())
+    }
+}
+
+pub fn char_foldcase(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "char-foldcase")?;
+    let c = pop_char(vm)?;
+    if c.is_ascii() {
+        Ok(c.to_ascii_lowercase().into())
+    } else if c.to_lowercase().into_iter().count() == 1 {
+        Ok(c.to_lowercase().into_iter().next().unwrap().into())
+    } else {
+        Ok(c.into())
+    }
+}
+
 pub fn char_eq(vm: &mut Vm) -> Result<VCell, Error> {
     char_comp(vm, "char=?", |x, y| x == y)
 }

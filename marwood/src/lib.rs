@@ -117,6 +117,18 @@ mod integration_test {
             "(char-ci>? #\\b #\\A)" => "#t",
             "(char>? #\\a #\\a)" => "#f",
             "(char>=? #\\a #\\a)" => "#t"
+        ];
+
+        evals![
+            "(char-upcase #\\a)" => "#\\A",
+            "(char-upcase #\\λ)" => "#\\Λ",
+
+            "(char-downcase #\\A)" => "#\\a",
+            "(char-downcase #\\Λ)" => "#\\λ",
+
+            // ß -> SS
+            "(char-downcase #\\ß)" => "#\\ß",
+            "(char-foldcase #\\Σ)" => "#\\σ"
         ]
     }
 

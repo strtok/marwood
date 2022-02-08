@@ -64,6 +64,9 @@ impl Vm {
         self.load_builtin("char-ci<=?", char::char_ci_lt_eq);
         self.load_builtin("char-ci>?", char::char_ci_gt);
         self.load_builtin("char-ci>=?", char::char_ci_gt_eq);
+        self.load_builtin("char-upcase", char::char_upcase);
+        self.load_builtin("char-downcase", char::char_downcase);
+        self.load_builtin("char-foldcase", char::char_foldcase);
         self.load_builtin("cons", list::cons);
         self.load_builtin("display", ports::display);
         self.load_builtin("eq?", predicate::eq);
