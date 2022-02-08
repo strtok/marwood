@@ -56,10 +56,12 @@ mod integration_test {
     fn eval_string_char_literals() {
         evals![
            "#\\a" => "#\\a",
+           "#\\A" => "#\\A",
            "#\\)" => "#\\)",
            "#\\(" => "#\\(",
            "#\\newline" => "#\\newline",
-           "#\\space" => "#\\space"
+           "#\\space" => "#\\space",
+           "#\\ " => "#\\space"
         ];
 
         evals![
