@@ -387,8 +387,20 @@ impl From<bool> for VCell {
     }
 }
 
+impl From<char> for VCell {
+    fn from(val: char) -> Self {
+        VCell::Char(val)
+    }
+}
+
 impl From<i64> for VCell {
     fn from(num: i64) -> Self {
+        VCell::Number(Number::from(num))
+    }
+}
+
+impl From<i32> for VCell {
+    fn from(num: i32) -> Self {
         VCell::Number(Number::from(num))
     }
 }

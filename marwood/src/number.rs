@@ -127,6 +127,37 @@ impl Number {
         }
     }
 
+    pub fn to_i64(&self) -> Option<i64> {
+        match self {
+            Number::Fixnum(num) => Some(*num as i64),
+            Number::BigInt(num) => num.to_i64(),
+            Number::Rational(num) if num.is_integer() => num.to_i64(),
+            _ => None,
+        }
+    }
+
+    pub fn to_u64(&self) -> Option<u64> {
+        match self {
+            Number::Fixnum(num) if *num >= 0 => Some(*num as u64),
+            Number::BigInt(num) if **num > BigInt::from(0) && **num <= BigInt::from(u64::MAX) => {
+                Some(num.to_u64().unwrap())
+            }
+            Number::Rational(num) if num.is_integer() => num.to_u64(),
+            _ => None,
+        }
+    }
+
+    pub fn to_u32(&self) -> Option<u32> {
+        match self {
+            Number::Fixnum(num) if *num >= 0 => Some(*num as u32),
+            Number::BigInt(num) if **num > BigInt::from(0) && **num <= BigInt::from(u32::MAX) => {
+                Some(num.to_u32().unwrap())
+            }
+            Number::Rational(num) if num.is_integer() => num.to_u32(),
+            _ => None,
+        }
+    }
+
     pub fn is_integer(&self) -> bool {
         match self {
             Number::Fixnum(_) => true,
@@ -766,6 +797,28 @@ impl fmt::Display for Number {
             Number::Float(num) if *num > 1E10 => write!(f, "{:E}", num),
             Number::Float(num) => write!(f, "{}", num),
             Number::Rational(num) => write!(f, "{}", num),
+        }
+    }
+}
+
+impl From<u32> for Number {
+    fn from(num: u32) -> Self {
+        Number::Fixnum(num as i64)
+    }
+}
+
+impl From<i32> for Number {
+    fn from(num: i32) -> Self {
+        Number::Fixnum(num as i64)
+    }
+}
+
+impl From<u64> for Number {
+    fn from(num: u64) -> Self {
+        if num > i64::MAX as u64 {
+            Number::new_bigint(BigInt::from(num))
+        } else {
+            Number::Fixnum(num as i64)
         }
     }
 }

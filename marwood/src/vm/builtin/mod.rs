@@ -5,6 +5,7 @@ use crate::vm::Error::{InvalidNumArgs, InvalidSyntax};
 use crate::vm::{Error, Vm};
 use std::rc::Rc;
 
+mod char;
 mod list;
 mod number;
 mod ports;
@@ -47,6 +48,7 @@ impl Vm {
         self.load_builtin("car", list::car);
         self.load_builtin("cdr", list::cdr);
         self.load_builtin("char?", predicate::is_char);
+        self.load_builtin("char->integer", char::char_to_integer);
         self.load_builtin("cons", list::cons);
         self.load_builtin("display", ports::display);
         self.load_builtin("eq?", predicate::eq);
@@ -55,6 +57,7 @@ impl Vm {
         self.load_builtin("even?", number::even);
         self.load_builtin("exact->inexact", number::exact_inexact);
         self.load_builtin("inexact->exact", number::inexact_exact);
+        self.load_builtin("integer->char", char::integer_to_char);
         self.load_builtin("make-vector", vector::make_vector);
         self.load_builtin("list?", predicate::is_list);
         self.load_builtin("list-ref", list::list_ref);
@@ -129,6 +132,18 @@ fn pop_integer(vm: &mut Vm) -> Result<Number, Error> {
         Ok(num) if num.is_integer() => Ok(num),
         Ok(num) => return Err(InvalidSyntax(format!("{} is not a valid integer", num))),
         Err(e) => Err(e),
+    }
+}
+
+fn pop_char(vm: &mut Vm) -> Result<char, Error> {
+    match vm.heap.get(vm.stack.pop()?) {
+        VCell::Char(c) => Ok(c),
+        vcell => {
+            return Err(InvalidSyntax(format!(
+                "{} is not a valid character",
+                vm.heap.get_as_cell(&vcell)
+            )))
+        }
     }
 }
 

@@ -68,6 +68,18 @@ mod integration_test {
     }
 
     #[test]
+    fn char_procedures() {
+        evals![
+            "(integer->char (char->integer #\\a))" => "#\\a",
+            "(integer->char (char->integer #\\𒀀))" => "#\\𒀀",
+            "(integer->char (char->integer #\\space))" => "#\\space"
+        ];
+        fails![
+            "(integer->char #xffffffffff)" => InvalidSyntax("4294967295 is not a valid unicode value".into())
+        ];
+    }
+
+    #[test]
     fn eval_quote() {
         evals![
             "'1" => "1",
