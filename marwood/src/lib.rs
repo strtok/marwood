@@ -72,10 +72,18 @@ mod integration_test {
         evals![
             "(integer->char (char->integer #\\a))" => "#\\a",
             "(integer->char (char->integer #\\𒀀))" => "#\\𒀀",
-            "(integer->char (char->integer #\\space))" => "#\\space"
+            "(integer->char (char->integer #\\alarm))" => "#\\alarm",
+            "(integer->char (char->integer #\\backspace))" => "#\\backspace",
+            "(integer->char (char->integer #\\delete))" => "#\\delete",
+            "(integer->char (char->integer #\\escape))" => "#\\escape",
+            "(integer->char (char->integer #\\newline))" => "#\\newline",
+            "(integer->char (char->integer #\\null))" => "#\\null",
+            "(integer->char (char->integer #\\return))" => "#\\return",
+            "(integer->char (char->integer #\\space))" => "#\\space",
+            "(integer->char (char->integer #\\tab))" => "#\\tab"
         ];
         fails![
-            "(integer->char #xffffffffff)" => InvalidSyntax("4294967295 is not a valid unicode value".into())
+            "(integer->char #xffffffffff)" => InvalidSyntax("4294967295 is not valid unicode".into())
         ];
     }
 

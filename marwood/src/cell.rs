@@ -1,4 +1,5 @@
 use crate::number::Number;
+use crate::vm::char::write_escaped_char;
 use ::lazy_static::lazy_static;
 use std::borrow::Borrow;
 use std::collections::HashSet;
@@ -390,11 +391,7 @@ impl Display for Cell {
             }
             Cell::Char(c) => match f.alternate() {
                 false => write!(f, "{}", c),
-                true => match c {
-                    ' ' => write!(f, "\\#space"),
-                    '\n' => write!(f, "\\#newline"),
-                    c => write!(f, "\\#{}", c),
-                },
+                true => write_escaped_char(*c, f),
             },
             Cell::Number(val) => {
                 write!(f, "{}", val)

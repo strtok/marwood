@@ -1,4 +1,5 @@
 use crate::number::Number;
+use crate::vm::char::write_escaped_char;
 use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
@@ -420,11 +421,7 @@ impl fmt::Display for VCell {
             VCell::BasePointerOffset(offset) => write!(f, "%bp[{:+}]", *offset),
             VCell::Bool(true) => write!(f, "#t"),
             VCell::Bool(false) => write!(f, "#f"),
-            VCell::Char(c) => match c {
-                ' ' => write!(f, "\\#space"),
-                '\n' => write!(f, "\\#newline"),
-                c => write!(f, "\\#{}", c),
-            },
+            VCell::Char(c) => write_escaped_char(*c, f),
             VCell::Closure(_, _) => write!(f, "#<closure>"),
             VCell::EnvironmentPointer(ep) => write!(f, "%ep[${:02x}]", ep),
             VCell::GlobalEnvSlot(slot) => write!(f, "genv[${:02x}]", slot),

@@ -6,12 +6,7 @@ use crate::vm::{Error, Vm};
 
 pub fn integer_to_char(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "integer->char")?;
-    let err = |num: Number| {
-        Err(InvalidSyntax(format!(
-            "{} is not a valid unicode value",
-            num
-        )))
-    };
+    let err = |num: Number| Err(InvalidSyntax(format!("{} is not valid unicode", num)));
     let num = pop_integer(vm)?;
     match num.to_u32() {
         Some(num) => match char::from_u32(num) {

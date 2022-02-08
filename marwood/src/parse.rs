@@ -6,6 +6,7 @@ use crate::number::{Exactness, Number};
 use crate::parse::Error::{
     Eof, ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken, UnknownChar,
 };
+use crate::vm::char::named_to_char;
 use std::iter::Peekable;
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
@@ -196,11 +197,9 @@ fn parse_char(text: &str, token: &Token) -> Result<Cell, Error> {
         let c = char::from_u32(c).ok_or_else(|| UnknownChar(span.into()))?;
         Ok(Cell::Char(c))
     } else {
-        match span {
-            "space" => Ok(Cell::Char(' ')),
-            "newline" => Ok(Cell::Char('\n')),
-            _ => Err(Error::UnknownChar(span.into())),
-        }
+        named_to_char(span)
+            .map(|c| Cell::Char(c))
+            .ok_or_else(|| Error::UnknownChar(span.into()))
     }
 }
 
