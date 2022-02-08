@@ -52,3 +52,67 @@ pub fn char_to_integer(vm: &mut Vm) -> Result<VCell, Error> {
     let c = pop_char(vm)?;
     Ok(Number::from(c as u32).into())
 }
+
+pub fn char_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char=?", |x, y| x == y)
+}
+
+pub fn char_lt(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char<?", |x, y| x < y)
+}
+
+pub fn char_lt_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char<=?", |x, y| x <= y)
+}
+
+pub fn char_gt(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char>?", |x, y| x > y)
+}
+
+pub fn char_gt_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char>=?", |x, y| x >= y)
+}
+
+pub fn char_ci_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char-ci=?", |x, y| x.eq_ignore_ascii_case(y))
+}
+
+pub fn char_ci_lt(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char-ci<?", |x, y| {
+        x.to_ascii_lowercase() < y.to_ascii_lowercase()
+    })
+}
+
+pub fn char_ci_lt_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char-ci<=?", |x, y| {
+        x.to_ascii_lowercase() <= y.to_ascii_lowercase()
+    })
+}
+
+pub fn char_ci_gt(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char-ci>?", |x, y| {
+        x.to_ascii_lowercase() > y.to_ascii_lowercase()
+    })
+}
+
+pub fn char_ci_gt_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    char_comp(vm, "char-ci>=?", |x, y| {
+        x.to_ascii_lowercase() >= y.to_ascii_lowercase()
+    })
+}
+
+fn char_comp(vm: &mut Vm, name: &str, comp: impl Fn(&char, &char) -> bool) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, None, name)?;
+    let mut result = true;
+
+    let mut y = pop_char(vm)?;
+    for _ in 0..argc - 1 {
+        let x = pop_char(vm)?;
+        if !comp(&x, &y) {
+            result = false;
+        }
+        y = x;
+    }
+
+    Ok(result.into())
+}

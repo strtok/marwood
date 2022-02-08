@@ -99,6 +99,24 @@ mod integration_test {
             "(char-upper-case? #\\A)" => "#t",
             "(char-lower-case? #\\a)" => "#t",
             "(char-lower-case? #\\A)" => "#f"
+        ];
+
+        evals![
+            "(char=? #\\a #\\a)" => "#t",
+            "(char=? #\\a #\\b)" => "#f",
+            "(char=? #\\A #\\a)" => "#f",
+            "(char-ci=? #\\A #\\a)" => "#t",
+
+            "(char<? #\\a #\\b)" => "#t",
+            "(char<? #\\a #\\B)" => "#f",
+            "(char-ci<? #\\a #\\B)" => "#t",
+            "(char<? #\\a #\\a)" => "#f",
+            "(char<=? #\\a #\\a)" => "#t",
+
+            "(char>? #\\b #\\a)" => "#t",
+            "(char-ci>? #\\b #\\A)" => "#t",
+            "(char>? #\\a #\\a)" => "#f",
+            "(char>=? #\\a #\\a)" => "#t"
         ]
     }
 
