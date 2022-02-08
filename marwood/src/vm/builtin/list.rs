@@ -1,9 +1,10 @@
+use crate::vm::builtin::{pop_argc, pop_index};
 use crate::vm::vcell::VCell;
 use crate::vm::Error::{ExpectedPairButFound, InvalidSyntax};
-use crate::vm::{builtin, Error, Vm};
+use crate::vm::{Error, Vm};
 
 pub fn car(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 1, Some(1), "car")?;
+    pop_argc(vm, 1, Some(1), "car")?;
     Ok(match vm.heap.get(vm.stack.pop()?) {
         VCell::Pair(car, _) => VCell::ptr(car),
         arg => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg).to_string())),
@@ -11,7 +12,7 @@ pub fn car(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn cdr(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 1, Some(1), "cdr")?;
+    pop_argc(vm, 1, Some(1), "cdr")?;
     Ok(match vm.heap.get(vm.stack.pop()?) {
         VCell::Pair(_, cdr) => VCell::ptr(cdr),
         arg => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg).to_string())),
@@ -19,14 +20,14 @@ pub fn cdr(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn cons(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 2, Some(2), "cons")?;
+    pop_argc(vm, 2, Some(2), "cons")?;
     let cdr = vm.stack.pop()?.as_ptr()?;
     let car = vm.stack.pop()?.as_ptr()?;
     Ok(VCell::Pair(car, cdr))
 }
 
 pub fn set_car(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 2, Some(2), "set-car!")?;
+    pop_argc(vm, 2, Some(2), "set-car!")?;
     let obj = vm.stack.pop()?.clone();
     let pair = vm.stack.pop()?.clone();
     let new_pair = match vm.heap.get(&pair) {
@@ -40,7 +41,7 @@ pub fn set_car(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn set_cdr(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 2, Some(2), "set-cdr!")?;
+    pop_argc(vm, 2, Some(2), "set-cdr!")?;
     let obj = vm.stack.pop()?.clone();
     let pair = vm.stack.pop()?.clone();
     let new_pair = match vm.heap.get(&pair) {
@@ -100,7 +101,7 @@ fn clone_list(vm: &mut Vm, list: VCell) -> Result<(VCell, VCell), Error> {
 }
 
 pub fn append(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = builtin::pop_argc(vm, 0, None, "append")?;
+    let argc = pop_argc(vm, 0, None, "append")?;
     if argc == 0 {
         return Ok(VCell::Nil);
     }
@@ -129,7 +130,7 @@ pub fn append(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
-    let _ = builtin::pop_argc(vm, 1, Some(1), "reverse")?;
+    let _ = pop_argc(vm, 1, Some(1), "reverse")?;
     let list = vm.heap.get(vm.stack.pop()?);
     let mut rest = list.clone();
     if !rest.is_pair() {
@@ -187,8 +188,8 @@ fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> 
 }
 
 pub fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
-    let _ = builtin::pop_argc(vm, 2, Some(2), "list-tail")?;
-    let idx = builtin::pop_index(vm)?;
+    let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
+    let idx = pop_index(vm)?;
     let list = vm.heap.get(vm.stack.pop()?);
     if !list.is_pair() && !list.is_nil() {
         return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
@@ -205,8 +206,8 @@ pub fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn list_tail(vm: &mut Vm) -> Result<VCell, Error> {
-    let _ = builtin::pop_argc(vm, 2, Some(2), "list-tail")?;
-    let idx = builtin::pop_index(vm)?;
+    let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
+    let idx = pop_index(vm)?;
     let list = vm.heap.get(vm.stack.pop()?);
     if !list.is_pair() && !list.is_nil() {
         return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));

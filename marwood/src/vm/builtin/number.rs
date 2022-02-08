@@ -1,7 +1,8 @@
 use crate::number::Number;
+use crate::vm::builtin::{pop_argc, pop_integer, pop_number};
 use crate::vm::vcell::VCell;
 use crate::vm::Error::{InvalidArgs, InvalidSyntax};
-use crate::vm::{builtin, Error, Vm};
+use crate::vm::{Error, Vm};
 
 pub fn num_equal(vm: &mut Vm) -> Result<VCell, Error> {
     num_comp(vm, "=", |x, y| x == y)
@@ -28,7 +29,7 @@ fn num_comp(
     name: &str,
     comp: impl Fn(&Number, &Number) -> bool,
 ) -> Result<VCell, Error> {
-    let argc = builtin::pop_argc(vm, 1, None, name)?;
+    let argc = pop_argc(vm, 1, None, name)?;
     let mut result = true;
 
     let mut y = match vm.heap.get(vm.stack.pop()?) {
@@ -83,7 +84,7 @@ fn num_unary_predicate(
     name: &str,
     predicate: impl Fn(&Number) -> bool,
 ) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 1, Some(1), name)?;
+    pop_argc(vm, 1, Some(1), name)?;
     let x = match vm.heap.get(vm.stack.pop()?) {
         VCell::Number(val) => val,
         _ => return Ok(false.into()),
@@ -92,7 +93,7 @@ fn num_unary_predicate(
 }
 
 pub fn plus(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = builtin::pop_argc(vm, 0, None, "+")?;
+    let argc = pop_argc(vm, 0, None, "+")?;
     let mut sum = Number::from(0);
     for _ in 0..argc {
         sum += match vm.heap.get(vm.stack.pop()?) {
@@ -110,7 +111,7 @@ pub fn plus(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn minus(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = builtin::pop_argc(vm, 1, None, "-")?;
+    let argc = pop_argc(vm, 1, None, "-")?;
     let mut result = Number::from(0);
     for _ in 0..(argc - 1) {
         result += match vm.heap.get(vm.stack.pop()?) {
@@ -137,7 +138,7 @@ pub fn minus(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn multiply(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = builtin::pop_argc(vm, 0, None, "*")?;
+    let argc = pop_argc(vm, 0, None, "*")?;
     let mut result = Number::from(1);
     for _ in 0..argc {
         result *= match vm.heap.get(vm.stack.pop()?) {
@@ -155,8 +156,8 @@ pub fn multiply(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn divide(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = builtin::pop_argc(vm, 1, Some(2), "/")?;
-    let y = builtin::pop_number(vm)?;
+    let argc = pop_argc(vm, 1, Some(2), "/")?;
+    let y = pop_number(vm)?;
 
     if y.is_zero() {
         return Err(InvalidSyntax("/ is undefined for 0".into()));
@@ -166,16 +167,16 @@ pub fn divide(vm: &mut Vm) -> Result<VCell, Error> {
         let result = Number::from(1) / y;
         Ok(result.into())
     } else {
-        let x = builtin::pop_number(vm)?;
+        let x = pop_number(vm)?;
         let result = x / y;
         Ok(result.into())
     }
 }
 
 pub fn remainder(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 2, Some(2), "remainder")?;
-    let y = builtin::pop_integer(vm)?;
-    let x = builtin::pop_integer(vm)?;
+    pop_argc(vm, 2, Some(2), "remainder")?;
+    let y = pop_integer(vm)?;
+    let x = pop_integer(vm)?;
 
     if y.is_zero() {
         return Err(InvalidSyntax("remainder is undefined for 0".into()));
@@ -194,9 +195,9 @@ pub fn remainder(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn quotient(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 2, Some(2), "quotient")?;
-    let y = builtin::pop_integer(vm)?;
-    let x = builtin::pop_integer(vm)?;
+    pop_argc(vm, 2, Some(2), "quotient")?;
+    let y = pop_integer(vm)?;
+    let x = pop_integer(vm)?;
 
     if y.is_zero() {
         return Err(InvalidSyntax("quotient is undefined for 0".into()));
@@ -215,8 +216,8 @@ pub fn quotient(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn exact_inexact(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 1, Some(1), "exact->inexact")?;
-    let x = builtin::pop_number(vm)?;
+    pop_argc(vm, 1, Some(1), "exact->inexact")?;
+    let x = pop_number(vm)?;
     match x.to_inexact() {
         Some(num) => Ok(num.into()),
         None => Ok(x.into()),
@@ -224,8 +225,8 @@ pub fn exact_inexact(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn inexact_exact(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 1, Some(1), "inexact->exact")?;
-    let x = builtin::pop_number(vm)?;
+    pop_argc(vm, 1, Some(1), "inexact->exact")?;
+    let x = pop_number(vm)?;
     match x.to_exact() {
         Some(num) => Ok(num.into()),
         None => Ok(x.into()),
@@ -233,8 +234,8 @@ pub fn inexact_exact(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn abs(vm: &mut Vm) -> Result<VCell, Error> {
-    builtin::pop_argc(vm, 1, Some(1), "exact->inexact")?;
-    let x = builtin::pop_number(vm)?;
+    pop_argc(vm, 1, Some(1), "exact->inexact")?;
+    let x = pop_number(vm)?;
     let x = x.abs();
     Ok(x.into())
 }

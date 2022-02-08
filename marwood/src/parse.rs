@@ -197,8 +197,8 @@ fn parse_char(text: &str, token: &Token) -> Result<Cell, Error> {
         Ok(Cell::Char(c))
     } else {
         named_to_char(span)
-            .map(|c| Cell::Char(c))
-            .ok_or(Error::UnknownChar(span.into()))
+            .map(Cell::Char)
+            .ok_or_else(|| Error::UnknownChar(span.into()))
     }
 }
 
