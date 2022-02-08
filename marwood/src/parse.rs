@@ -189,8 +189,7 @@ fn parse_char(text: &str, token: &Token) -> Result<Cell, Error> {
     let span = &span[2..span.len()];
     if span.chars().count() == 1 {
         Ok(Cell::Char(span.chars().next().unwrap()))
-    } else if span.chars().next().unwrap() == 'x'
-        && span[1..span.len()].chars().all(|it| it.is_ascii_hexdigit())
+    } else if span.starts_with('x') && span[1..span.len()].chars().all(|it| it.is_ascii_hexdigit())
     {
         let c =
             u32::from_str_radix(&span[1..span.len()], 16).map_err(|_| UnknownChar(span.into()))?;
@@ -199,7 +198,7 @@ fn parse_char(text: &str, token: &Token) -> Result<Cell, Error> {
     } else {
         named_to_char(span)
             .map(|c| Cell::Char(c))
-            .ok_or_else(|| Error::UnknownChar(span.into()))
+            .ok_or(Error::UnknownChar(span.into()))
     }
 }
 
