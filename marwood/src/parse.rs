@@ -212,10 +212,16 @@ fn parse_string(text: &str, token: &Token) -> Result<Cell, Error> {
     let mut output = String::new();
     while let Some(c) = cur.next() {
         if c == '\\' {
-            if let Some('\\') = cur.peek() {
-                output.push('\\');
-                cur.next();
-            }
+            output.push(match cur.peek() {
+                Some('\\') => '\\',
+                Some('a') => char::from_u32(0x7).unwrap(),
+                Some('b') => char::from_u32(0x8).unwrap(),
+                Some('t') => '\t',
+                Some('n') => '\n',
+                Some(c) => *c,
+                None => return Err(Error::Eof),
+            });
+            cur.next();
         } else {
             output.push(c);
         }
@@ -426,7 +432,12 @@ mod tests {
         parses! {
             r#""foo""# => Cell::new_string("foo"),
             r#""foo \"bar\" baz""# => Cell::new_string("foo \"bar\" baz"),
-            r#""foo \\ baz""# => Cell::new_string("foo \\ baz")
+            r#""foo \\ baz""# => Cell::new_string("foo \\ baz"),
+            r#""\t""# => Cell::new_string("\t"),
+            r#""\n""# => Cell::new_string("\n"),
+            r#""\a""# => Cell::new_string(&String::from(char::from_u32(0x7).unwrap())),
+            r#""\a""# => Cell::new_string(&String::from(char::from_u32(0x7).unwrap())),
+            r#""\b""# => Cell::new_string(&String::from(char::from_u32(0x8).unwrap()))
         }
     }
 
