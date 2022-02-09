@@ -285,6 +285,7 @@ fn is_subsequent_number(c: char) -> bool {
 
 fn is_initial_identifier(c: char) -> bool {
     c.is_alphabetic()
+        || c as u32 > 0xFF
         || c == '!'
         || c == '$'
         || c == '%'
