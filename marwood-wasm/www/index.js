@@ -18,6 +18,10 @@ var term = $('#terminal').terminal((text) => {
         } else {
             term.echo("")
         }
+
+        if (result.remaining != null) {
+            term.exec(result.remaining);
+        }
     }
 }, {
     name: 'marwood',
