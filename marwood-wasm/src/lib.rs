@@ -1,8 +1,8 @@
 #![allow(clippy::unused_unit)]
 
 use marwood::cell::Cell;
-use marwood::lex::{scan, Token};
-use marwood::parse::parse;
+use marwood::lex;
+use marwood::parse;
 use marwood::vm::Vm;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
@@ -33,12 +33,19 @@ impl Marwood {
     pub fn eval(&mut self, text: &str) -> EvalResult {
         self.parse_and_eval(text)
     }
+
+    pub fn check(&mut self, text: &str) -> CheckResult {
+        self.parse_and_check(text)
+    }
 }
 
 impl Marwood {
     fn parse_and_eval(&mut self, text: &str) -> EvalResult {
-        let tokens = match scan(text) {
+        let tokens = match lex::scan(text) {
             Ok(tokens) => tokens,
+            Err(lex::Error::Eof) => {
+                return EvalResult::new_eof();
+            }
             Err(e) => {
                 return EvalResult::new_error(format!("error: {}", e));
             }
@@ -46,21 +53,40 @@ impl Marwood {
 
         let mut cur = tokens.iter().peekable();
 
-        let mut result = match parse(text, &mut cur) {
+        let mut result = match parse::parse(text, &mut cur) {
             Ok(cell) => match self.vm.eval(&cell) {
                 Ok(Cell::Void) => EvalResult::new_ok(""),
                 Ok(cell) => EvalResult::new_ok(format!("{:#}", cell)),
                 Err(e) => EvalResult::new_error(format!("error: {}", e)),
             },
+            Err(parse::Error::Eof) => return EvalResult::new_eof(),
             Err(e) => EvalResult::new_error(format!("error: {}", e)),
         };
 
         result.remaining = match cur.peek() {
-            Some(Token { span, .. }) => JsValue::from(&text[span.0..]),
+            Some(lex::Token { span, .. }) => JsValue::from(&text[span.0..]),
             None => JsValue::null(),
         };
 
         result
+    }
+
+    fn parse_and_check(&mut self, text: &str) -> CheckResult {
+        let tokens = match lex::scan(text) {
+            Ok(tokens) => tokens,
+            Err(lex::Error::Eof) => {
+                return CheckResult::new(true);
+            }
+            Err(_) => {
+                return CheckResult::new(false);
+            }
+        };
+
+        let mut cur = tokens.iter().peekable();
+        CheckResult::new(matches!(
+            parse::parse(text, &mut cur),
+            Err(parse::Error::Eof)
+        ))
     }
 }
 
@@ -69,6 +95,7 @@ pub struct EvalResult {
     ok: JsValue,
     error: JsValue,
     remaining: JsValue,
+    eof: bool,
 }
 
 #[wasm_bindgen]
@@ -78,6 +105,7 @@ impl EvalResult {
             ok: JsValue::null(),
             error: JsValue::from(error.into()),
             remaining: JsValue::null(),
+            eof: false,
         }
     }
 
@@ -86,7 +114,22 @@ impl EvalResult {
             ok: JsValue::from(result.into()),
             error: JsValue::null(),
             remaining: JsValue::null(),
+            eof: false,
         }
+    }
+
+    fn new_eof() -> EvalResult {
+        EvalResult {
+            ok: JsValue::null(),
+            error: JsValue::null(),
+            remaining: JsValue::null(),
+            eof: true,
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn eof(&self) -> JsValue {
+        JsValue::from(self.eof)
     }
 
     #[wasm_bindgen(getter)]
@@ -102,6 +145,23 @@ impl EvalResult {
     #[wasm_bindgen(getter)]
     pub fn remaining(&self) -> JsValue {
         self.remaining.clone()
+    }
+}
+
+#[wasm_bindgen]
+pub struct CheckResult {
+    eof: bool,
+}
+
+#[wasm_bindgen]
+impl CheckResult {
+    fn new(eof: bool) -> CheckResult {
+        CheckResult { eof }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn eof(&self) -> JsValue {
+        JsValue::from(self.eof)
     }
 }
 

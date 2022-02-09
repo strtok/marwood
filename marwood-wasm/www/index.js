@@ -30,7 +30,12 @@ var term = $('#terminal').terminal((text) => {
     keypress: (e) => { parens.paren_match(term, e) },
     keymap: {
         ENTER: (e, original) => {
-            original();
+            let check = vm.check(term.get_command());
+            if (check.eof) {
+                term.insert('\n')
+            } else {
+                original();
+            }
         }
     }
 });
