@@ -23,7 +23,9 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v2
+          with:
+            node-version: '16'
 
       - name: Build wasm 
         run: |
