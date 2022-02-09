@@ -1,11 +1,12 @@
 .terminal {
   --color: #F5F2E7;
   --background: #191A19;
-  --animation: terminal-underline;
+  /* --animation: terminal-underline; */
   --size: 1.5;
-  /* better then return false in onBlur */
+  --font: Hack, monospace;
   height: 100vh;
 }
+
 body {
-  maring: 0;
+  margin: 0;
 }
