@@ -402,13 +402,14 @@ impl Display for Cell {
                     write!(f, "\"")?;
                     for it in val.chars() {
                         match it {
-                            '"' | '\\' => {
-                                write!(f, "\\{}", it)?;
-                            }
-                            it => {
-                                write!(f, "{}", it)?;
-                            }
-                        }
+                            '"' | '\\' => write!(f, "\\{}", it)?,
+                            '\t' => write!(f, "\\t")?,
+                            '\n' => write!(f, "\\n")?,
+                            '\r' => write!(f, "\\r")?,
+                            _ if it as u32 == 0x7 => write!(f, "\\a")?,
+                            _ if it as u32 == 0x8 => write!(f, "\\b")?,
+                            it => write!(f, "{}", it)?,
+                        };
                     }
                     write!(f, "\"")
                 }
