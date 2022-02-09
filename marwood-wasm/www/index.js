@@ -11,14 +11,24 @@ const vm = Marwood.new((text) => console.log(text));
 var term = $('#terminal').terminal((text) => {
     if (text.length > 0) {
         let result = vm.eval(text);
-        term.echo(result);
+        if (result.ok != null) {
+            term.echo(result.ok);
+        } else if (result.error != null) {
+            term.error(result.error);
+        } else {
+            term.echo("")
+        }
     }
 }, {
     name: 'marwood',
     greetings: false,
-    // below is the code for parenthesis matching (jumping)
-    keydown: function () { parens.set_position(term) },
-    keypress: function (e) { parens.paren_match(term, e) }
+    keydown: () => { parens.set_position(term) },
+    keypress: (e) => { parens.paren_match(term, e) },
+    keymap: {
+        ENTER: (e, original) => {
+            original();
+        }
+    }
 });
 
 globalThis.marwood_display = (text) => term.echo(text, { newline: false });
