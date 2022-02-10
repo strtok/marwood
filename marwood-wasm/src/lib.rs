@@ -92,7 +92,7 @@ impl Marwood {
     pub fn autocomplete(&self, text: &str) -> AutocompleteResult {
         let mut result = AutocompleteResult::new();
 
-        if text.len() > 0 && text.chars().last().unwrap().is_whitespace() {
+        if text.is_empty() || text.chars().last().unwrap().is_whitespace() {
             return result;
         }
 

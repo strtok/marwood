@@ -44,6 +44,7 @@ var term = $('#terminal').terminal((text) => {
             .map((match) => vm.last_token(match))
             .join(" "));
     },
+    clear: false,
     completionEscape: false,
     wordAutocomplete: false,
     completion: (text) => {
