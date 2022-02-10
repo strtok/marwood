@@ -38,10 +38,17 @@ var term = $('#terminal').terminal((text) => {
             }
         }
     },
-    completion: function (word, callback) {
-        let result = vm.autocomplete(term.get_command(), word)
-        console.log(result.completions);
-        callback(result.completions);
+    doubleTab: (text, matches, echo_command) => {
+        echo_command();
+        term.echo(matches
+            .map((match) => vm.last_token(match))
+            .join(" "));
+    },
+    completionEscape: false,
+    wordAutocomplete: false,
+    completion: (text) => {
+        let result = vm.autocomplete(text);
+        return result.completions;
     }
 });
 

@@ -57,6 +57,14 @@ impl Token {
         &text[self.span.0..self.span.1]
     }
 
+    /// span prefix
+    ///
+    /// Given the originally scanned &str, extract any text before this
+    /// token.
+    pub fn span_prefix<'a, 'b>(&'a self, text: &'b str) -> &'b str {
+        &text[0..self.span.0]
+    }
+
     pub fn is_symbol(&self) -> bool {
         self.token_type == TokenType::Symbol
     }

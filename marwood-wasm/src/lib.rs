@@ -79,40 +79,68 @@ impl Marwood {
         ))
     }
 
-    pub fn autocomplete(&self, text: &str, word: &str) -> AutocompleteResult {
-        // Include any symbols already referenced, except the one currently being completed.
-        let symbols = match lex::scan(text) {
+    pub fn last_token(&self, text: &str) -> JsValue {
+        match lex::scan(text) {
             Ok(tokens) => tokens
-                .iter()
-                .filter(|it| it.is_symbol())
-                .map(|it| it.span(text))
-                .filter(|sym| *sym != word)
-                .filter(|sym| sym.starts_with(word))
-                .collect(),
-            _ => vec![],
-        };
+                .last()
+                .map(|it| JsValue::from(it.span(text)))
+                .unwrap_or(JsValue::null()),
+            _ => JsValue::null(),
+        }
+    }
 
-        let word = match lex::scan(word) {
-            Ok(tokens) => match tokens.iter().last() {
-                Some(token) => token.span(word),
-                None => word,
-            },
-            _ => word,
-        };
-
+    pub fn autocomplete(&self, text: &str) -> AutocompleteResult {
         let mut result = AutocompleteResult::new();
-        symbols
+
+        if text.len() > 0 && text.chars().last().unwrap().is_whitespace() {
+            return result;
+        }
+
+        let tokens = match lex::scan(text) {
+            Ok(tokens) => tokens,
+            _ => {
+                return result;
+            }
+        };
+
+        let word_token = tokens.iter().last().unwrap();
+        let word = word_token.span(text);
+        let prefix = word_token.span_prefix(text);
+
+        // Include any symbols already referenced, except the one currently being completed.
+        let symbols = tokens
             .iter()
-            .for_each(|sym| result.completions.push(JsValue::from(*sym)));
+            .filter(|it| it.is_symbol())
+            .map(|it| it.span(text))
+            .filter(|sym| *sym != word)
+            .filter(|sym| sym.starts_with(word))
+            .collect::<Vec<_>>();
+
+        symbols.iter().for_each(|sym| {
+            result
+                .completions
+                .push(JsValue::from(format!("{}{}", prefix, *sym)))
+        });
+
         self.vm
             .global_symbols()
             .iter()
             .filter(|sym| sym.starts_with(word))
-            .for_each(|sym| result.completions.push(JsValue::from(*sym)));
+            .for_each(|sym| {
+                result
+                    .completions
+                    .push(JsValue::from(format!("{}{}", prefix, *sym)))
+            });
+
         ["define", "quote", "define-syntax", "lambda", "if", "set!"]
             .iter()
             .filter(|sym| sym.starts_with(word))
-            .for_each(|sym| result.completions.push(JsValue::from(*sym)));
+            .for_each(|sym| {
+                result
+                    .completions
+                    .push(JsValue::from(format!("{}{}", prefix, *sym)))
+            });
+
         result
     }
 }
