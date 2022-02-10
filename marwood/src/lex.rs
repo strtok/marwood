@@ -182,7 +182,7 @@ fn scan_simple_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
 
 fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     let (start, _) = cur.next().unwrap();
-    let (_, c) = cur.next().ok_or(Error::UnexpectedToken('#'))?;
+    let (_, c) = cur.next().ok_or(Error::Eof)?;
 
     match c {
         't' => Ok(Token::new((start, start + 2), TokenType::True)),
@@ -463,6 +463,7 @@ mod tests {
         };
 
         fails! {
+            "#" => Error::Eof,
             "#p" => Error::UnexpectedToken('#')
         };
     }
