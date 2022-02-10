@@ -184,10 +184,9 @@ fn scan_simple_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
 
 fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     let (start, _) = cur.next().unwrap();
-    let (_, c) = cur.next().ok_or(Error::UnexpectedCharacterFollowing(
-        '#'.into(),
-        "\\n".into(),
-    ))?;
+    let (_, c) = cur
+        .next()
+        .ok_or_else(|| Error::UnexpectedCharacterFollowing('#'.into(), "\\n".into()))?;
 
     match c {
         't' => Ok(Token::new((start, start + 2), TokenType::True)),
@@ -215,16 +214,14 @@ fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
 }
 
 fn scan_string(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
-    // Advance past opening "
+    let start = cur.peek().ok_or(Error::Eof)?.0;
     cur.next();
 
-    let start = cur.peek().ok_or(Error::Eof)?.0;
-    let mut end = start;
     let mut escape_next = false;
     let mut terminated = false;
-    while let Some(&(offset, c)) = cur.peek() {
+    while let Some(&(_, c)) = cur.peek() {
         let escaping = escape_next;
-        if c == '"' && start != end && !escaping {
+        if c == '"' && !escaping {
             terminated = true;
             break;
         }
@@ -233,13 +230,13 @@ fn scan_string(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
         } else {
             escape_next = false;
         }
-        end = offset + c.len_utf8();
         cur.next();
     }
+    // empty string
     if !terminated {
         return Err(Error::Eof);
     }
-    cur.next();
+    let end = cur.next().unwrap().0 + '"'.len_utf8();
     Ok(Token::new((start, end), TokenType::String))
 }
 
@@ -388,8 +385,18 @@ mod tests {
     #[test]
     fn strings() {
         assert_eq!(
+            expand(scan(r#""""#).unwrap(), r#""""#),
+            [(r#""""#, TokenType::String)]
+        );
+
+        assert_eq!(
+            expand(scan(r#""a""#).unwrap(), r#""a""#),
+            [(r#""a""#, TokenType::String)]
+        );
+
+        assert_eq!(
             expand(scan(r#""foo bar baz""#).unwrap(), r#""foo bar baz""#),
-            [("foo bar baz", TokenType::String)]
+            [("\"foo bar baz\"", TokenType::String)]
         );
 
         assert_eq!(
@@ -398,14 +405,14 @@ mod tests {
                 r#""The word \"recursion\" has many meanings.""#
             ),
             [(
-                r#"The word \"recursion\" has many meanings."#,
+                r#""The word \"recursion\" has many meanings.""#,
                 TokenType::String
             )]
         );
 
         assert_eq!(
             expand(scan(r#""\\\\""#).unwrap(), r#""\\\\""#),
-            [((r#"\\\\"#), TokenType::String)]
+            [((r#""\\\\""#), TokenType::String)]
         );
     }
 

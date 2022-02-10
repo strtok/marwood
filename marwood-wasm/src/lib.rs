@@ -84,7 +84,7 @@ impl Marwood {
             Ok(tokens) => tokens
                 .last()
                 .map(|it| JsValue::from(it.span(text)))
-                .unwrap_or(JsValue::null()),
+                .unwrap_or_else(JsValue::null),
             _ => JsValue::null(),
         }
     }

@@ -206,7 +206,11 @@ fn parse_char(text: &str, token: &Token) -> Result<Cell, Error> {
 ///
 /// Parse the literal string, processing any espace (e.g. \").
 fn parse_string(text: &str, token: &Token) -> Result<Cell, Error> {
-    let span = token.span(text);
+    let span = match token.span(text) {
+        "\"\"" => "",
+        span => &span[1..span.len() - 1],
+    };
+
     let mut cur = span.chars().peekable();
 
     let mut output = String::new();
@@ -301,7 +305,7 @@ mod tests {
     macro_rules! parses {
         ($($lhs:expr => $rhs:expr),+) => {{
              $(
-                assert_eq!(Ok($rhs), parse($lhs, &mut lex::scan($lhs).unwrap().iter().peekable()));
+                assert_eq!(parse($lhs, &mut lex::scan($lhs).unwrap().iter().peekable()), Ok($rhs));
              )+
         }};
     }
@@ -430,6 +434,7 @@ mod tests {
     #[test]
     fn strings() {
         parses! {
+            r#""""# => Cell::new_string(""),
             r#""foo""# => Cell::new_string("foo"),
             r#""foo \"bar\" baz""# => Cell::new_string("foo \"bar\" baz"),
             r#""foo \\ baz""# => Cell::new_string("foo \\ baz"),
