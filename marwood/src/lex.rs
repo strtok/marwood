@@ -56,6 +56,10 @@ impl Token {
     pub fn span<'a, 'b>(&'a self, text: &'b str) -> &'b str {
         &text[self.span.0..self.span.1]
     }
+
+    pub fn is_symbol(&self) -> bool {
+        self.token_type == TokenType::Symbol
+    }
 }
 
 /// Error Type

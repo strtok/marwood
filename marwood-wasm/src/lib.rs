@@ -79,9 +79,22 @@ impl Marwood {
         ))
     }
 
-    pub fn autocomplete(&self, _text: &str, _word: &str) -> AutocompleteResult {
+    pub fn autocomplete(&self, text: &str, word: &str) -> AutocompleteResult {
+        // Include any symbols already referenced, except the one currently being completed.
+        let symbols = match lex::scan(text) {
+            Ok(tokens) => tokens
+                .iter()
+                .filter(|it| it.is_symbol())
+                .map(|it| it.span(text))
+                .filter(|sym| *sym != word)
+                .collect(),
+            _ => vec![],
+        };
+
         let mut result = AutocompleteResult::new();
-        result.completions.push(JsValue::from("define"));
+        symbols
+            .iter()
+            .for_each(|sym| result.completions.push(JsValue::from(*sym)));
         result
     }
 }
