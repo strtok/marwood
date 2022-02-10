@@ -87,6 +87,7 @@ impl Marwood {
                 .filter(|it| it.is_symbol())
                 .map(|it| it.span(text))
                 .filter(|sym| *sym != word)
+                .filter(|sym| sym.starts_with(word))
                 .collect(),
             _ => vec![],
         };
@@ -98,9 +99,11 @@ impl Marwood {
         self.vm
             .global_symbols()
             .iter()
+            .filter(|sym| sym.starts_with(word))
             .for_each(|sym| result.completions.push(JsValue::from(*sym)));
         ["define", "quote", "define-syntax", "lambda", "if", "set!"]
             .iter()
+            .filter(|sym| sym.starts_with(word))
             .for_each(|sym| result.completions.push(JsValue::from(*sym)));
         result
     }
