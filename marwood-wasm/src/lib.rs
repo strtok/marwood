@@ -95,6 +95,13 @@ impl Marwood {
         symbols
             .iter()
             .for_each(|sym| result.completions.push(JsValue::from(*sym)));
+        self.vm
+            .global_symbols()
+            .iter()
+            .for_each(|sym| result.completions.push(JsValue::from(*sym)));
+        ["define", "quote", "define-syntax", "lambda", "if", "set!"]
+            .iter()
+            .for_each(|sym| result.completions.push(JsValue::from(*sym)));
         result
     }
 }

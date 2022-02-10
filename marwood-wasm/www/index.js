@@ -40,6 +40,7 @@ var term = $('#terminal').terminal((text) => {
     },
     completion: function (word, callback) {
         let result = vm.autocomplete(term.get_command(), word)
+        console.log(result.completions);
         callback(result.completions);
     }
 });

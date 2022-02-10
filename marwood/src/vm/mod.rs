@@ -101,6 +101,13 @@ impl Vm {
     pub fn display(&self, cell: &Cell) {
         self.display.display(cell)
     }
+
+    pub fn global_symbols(&self) -> Vec<&str> {
+        self.globenv
+            .iter_bindings()
+            .map(|sym| self.heap.get_at_index(*sym).as_symbol().unwrap())
+            .collect()
+    }
 }
 
 impl Default for Vm {
