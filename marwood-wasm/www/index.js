@@ -37,6 +37,10 @@ var term = $('#terminal').terminal((text) => {
                 original();
             }
         }
+    },
+    completion: function (word, callback) {
+        let result = vm.autocomplete(term.get_command(), word)
+        callback(result.completions);
     }
 });
 

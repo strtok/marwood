@@ -31,16 +31,6 @@ impl Marwood {
     }
 
     pub fn eval(&mut self, text: &str) -> EvalResult {
-        self.parse_and_eval(text)
-    }
-
-    pub fn check(&mut self, text: &str) -> CheckResult {
-        self.parse_and_check(text)
-    }
-}
-
-impl Marwood {
-    fn parse_and_eval(&mut self, text: &str) -> EvalResult {
         let tokens = match lex::scan(text) {
             Ok(tokens) => tokens,
             Err(lex::Error::Eof) => {
@@ -71,7 +61,7 @@ impl Marwood {
         result
     }
 
-    fn parse_and_check(&mut self, text: &str) -> CheckResult {
+    pub fn check(&self, text: &str) -> CheckResult {
         let tokens = match lex::scan(text) {
             Ok(tokens) => tokens,
             Err(lex::Error::Eof) => {
@@ -87,6 +77,12 @@ impl Marwood {
             parse::parse(text, &mut cur),
             Err(parse::Error::Eof)
         ))
+    }
+
+    pub fn autocomplete(&self, _text: &str, _word: &str) -> AutocompleteResult {
+        let mut result = AutocompleteResult::new();
+        result.completions.push(JsValue::from("define"));
+        result
     }
 }
 
@@ -165,9 +161,27 @@ impl CheckResult {
     }
 }
 
+#[wasm_bindgen]
+pub struct AutocompleteResult {
+    completions: Vec<JsValue>,
+}
+
+#[wasm_bindgen]
+impl AutocompleteResult {
+    fn new() -> AutocompleteResult {
+        AutocompleteResult {
+            completions: vec![],
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn completions(&self) -> Box<[JsValue]> {
+        self.completions.clone().into_boxed_slice()
+    }
+}
+
 #[wasm_bindgen(start)]
-pub fn main() -> Result<(), JsValue> {
-    // forward panics to console.error
+pub fn run() -> Result<(), JsValue> {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
     console::log_1(&"starting Marwood".into());
