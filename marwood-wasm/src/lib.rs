@@ -92,6 +92,14 @@ impl Marwood {
             _ => vec![],
         };
 
+        let word = match lex::scan(word) {
+            Ok(tokens) => match tokens.iter().last() {
+                Some(token) => token.span(word),
+                None => word,
+            },
+            _ => word,
+        };
+
         let mut result = AutocompleteResult::new();
         symbols
             .iter()
