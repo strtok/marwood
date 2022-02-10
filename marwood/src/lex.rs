@@ -79,6 +79,8 @@ pub enum Error {
     Eof,
     #[error("unexpected character '{0}'")]
     UnexpectedToken(char),
+    #[error("unexpected character following '{0}': '{1}'")]
+    UnexpectedCharacterFollowing(String, String),
 }
 
 /// Scan
@@ -182,7 +184,10 @@ fn scan_simple_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
 
 fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     let (start, _) = cur.next().unwrap();
-    let (_, c) = cur.next().ok_or(Error::Eof)?;
+    let (_, c) = cur.next().ok_or(Error::UnexpectedCharacterFollowing(
+        '#'.into(),
+        "\\n".into(),
+    ))?;
 
     match c {
         't' => Ok(Token::new((start, start + 2), TokenType::True)),
@@ -192,7 +197,7 @@ fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
             Ok(Token::new((start, start + 2), TokenType::NumberPrefix))
         }
         '\\' => scan_char(cur, start),
-        _ => Err(Error::UnexpectedToken('#')),
+        c => Err(Error::UnexpectedCharacterFollowing('#'.into(), c.into())),
     }
 }
 
@@ -463,8 +468,8 @@ mod tests {
         };
 
         fails! {
-            "#" => Error::Eof,
-            "#p" => Error::UnexpectedToken('#')
+            "#" => Error::UnexpectedCharacterFollowing('#'.into(), "\\n".into()),
+            "#p" => Error::UnexpectedCharacterFollowing('#'.into(), "p".into())
         };
     }
 }
