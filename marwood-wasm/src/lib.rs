@@ -12,7 +12,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 /// How many instructions to execute per eval/eval_continue()
 /// call.
-const INSTRUCTIONS_PER_EVAL: usize = 10000;
+const INSTRUCTIONS_PER_EVAL: usize = 50000;
 
 #[wasm_bindgen(module = "/display.js")]
 extern "C" {
