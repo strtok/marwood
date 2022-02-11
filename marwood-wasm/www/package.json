@@ -27,9 +27,10 @@
   },
   "homepage": "https://github.com/strtok/marwood",
   "dependencies": {
-    "marwood": "file:../pkg",
     "jquery": "^3.6.0",
-    "jquery.terminal": "^2.31.1"
+    "jquery.terminal": "^2.31.1",
+    "marwood": "file:../pkg",
+    "prismjs": "^1.26.0"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^10.2.4",

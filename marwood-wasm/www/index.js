@@ -1,13 +1,17 @@
 import "./node_modules/jquery.terminal/css/jquery.terminal.css";
 import "./terminal.css"
+import "./node_modules/prismjs/prism"
+import "./node_modules/jquery.terminal/js/prism"
 import { Marwood } from "marwood";
 import * as parens from "./parens.js";
+import "./prism.css";
+import "./prism-scheme.js";
 
 const $ = require("jquery");
-const terminal = require("jquery.terminal");
 
-const vm = Marwood.new((text) => console.log(text));
+$.terminal.syntax("scheme");
 
+const vm = Marwood.new();
 var term = $('#terminal').terminal((text) => {
     if (text.length > 0) {
         let result = vm.eval(text);
@@ -54,7 +58,6 @@ var term = $('#terminal').terminal((text) => {
 });
 
 globalThis.marwood_display = (text) => term.echo(text, { newline: false });
-term.echo
 term.echo("λMARWOOD", { typing: true, delay: 100 });
 term.echo("");
 term.set_prompt(">");
