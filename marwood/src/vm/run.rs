@@ -14,23 +14,7 @@ impl Vm {
     /// Run the virtual machine until it encounters a HALT instruction,
     /// and return the value contained within the ACC register as a Cell
     pub fn run(&mut self) -> Result<Cell, Error> {
-        let mut cycles = 0;
-        self.stack.clear();
-        loop {
-            cycles += 1;
-            if cycles % 256 == 0 {
-                self.run_gc();
-            }
-            match self.run_one() {
-                Ok(true) => break,
-                Ok(false) => continue,
-                Err(e) => return Err(e),
-            }
-        }
-        trace!("cycles: {}", cycles);
-        let cell = self.heap.get_as_cell(&self.acc);
-        self.run_gc();
-        Ok(cell)
+        self.run_count(usize::MAX).map(|it| it.unwrap())
     }
 
     pub fn run_count(&mut self, count: usize) -> Result<Option<Cell>, Error> {
@@ -41,6 +25,7 @@ impl Vm {
                 self.run_gc();
             }
             if cycles == count {
+                self.run_gc();
                 return Ok(None);
             }
             match self.run_one() {
