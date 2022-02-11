@@ -47,7 +47,7 @@ impl Marwood {
                 Ok(()) => {}
                 Err(e) => return EvalResult::new_error(format!("error: {}", e)),
             },
-            Err(parse::Error::Eof) => return EvalResult::new_eof().into(),
+            Err(parse::Error::Eof) => return EvalResult::new_eof(),
             Err(e) => return EvalResult::new_error(format!("error: {}", e)),
         };
 
@@ -101,13 +101,13 @@ impl Marwood {
         let mut result = AutocompleteResult::new();
 
         if text.is_empty() || text.chars().last().unwrap().is_whitespace() {
-            return result.into();
+            return result;
         }
 
-        let tokens = match lex::scan(&text) {
+        let tokens = match lex::scan(text) {
             Ok(tokens) => tokens,
             _ => {
-                return result.into();
+                return result;
             }
         };
 
@@ -119,7 +119,7 @@ impl Marwood {
         let symbols = tokens
             .iter()
             .filter(|it| it.is_symbol())
-            .map(|it| it.span(&text))
+            .map(|it| it.span(text))
             .filter(|sym| *sym != word)
             .filter(|sym| sym.starts_with(word))
             .collect::<Vec<_>>();
