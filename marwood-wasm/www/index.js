@@ -15,22 +15,28 @@ $.terminal.prism_formatters = {
     echo: false,
     prompt: true
 };
+
 const vm = Marwood.new();
 var term = $('#terminal').terminal((text) => {
-    if (text.length > 0) {
-        let result = vm.eval(text);
-        if (result.ok != null) {
-            term.echo(result.ok);
-        } else if (result.error != null) {
-            term.error(result.error);
-        } else {
-            term.echo("")
-        }
+    return new Promise(function (resolve) {
+        setTimeout(function () {
+            if (text.length > 0) {
+                let result = vm.eval(text);
+                if (result.ok != null) {
+                    term.echo(result.ok);
+                } else if (result.error != null) {
+                    term.error(result.error);
+                } else {
+                    term.echo("")
+                }
 
-        if (result.remaining != null) {
-            term.exec(result.remaining);
-        }
-    }
+                if (result.remaining != null) {
+                    term.exec(result.remaining);
+                }
+            }
+            resolve();
+        }, 0);
+    });
 }, {
     name: 'marwood',
     greetings: false,
@@ -60,9 +66,11 @@ var term = $('#terminal').terminal((text) => {
         return result.completions;
     }
 });
+
 globalThis.marwood_display = (text) => {
     term.echo(text, { newline: false, flush: false });
 }
+
 term.echo("λMARWOOD", { typing: true, delay: 100 });
 term.echo("");
 term.set_prompt(">");
