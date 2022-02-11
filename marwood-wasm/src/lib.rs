@@ -45,10 +45,10 @@ impl Marwood {
         match parse::parse(text, &mut cur) {
             Ok(cell) => match self.vm.prepare_eval(&cell) {
                 Ok(()) => {}
-                Err(e) => return EvalResult::new_error(format!("error: {}", e)).into(),
+                Err(e) => return EvalResult::new_error(format!("error: {}", e)),
             },
             Err(parse::Error::Eof) => return EvalResult::new_eof().into(),
-            Err(e) => return EvalResult::new_error(format!("error: {}", e)).into(),
+            Err(e) => return EvalResult::new_error(format!("error: {}", e)),
         };
 
         let mut result = self.eval_continue();
