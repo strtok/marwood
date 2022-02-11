@@ -61,7 +61,7 @@ var term = $('#terminal').terminal((text) => {
     }
 });
 
-globalThis.marwood_display = (text) => term.echo(text, { newline: false });
+globalThis.marwood_display = (text) => term.echo(text, { newline: false, flush: false });
 term.echo("λMARWOOD", { typing: true, delay: 100 });
 term.echo("");
 term.set_prompt(">");
