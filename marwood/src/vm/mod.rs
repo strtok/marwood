@@ -86,12 +86,17 @@ impl Vm {
     /// # Arguments
     /// `cell` - An expression to evaluate
     pub fn eval(&mut self, cell: &Cell) -> Result<Cell, Error> {
+        self.prepare_eval(cell)?;
+        self.run()
+    }
+
+    pub fn prepare_eval(&mut self, cell: &Cell) -> Result<(), Error> {
         let lambda = self.compile(cell)?;
         trace!("entry: \n{}", self.decompile_text(&lambda));
         let lambda = self.heap.put(lambda);
         self.ip.0 = lambda.as_ptr().unwrap();
         self.ip.1 = 0;
-        self.run()
+        Ok(())
     }
 
     pub fn set_display_fn(&mut self, func: Box<dyn Fn(&Cell)>) {

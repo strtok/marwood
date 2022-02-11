@@ -33,6 +33,29 @@ impl Vm {
         Ok(cell)
     }
 
+    pub fn run_count(&mut self, count: usize) -> Result<Option<Cell>, Error> {
+        let mut cycles = 0;
+        loop {
+            cycles += 1;
+            if cycles % 256 == 0 {
+                self.run_gc();
+            }
+            if cycles == count {
+                return Ok(None);
+            }
+            match self.run_one() {
+                Ok(true) => break,
+                Ok(false) => continue,
+                Err(e) => return Err(e),
+            }
+        }
+        trace!("cycles: {}", cycles);
+        let cell = self.heap.get_as_cell(&self.acc);
+        self.stack.clear();
+        self.run_gc();
+        Ok(Some(cell))
+    }
+
     /// Run One
     ///
     /// Execute one instruction, returning either a bool or runtime error.

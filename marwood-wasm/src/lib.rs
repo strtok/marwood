@@ -1,5 +1,4 @@
 #![allow(clippy::unused_unit)]
-
 use marwood::cell::Cell;
 use marwood::lex;
 use marwood::parse;
@@ -24,7 +23,7 @@ pub struct Marwood {
 
 #[wasm_bindgen]
 impl Marwood {
-    pub fn new() -> Marwood {
+    pub fn new() -> Self {
         let mut vm = Vm::new();
         vm.set_display_fn(Box::new(|cell| display(&cell.to_string())));
         Marwood { vm }
@@ -43,22 +42,31 @@ impl Marwood {
 
         let mut cur = tokens.iter().peekable();
 
-        let mut result = match parse::parse(text, &mut cur) {
-            Ok(cell) => match self.vm.eval(&cell) {
-                Ok(Cell::Void) => EvalResult::new_ok(""),
-                Ok(cell) => EvalResult::new_ok(format!("{:#}", cell)),
-                Err(e) => EvalResult::new_error(format!("error: {}", e)),
+        match parse::parse(text, &mut cur) {
+            Ok(cell) => match self.vm.prepare_eval(&cell) {
+                Ok(()) => {}
+                Err(e) => return EvalResult::new_error(format!("error: {}", e)).into(),
             },
-            Err(parse::Error::Eof) => return EvalResult::new_eof(),
-            Err(e) => EvalResult::new_error(format!("error: {}", e)),
+            Err(parse::Error::Eof) => return EvalResult::new_eof().into(),
+            Err(e) => return EvalResult::new_error(format!("error: {}", e)).into(),
         };
 
+        let mut result = self.eval_continue();
         result.remaining = match cur.peek() {
             Some(lex::Token { span, .. }) => JsValue::from(&text[span.0..]),
             None => JsValue::null(),
         };
 
         result
+    }
+
+    pub fn eval_continue(&mut self) -> EvalResult {
+        match self.vm.run_count(10000) {
+            Ok(Some(Cell::Void)) => EvalResult::new_ok(""),
+            Ok(Some(cell)) => EvalResult::new_ok(format!("{:#}", cell)),
+            Ok(None) => EvalResult::new_not_completed(),
+            Err(e) => EvalResult::new_error(format!("error: {}", e)),
+        }
     }
 
     pub fn check(&self, text: &str) -> CheckResult {
@@ -93,13 +101,13 @@ impl Marwood {
         let mut result = AutocompleteResult::new();
 
         if text.is_empty() || text.chars().last().unwrap().is_whitespace() {
-            return result;
+            return result.into();
         }
 
-        let tokens = match lex::scan(text) {
+        let tokens = match lex::scan(&text) {
             Ok(tokens) => tokens,
             _ => {
-                return result;
+                return result.into();
             }
         };
 
@@ -111,7 +119,7 @@ impl Marwood {
         let symbols = tokens
             .iter()
             .filter(|it| it.is_symbol())
-            .map(|it| it.span(text))
+            .map(|it| it.span(&text))
             .filter(|sym| *sym != word)
             .filter(|sym| sym.starts_with(word))
             .collect::<Vec<_>>();
@@ -151,6 +159,7 @@ pub struct EvalResult {
     error: JsValue,
     remaining: JsValue,
     eof: bool,
+    completed: bool,
 }
 
 #[wasm_bindgen]
@@ -161,6 +170,7 @@ impl EvalResult {
             error: JsValue::from(error.into()),
             remaining: JsValue::null(),
             eof: false,
+            completed: true,
         }
     }
 
@@ -170,6 +180,7 @@ impl EvalResult {
             error: JsValue::null(),
             remaining: JsValue::null(),
             eof: false,
+            completed: true,
         }
     }
 
@@ -179,6 +190,17 @@ impl EvalResult {
             error: JsValue::null(),
             remaining: JsValue::null(),
             eof: true,
+            completed: true,
+        }
+    }
+
+    fn new_not_completed() -> EvalResult {
+        EvalResult {
+            ok: JsValue::null(),
+            error: JsValue::null(),
+            remaining: JsValue::null(),
+            eof: false,
+            completed: false,
         }
     }
 
@@ -200,6 +222,11 @@ impl EvalResult {
     #[wasm_bindgen(getter)]
     pub fn remaining(&self) -> JsValue {
         self.remaining.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn completed(&self) -> JsValue {
+        JsValue::from(self.completed)
     }
 }
 
