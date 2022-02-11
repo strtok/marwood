@@ -10,7 +10,11 @@ import "./prism-scheme.js";
 const $ = require("jquery");
 
 $.terminal.syntax("scheme");
-
+$.terminal.prism_formatters = {
+    command: true,
+    echo: false,
+    prompt: true
+};
 const vm = Marwood.new();
 var term = $('#terminal').terminal((text) => {
     if (text.length > 0) {
