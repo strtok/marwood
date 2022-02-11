@@ -10,6 +10,10 @@ use web_sys::console;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+/// How many instructions to execute per eval/eval_continue()
+/// call.
+const INSTRUCTIONS_PER_EVAL: usize = 10000;
+
 #[wasm_bindgen(module = "/display.js")]
 extern "C" {
     fn display(text: &str);
@@ -61,7 +65,7 @@ impl Marwood {
     }
 
     pub fn eval_continue(&mut self) -> EvalResult {
-        match self.vm.run_count(10000) {
+        match self.vm.run_count(INSTRUCTIONS_PER_EVAL) {
             Ok(Some(Cell::Void)) => EvalResult::new_ok(""),
             Ok(Some(cell)) => EvalResult::new_ok(format!("{:#}", cell)),
             Ok(None) => EvalResult::new_not_completed(),
