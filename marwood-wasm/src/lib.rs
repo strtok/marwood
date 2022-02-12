@@ -4,11 +4,10 @@ use marwood::lex;
 use marwood::parse;
 use marwood::vm::Vm;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+// #[cfg(feature = "wee_alloc")]
+// #[global_allocator]
+// static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 /// How many instructions to execute per eval/eval_continue()
 /// call.
@@ -28,6 +27,8 @@ pub struct Marwood {
 #[wasm_bindgen]
 impl Marwood {
     pub fn new() -> Self {
+        #[cfg(feature = "console_error_panic_hook")]
+        console_error_panic_hook::set_once();
         let mut vm = Vm::new();
         vm.set_display_fn(Box::new(|cell| display(&cell.to_string())));
         Marwood { vm }
@@ -268,12 +269,4 @@ impl AutocompleteResult {
     pub fn completions(&self) -> Box<[JsValue]> {
         self.completions.clone().into_boxed_slice()
     }
-}
-
-#[wasm_bindgen(start)]
-pub fn run() -> Result<(), JsValue> {
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
-    console::log_1(&"starting Marwood".into());
-    Ok(())
 }

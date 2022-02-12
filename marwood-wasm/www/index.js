@@ -22,38 +22,49 @@ var term = $('#terminal').terminal((text) => {
     if (text.length == 0) {
         return "";
     }
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         let first_eval = true;
         let remaining_text;
-        async function eval_loop() {
+        function try_eval() {
             let result;
             if (first_eval) {
-                result = await vm.eval(text);
+                result = vm.eval(text);
                 remaining_text = result.remaining;
                 first_eval = false;
             } else {
-                result = await vm.eval_continue();
+                result = vm.eval_continue();
             }
 
             if (result.completed) {
                 if (result.ok != null) {
-                    await term.echo(result.ok);
+                    term.echo(result.ok);
                 } else if (result.error != null) {
-                    await term.echo(result.error);
+                    term.echo(result.error);
                 } else {
-                    await term.echo("");
+                    term.echo("");
                 }
-
                 if (remaining_text != null && remaining_text.length > 0) {
                     term.exec(remaining_text);
                 }
+                return true;
+            }
+            return false;
+        }
 
-                resolve();
+        function eval_loop() {
+            try {
+                if (!try_eval()) {
+                    setTimeout(() => {
+                        eval_loop();
+                    }, 0);
+                } else {
+                    resolve();
+                }
+            } catch (e) {
+                console.log(e);
+                reject("fatal error in try_eval()");
                 return;
             }
-            setTimeout(() => {
-                eval_loop();
-            }, 0);
         }
         eval_loop();
     });
