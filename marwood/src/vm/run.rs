@@ -412,12 +412,18 @@ impl Vm {
     ///
     /// Run GC performs two steps in order:
     ///
-    /// 1. It performs a mark on all roots:
+    /// 1. Check if heap utilization is > 75%, aborting gc is not.
+    ///
+    /// 2. It performs a mark on all roots:
     ///    * The global environment
     ///    * Any data referecned by the running program & stack
     ///
-    /// 2. A sweep, freeing any vcells not marked as used in step #1.
+    /// 3. A sweep, freeing any vcells not marked as used in step #1.
     pub fn run_gc(&mut self) {
+        if (self.heap.used_size() as f64 / self.heap.capacity() as f64) < 0.75_f64 {
+            return;
+        }
+
         self.globenv
             .iter_bindings()
             .for_each(|it| self.heap.mark(*it));

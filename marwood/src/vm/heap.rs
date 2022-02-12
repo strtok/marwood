@@ -383,6 +383,27 @@ impl Heap {
         }
         trace!("freed {} vcell(s)", self.free_list.len() - before);
     }
+
+    /// Size
+    ///
+    /// The total capacity of the heap.
+    pub fn capacity(&self) -> usize {
+        self.heap.len()
+    }
+
+    /// Free Size
+    ///
+    /// The number of nodes in the free list.
+    pub fn free_size(&self) -> usize {
+        self.free_list.len()
+    }
+
+    /// Used Size
+    ///
+    /// The number of nodes in used.
+    pub fn used_size(&self) -> usize {
+        self.capacity() - self.free_size()
+    }
 }
 
 #[cfg(test)]

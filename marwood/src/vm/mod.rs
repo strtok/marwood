@@ -23,7 +23,7 @@ pub mod transform;
 pub mod vcell;
 pub mod vector;
 
-const HEAP_SIZE: usize = 4096;
+const HEAP_SIZE: usize = 16 * 1024;
 struct Display(Box<dyn Fn(&Cell)>);
 
 #[derive(Debug)]
