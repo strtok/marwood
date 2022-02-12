@@ -821,4 +821,27 @@ mod integration_test {
             "(find-primes 100)" => "(0 1 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97)"
         ];
     }
+
+    #[test]
+    fn copy_closure() {
+        evals![r#"
+          (define (copy a b)
+             ((lambda (partial) (cons a partial))
+             (if (= b 0)
+                'eol
+                (copy (+ a 1) (- b 1)))))"# => "#<void>",
+           "(copy 100 10)" => "(100 101 102 103 104 105 106 107 108 109 110 . eol)"
+        ];
+    }
+
+    #[test]
+    fn apply_makes_environment() {
+        evals![
+            "(define x 0)" => "#<void>",
+            "(let ~ ((i (* 9)))
+              (if (< 1 i) (~ (- i 1)))
+              (set! x (+ x i)))" => "#<void>",
+            "x" => "45"
+        ]
+    }
 }

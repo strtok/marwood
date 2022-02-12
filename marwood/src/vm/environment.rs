@@ -163,7 +163,7 @@ impl Default for EnvironmentMap {
 /// LexicalEnvironment represents a series of shallow binding slots for
 /// a procedure of which are populated during the evaluation of the lambda
 /// procedure and during procedure application.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LexicalEnvironment {
     slots: RefCell<Vec<VCell>>,
 }

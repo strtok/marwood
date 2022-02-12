@@ -2,6 +2,7 @@ use crate::cell::Cell;
 use crate::vm::environment::{BindingSource, EnvironmentMap, LexicalEnvironment};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
+use crate::vm::vcell::VCell::LexicalEnvPtr;
 use crate::vm::vcell::{BuiltInProc, VCell};
 use crate::vm::Error::{InvalidBytecode, InvalidNumArgs, InvalidProcedure, VariableNotBound};
 use crate::vm::{Error, Vm};
@@ -100,7 +101,7 @@ impl Vm {
                 let lambda = self.heap.get_at_index(lambda_ptr).as_lambda()?;
 
                 // Build the lexical environment
-                let lexical_env = self.build_lexical_environment(&lambda.envmap)?;
+                let lexical_env = self.build_closure_environment(&lambda.envmap)?;
                 let lexical_env = VCell::LexicalEnv(Rc::new(lexical_env));
                 let lexical_env_ptr = self.heap.put(lexical_env).as_ptr()?;
 
@@ -179,13 +180,14 @@ impl Vm {
                 }
             }
             OpCode::Enter => {
-                let (lambda, lexical_env) = match self.heap.get(&self.acc) {
+                let (lambda, closure_env) = match self.heap.get(&self.acc) {
                     VCell::Closure(lambda, lexical_env) => (lambda, Some(lexical_env)),
                     VCell::Lambda(_) => (self.acc.as_ptr()?, None),
                     _ => {
                         return Err(InvalidBytecode);
                     }
                 };
+
                 let lambda = self.heap.get_at_index(lambda);
                 let lambda = lambda.as_lambda()?;
                 if self.stack.get_offset(-2)?.as_argc()? != lambda.args.len() {
@@ -195,15 +197,15 @@ impl Vm {
                 self.stack.push(VCell::BasePointer(self.bp));
                 self.bp = self.stack.get_sp() - 4;
 
-                if let Some(lexical_env) = lexical_env {
-                    self.ep = lexical_env;
-                    let lexical_env = self.heap.get_at_index(lexical_env).as_lexical_env()?;
-                    for (slot, binding) in lambda.envmap.get_map().iter().enumerate() {
-                        if let BindingSource::Argument(arg) = binding.1 {
-                            let arg_offset = self.bp - (lambda.argc() - arg) + 1;
-                            lexical_env.put(slot, self.stack.get(arg_offset)?.clone());
-                        }
-                    }
+                if let Some(closure_env_ptr) = closure_env {
+                    let closure_env = self.heap.get_at_index(closure_env_ptr).as_lexical_env()?;
+                    let lexical_env =
+                        self.build_lexical_environment(lambda, closure_env_ptr, closure_env)?;
+                    let lexical_env_ptr = self
+                        .heap
+                        .put(VCell::LexicalEnv(Rc::new(lexical_env)))
+                        .as_ptr()?;
+                    self.ep = lexical_env_ptr;
                 }
             }
             OpCode::Ret => {
@@ -362,20 +364,20 @@ impl Vm {
             VCell::GlobalEnvSlot(slot) => {
                 self.globenv.put_slot(slot, vcell);
             }
-            VCell::LexicalEnvSlot(slot) => match self.heap.get_at_index(self.ep) {
-                VCell::LexicalEnv(env) => {
-                    env.put(slot, vcell);
+            VCell::LexicalEnvSlot(slot) => {
+                let lexical_env = self.heap.get_at_index(self.ep).as_lexical_env()?;
+                match lexical_env.get(slot) {
+                    VCell::LexicalEnvPtr(env, slot) => {
+                        self.heap
+                            .get_at_index(env)
+                            .as_lexical_env()?
+                            .put(slot, vcell);
+                    }
+                    _ => {
+                        lexical_env.put(slot, vcell);
+                    }
                 }
-                VCell::LexicalEnvPtr(env, slot) => {
-                    self.heap
-                        .get_at_index(*env)
-                        .as_lexical_env()?
-                        .put(*slot, vcell);
-                }
-                _ => {
-                    return Err(InvalidBytecode);
-                }
-            },
+            }
             _ => return Err(InvalidBytecode),
         }
         Ok(())
@@ -442,14 +444,15 @@ impl Vm {
         self.heap.sweep();
     }
 
-    /// Build Lexical Environment
+    /// Build Closure Environment
     ///
     /// Build a lexical environment with the given environment map, assuming
-    /// that the current stack is that of the IOF.
+    /// that the current stack is that of the IOF. This function is called by
+    /// the CLOSURE instruction as part of creation of a lambda.
     ///
     /// # Arguments
     /// `envmap` - The EnvironmentMap used to build the lexical environment
-    fn build_lexical_environment(
+    fn build_closure_environment(
         &self,
         envmap: &EnvironmentMap,
     ) -> Result<LexicalEnvironment, Error> {
@@ -476,18 +479,57 @@ impl Vm {
         Ok(lexical_env)
     }
 
+    /// Chain Lexical Environment
+    ///
+    /// Given a closure's environment, produce a cloned environment that chains
+    /// to the original environment. This function is called by the ENTER instruction
+    /// when applying a function.
+    ///
+    /// # Arguments
+    /// `lambda` - The lambda being applied by the ENTER instruction.
+    /// `env_ptr` - A pointer to the base environment of lambda.
+    /// `env` - The base environment.
+    fn build_lexical_environment(
+        &self,
+        lambda: &Lambda,
+        closure_env_ptr: usize,
+        closure_env: &LexicalEnvironment,
+    ) -> Result<LexicalEnvironment, Error> {
+        let lexical_env = closure_env.clone();
+        for (slot, it) in lambda.envmap.get_map().iter().enumerate() {
+            match it.1 {
+                BindingSource::Argument(arg) => {
+                    let arg_offset = self.bp - (lambda.argc() - arg) + 1;
+                    lexical_env.put(slot, self.stack.get(arg_offset)?.clone());
+                }
+                BindingSource::IofArgument(_) | BindingSource::IofEnvironment(_) => {
+                    match closure_env.get(slot) {
+                        VCell::LexicalEnvPtr(_, _) => {}
+                        _ => lexical_env.put(slot, LexicalEnvPtr(closure_env_ptr, slot)),
+                    }
+                }
+                BindingSource::Global | BindingSource::InternalDefinition => {}
+            }
+        }
+        Ok(lexical_env)
+    }
+
     #[allow(dead_code)]
     fn trace_environment_map(&self, envmap: &EnvironmentMap) {
+        trace!("--- ENVIRONMENT MAP ---");
         envmap.get_map().iter().for_each(|it| {
             trace!("{} => {:?}", self.get_str_bound_to(it.0.clone()), it.1);
-        })
+        });
+        trace!("--- END MAP ---");
     }
 
     #[allow(dead_code)]
     fn trace_lexical_environment(&self, env: &LexicalEnvironment) {
+        trace!("--- LEXICAL ENVIRONMENT ---");
         for it in 0..env.slot_len() {
-            trace!("{} => {}", it, env.get(it));
+            trace!("{} => {:?}", it, env.get(it));
         }
+        trace!("--- END LEXICAL ENVIRONMENT ---");
     }
 
     fn trace_instruction(&self) {
