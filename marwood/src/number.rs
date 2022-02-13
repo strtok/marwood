@@ -120,7 +120,7 @@ impl Number {
     pub fn to_usize(&self) -> Option<usize> {
         match self {
             Number::Fixnum(num) if *num >= 0 => Some(*num as usize),
-            Number::BigInt(num) if **num > BigInt::from(0) && **num <= BigInt::from(usize::MAX) => {
+            Number::BigInt(num) if **num >= BigInt::from(0) && **num <= BigInt::from(usize::MAX) => {
                 Some(num.to_usize().unwrap())
             }
             _ => None,
@@ -139,7 +139,7 @@ impl Number {
     pub fn to_u64(&self) -> Option<u64> {
         match self {
             Number::Fixnum(num) if *num >= 0 => Some(*num as u64),
-            Number::BigInt(num) if **num > BigInt::from(0) && **num <= BigInt::from(u64::MAX) => {
+            Number::BigInt(num) if **num >= BigInt::from(0) && **num <= BigInt::from(u64::MAX) => {
                 Some(num.to_u64().unwrap())
             }
             Number::Rational(num) if num.is_integer() => num.to_u64(),
@@ -150,7 +150,7 @@ impl Number {
     pub fn to_u32(&self) -> Option<u32> {
         match self {
             Number::Fixnum(num) if *num >= 0 => Some(*num as u32),
-            Number::BigInt(num) if **num > BigInt::from(0) && **num <= BigInt::from(u32::MAX) => {
+            Number::BigInt(num) if **num >= BigInt::from(0) && **num <= BigInt::from(u32::MAX) => {
                 Some(num.to_u32().unwrap())
             }
             Number::Rational(num) if num.is_integer() => num.to_u32(),
