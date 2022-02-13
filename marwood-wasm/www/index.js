@@ -37,19 +37,19 @@ var term = $('#terminal').terminal((text) => {
 
             if (result.completed) {
                 if (result.ok != null) {
-                    term.echo(result.ok, { flush: false });
+                    setTimeout(() => { term.flush(); term.echo(result.ok); });
                 } else if (result.error != null) {
-                    term.echo(result.error, { flush: false });
+                    setTimeout(() => { term.flush(); term.echo(result.error); });
                 } else {
-                    term.echo("");
+                    setTimeout(() => { term.flush(); term.echo(""); });
                 }
                 term.flush();
                 if (remaining_text != null && remaining_text.length > 0) {
-                    term.exec(remaining_text);
+                    setTimeout(() => { term.exec(remaining_text); });
                 }
                 return true;
             } else {
-                setTimeout(() => { term.flush(); }, 0);
+                setTimeout(() => { term.flush(); });
             }
             return false;
         }
@@ -59,7 +59,7 @@ var term = $('#terminal').terminal((text) => {
                 if (!try_eval()) {
                     setTimeout(() => {
                         eval_loop();
-                    }, 0);
+                    });
                 } else {
                     resolve();
                 }
@@ -102,7 +102,7 @@ var term = $('#terminal').terminal((text) => {
 });
 
 globalThis.marwood_display = (text) => {
-    term.echo(text, { newline: false, flush: false });
+    setTimeout(() => { term.echo(text, { newline: false, flush: false }) });
 }
 
 term.echo("λMARWOOD", { typing: true, delay: 100 });
