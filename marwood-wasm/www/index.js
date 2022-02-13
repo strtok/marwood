@@ -28,25 +28,28 @@ var term = $('#terminal').terminal((text) => {
         function try_eval() {
             let result;
             if (first_eval) {
-                result = vm.eval(text);
+                result = vm.eval(text, 5000);
                 remaining_text = result.remaining;
                 first_eval = false;
             } else {
-                result = vm.eval_continue();
+                result = vm.eval_continue(1000);
             }
 
             if (result.completed) {
                 if (result.ok != null) {
-                    term.echo(result.ok);
+                    term.echo(result.ok, { flush: false });
                 } else if (result.error != null) {
-                    term.echo(result.error);
+                    term.echo(result.error, { flush: false });
                 } else {
                     term.echo("");
                 }
+                term.flush();
                 if (remaining_text != null && remaining_text.length > 0) {
                     term.exec(remaining_text);
                 }
                 return true;
+            } else {
+                setTimeout(() => { term.flush(); }, 0);
             }
             return false;
         }
@@ -99,7 +102,7 @@ var term = $('#terminal').terminal((text) => {
 });
 
 globalThis.marwood_display = (text) => {
-    term.echo(text, { newline: false });
+    term.echo(text, { newline: false, flush: false });
 }
 
 term.echo("λMARWOOD", { typing: true, delay: 100 });

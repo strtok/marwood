@@ -5,14 +5,6 @@ use marwood::parse;
 use marwood::vm::Vm;
 use wasm_bindgen::prelude::*;
 
-// #[cfg(feature = "wee_alloc")]
-// #[global_allocator]
-// static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-/// How many instructions to execute per eval/eval_continue()
-/// call.
-const INSTRUCTIONS_PER_EVAL: usize = 50000;
-
 #[wasm_bindgen(module = "/display.js")]
 extern "C" {
     fn display(text: &str);
@@ -34,7 +26,7 @@ impl Marwood {
         Marwood { vm }
     }
 
-    pub fn eval(&mut self, text: &str) -> EvalResult {
+    pub fn eval(&mut self, text: &str, count: usize) -> EvalResult {
         let tokens = match lex::scan(text) {
             Ok(tokens) => tokens,
             Err(lex::Error::Eof) => {
@@ -56,7 +48,7 @@ impl Marwood {
             Err(e) => return EvalResult::new_error(format!("error: {}", e)),
         };
 
-        let mut result = self.eval_continue();
+        let mut result = self.eval_continue(count);
         result.remaining = match cur.peek() {
             Some(lex::Token { span, .. }) => JsValue::from(&text[span.0..]),
             None => JsValue::null(),
@@ -65,8 +57,8 @@ impl Marwood {
         result
     }
 
-    pub fn eval_continue(&mut self) -> EvalResult {
-        match self.vm.run_count(INSTRUCTIONS_PER_EVAL) {
+    pub fn eval_continue(&mut self, count: usize) -> EvalResult {
+        match self.vm.run_count(count) {
             Ok(Some(Cell::Void)) => EvalResult::new_ok(""),
             Ok(Some(cell)) => EvalResult::new_ok(format!("{:#}", cell)),
             Ok(None) => EvalResult::new_not_completed(),
