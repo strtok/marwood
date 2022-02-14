@@ -43,7 +43,6 @@ var term = $('#terminal').terminal((text) => {
                 } else {
                     setTimeout(() => { term.flush(); term.echo(""); });
                 }
-                term.flush();
                 if (remaining_text != null && remaining_text.length > 0) {
                     setTimeout(() => { term.exec(remaining_text); });
                 }
