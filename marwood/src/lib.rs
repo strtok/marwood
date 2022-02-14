@@ -138,6 +138,14 @@ mod integration_test {
     }
 
     #[test]
+    fn string_procedures() {
+        evals![
+            "(make-string 5)" => "\"\0\0\0\0\0\"",
+            "(make-string 5 #\\a)" => "\"aaaaa\""
+        ];
+    }
+
+    #[test]
     fn eval_quote() {
         evals![
             "'1" => "1",
