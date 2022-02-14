@@ -37,18 +37,16 @@ var term = $('#terminal').terminal((text) => {
 
             if (result.completed) {
                 if (result.ok != null) {
-                    setTimeout(() => { term.flush(); term.echo(result.ok); });
+                    setTimeout(() => { term.echo(result.ok); });
                 } else if (result.error != null) {
-                    setTimeout(() => { term.flush(); term.echo(result.error); });
+                    setTimeout(() => { term.echo(result.error); });
                 } else {
-                    setTimeout(() => { term.flush(); term.echo(""); });
+                    setTimeout(() => { term.echo(""); });
                 }
                 if (remaining_text != null && remaining_text.length > 0) {
                     setTimeout(() => { term.exec(remaining_text); });
                 }
                 return true;
-            } else {
-                setTimeout(() => { term.flush(); });
             }
             return false;
         }
@@ -101,7 +99,7 @@ var term = $('#terminal').terminal((text) => {
 });
 
 globalThis.marwood_display = (text) => {
-    setTimeout(() => { term.echo(text, { newline: false, flush: false }) });
+    setTimeout(() => { term.echo(text, { newline: false }) });
 }
 
 const params = new URLSearchParams(window.location.search);
