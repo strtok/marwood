@@ -23,7 +23,7 @@ pub enum Error {
     ExpectedListTerminator(char, char),
     #[error("expected vector terminator ), but encountered {0}")]
     ExpectedVectorTerminator(char),
-    #[error("syntax error parsing {0}")]
+    #[error("syntax error: {0}")]
     SyntaxError(String),
     #[error("unknown character {0}")]
     UnknownChar(String),
@@ -222,6 +222,41 @@ fn parse_string(text: &str, token: &Token) -> Result<Cell, Error> {
                 Some('b') => char::from_u32(0x8).unwrap(),
                 Some('t') => '\t',
                 Some('n') => '\n',
+                Some('x') => {
+                    cur.next();
+                    let mut unicode_value = 0_u32;
+                    loop {
+                        match cur.peek() {
+                            Some(';') => break,
+                            Some(c) if c.is_ascii_hexdigit() => {
+                                unicode_value = unicode_value.checked_mul(16).ok_or_else(|| {
+                                    Error::SyntaxError("overflow when parsing \\x".into())
+                                })?;
+                                unicode_value = unicode_value
+                                    .checked_add(c.to_digit(16).unwrap())
+                                    .ok_or_else(|| {
+                                        Error::SyntaxError("overflow when parsing \\x".into())
+                                    })?;
+                            }
+                            Some(c) => {
+                                return Err(Error::SyntaxError(format!(
+                                    "\\x expected hex digits but encountered '{}' in \"{}\"",
+                                    c, span
+                                )))
+                            }
+                            None => {
+                                return Err(Error::SyntaxError(format!(
+                                    "\\x must be terminated with ; in \"{}\"",
+                                    span
+                                )))
+                            }
+                        }
+                        cur.next();
+                    }
+                    char::from_u32(unicode_value).ok_or_else(|| {
+                        Error::SyntaxError(format!("\\#x{:x}; is not valid unicode", unicode_value))
+                    })?
+                }
                 Some(c) => *c,
                 None => return Err(Error::Eof),
             });
@@ -442,8 +477,12 @@ mod tests {
             r#""\n""# => Cell::new_string("\n"),
             r#""\a""# => Cell::new_string(&String::from(char::from_u32(0x7).unwrap())),
             r#""\a""# => Cell::new_string(&String::from(char::from_u32(0x7).unwrap())),
-            r#""\b""# => Cell::new_string(&String::from(char::from_u32(0x8).unwrap()))
-        }
+            r#""\b""# => Cell::new_string(&String::from(char::from_u32(0x8).unwrap())),
+            r#""\x41;""# => Cell::new_string("A"),
+            r#""\x1f436;""# => Cell::new_string("🐶")
+        };
+
+        fails![r#""\xffffffff;""#, r#""\x41""#, r#""\xzz;""#];
     }
 
     #[test]
