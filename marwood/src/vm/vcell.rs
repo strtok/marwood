@@ -7,8 +7,10 @@ use crate::vm::transform::Transform;
 use crate::vm::vector::Vector;
 use crate::vm::Error::ExpectedType;
 use crate::vm::{Error, Vm};
+use std::cell::RefCell;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
+use std::ops::Deref;
 use std::rc::Rc;
 
 /// VCell
@@ -30,7 +32,7 @@ pub enum VCell {
     Number(Number),
     Pair(usize, usize),
     Symbol(Rc<String>),
-    String(Rc<String>),
+    String(Rc<RefCell<String>>),
     Vector(Rc<Vector>),
 
     // other scheme values
@@ -168,7 +170,7 @@ impl VCell {
     }
 
     pub fn string<T: Into<String>>(s: T) -> VCell {
-        VCell::String(Rc::new(s.into()))
+        VCell::String(Rc::new(RefCell::new(s.into())))
     }
 
     pub fn symbol<T: Into<String>>(sym: T) -> VCell {
@@ -287,6 +289,13 @@ impl VCell {
     pub fn as_symbol(&self) -> Result<&str, Error> {
         match self {
             VCell::Symbol(s) => Ok(&*s),
+            _ => Err(ExpectedType(SYMBOL_TYPE_TEXT, self.type_text())),
+        }
+    }
+
+    pub fn as_string(&self) -> Result<&RefCell<String>, Error> {
+        match self {
+            VCell::String(s) => Ok(&*s),
             _ => Err(ExpectedType(SYMBOL_TYPE_TEXT, self.type_text())),
         }
     }
@@ -446,7 +455,7 @@ impl fmt::Display for VCell {
             VCell::OpCode(val) => write!(f, "{:?}", val),
             VCell::Pair(car, cdr) => write!(f, "(${:02x} . ${:02x})", car, cdr),
             VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
-            VCell::String(s) => write!(f, "\"{}\"", *s),
+            VCell::String(s) => write!(f, "\"{}\"", (**s).borrow().deref()),
             VCell::Symbol(s) => write!(f, "{}", *s),
             VCell::BuiltInProc(_) => write!(f, "#<syscall>"),
             VCell::Undefined => write!(f, "undefined"),

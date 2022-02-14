@@ -183,7 +183,7 @@ impl Heap {
                 self.get_as_cell(&VCell::Ptr(*cdr)),
             ),
             VCell::Ptr(ptr) => self.get_as_cell(self.get_at_index(*ptr)),
-            VCell::String(s) => Cell::String(s.deref().into()),
+            VCell::String(s) => Cell::String(s.borrow().deref().into()),
             VCell::Symbol(s) => Cell::Symbol(s.deref().into()),
             VCell::Undefined => Cell::Undefined,
             VCell::Void => Cell::Void,

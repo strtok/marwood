@@ -33,6 +33,7 @@ mod vector;
 
 impl Vm {
     pub fn load_builtins(&mut self) {
+        string::load_builtins(self);
         self.load_builtin("*", number::multiply);
         self.load_builtin("/", number::divide);
         self.load_builtin("+", number::plus);
@@ -109,7 +110,7 @@ impl Vm {
         self.load_builtin("zero?", number::zero);
     }
 
-    fn load_builtin(&mut self, symbol: &str, func: fn(&mut Vm) -> Result<VCell, Error>) {
+    pub fn load_builtin(&mut self, symbol: &str, func: fn(&mut Vm) -> Result<VCell, Error>) {
         let syscall = self.heap.put(VCell::syscall(func));
         let symbol = self.heap.put(VCell::symbol(symbol));
         let slot = self.globenv.get_binding(symbol.as_ptr().unwrap());
@@ -151,6 +152,16 @@ fn pop_integer(vm: &mut Vm) -> Result<Number, Error> {
     match pop_number(vm) {
         Ok(num) if num.is_integer() => Ok(num),
         Ok(num) => return Err(InvalidSyntax(format!("{} is not a valid integer", num))),
+        Err(e) => Err(e),
+    }
+}
+
+fn pop_usize(vm: &mut Vm) -> Result<usize, Error> {
+    match pop_number(vm) {
+        Ok(num) if num.is_integer() && num >= Number::from(0) && num.to_usize().is_some() => {
+            Ok(num.to_usize().unwrap())
+        }
+        Ok(num) => return Err(InvalidSyntax(format!("{} is not a valid size", num))),
         Err(e) => Err(e),
     }
 }
