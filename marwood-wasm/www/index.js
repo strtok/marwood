@@ -6,7 +6,7 @@ import { Marwood, MarwoodWrapper } from "marwood";
 import * as parens from "./parens.js";
 import "./prism.css";
 import "./prism-scheme.js";
-import { terminal } from "jquery";
+import { Buffer } from "buffer";
 
 const $ = require("jquery");
 
@@ -105,6 +105,20 @@ globalThis.marwood_display = (text) => {
     setTimeout(() => { term.echo(text, { newline: false, flush: false }) });
 }
 
-term.echo("λMARWOOD", { typing: true, delay: 100 });
-term.echo("");
-term.set_prompt(">");
+const params = new URLSearchParams(window.location.search);
+
+if (params.has("eval")) {
+    let text = params.get("eval");
+    text.replace("-", "+");
+    text.replace("_", "/");
+    text = Buffer.from(params.get("eval"), "base64")
+        .toString('ascii');
+    if (text != null) {
+        term.echo("λMARWOOD");
+        term.set_prompt(">");
+        console.log(text);
+        term.exec(text);
+    }
+} else {
+    term.echo("λMARWOOD", { typing: true, delay: 100 });
+}
