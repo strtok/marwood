@@ -1,10 +1,19 @@
-use crate::vm::builtin::{pop_argc, pop_char, pop_usize};
+use crate::number::Number;
+use crate::vm::builtin::{pop_argc, pop_char, pop_string, pop_usize};
 use crate::vm::vcell::VCell;
 use crate::vm::{Error, Vm};
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("make-string", make_string);
     vm.load_builtin("string", string);
+    vm.load_builtin("string-length", string_length);
+}
+
+pub fn string_length(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "string-length")?;
+    let s = pop_string(vm, "string-length")?;
+    let s = s.borrow();
+    Ok(Number::from(s.chars().count() as u64).into())
 }
 
 pub fn make_string(vm: &mut Vm) -> Result<VCell, Error> {

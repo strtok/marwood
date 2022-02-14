@@ -146,7 +146,11 @@ mod integration_test {
         evals![
             "(string #\\a)" => "\"a\"",
             "(string #\\a #\\b)" => "\"ab\""
-        ]
+        ];
+        evals![
+            "(string-length \"foo\")" => "3",
+            "(string-length \"🐶\")" => "1"
+        ];
     }
 
     #[test]

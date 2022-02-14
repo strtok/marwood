@@ -3,6 +3,7 @@ use crate::vm::vcell::VCell;
 use crate::vm::vector::Vector;
 use crate::vm::Error::{InvalidNumArgs, InvalidSyntax};
 use crate::vm::{Error, Vm};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 mod char;
@@ -172,6 +173,19 @@ fn pop_char(vm: &mut Vm) -> Result<char, Error> {
         vcell => {
             return Err(InvalidSyntax(format!(
                 "{} is not a valid character",
+                vm.heap.get_as_cell(&vcell)
+            )))
+        }
+    }
+}
+
+fn pop_string(vm: &mut Vm, proc: &str) -> Result<Rc<RefCell<String>>, Error> {
+    match vm.heap.get(vm.stack.pop()?) {
+        VCell::String(s) => Ok(s.clone()),
+        vcell => {
+            return Err(InvalidSyntax(format!(
+                "bad argument to {}: {} is not a string",
+                proc,
                 vm.heap.get_as_cell(&vcell)
             )))
         }
