@@ -10,6 +10,7 @@ mod list;
 mod number;
 mod ports;
 mod predicate;
+mod string;
 mod vector;
 
 /// Built Ins

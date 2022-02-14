@@ -195,6 +195,14 @@ impl VCell {
         matches!(self, VCell::Number(_))
     }
 
+    pub fn is_string(&self) -> bool {
+        matches!(self, VCell::String(_))
+    }
+
+    pub fn is_char(&self) -> bool {
+        matches!(self, VCell::Char(_))
+    }
+
     pub fn is_pair(&self) -> bool {
         matches!(self, VCell::Pair(_, _))
     }

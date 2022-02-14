@@ -10,8 +10,8 @@ pub fn is_boolean(vm: &mut Vm) -> Result<VCell, Error> {
 
 pub fn is_char(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "char?")?;
-    let _ = vm.stack.pop()?;
-    Ok(false.into())
+    let result = vm.heap.get(vm.stack.pop()?);
+    Ok(result.is_char().into())
 }
 
 pub fn is_null(vm: &mut Vm) -> Result<VCell, Error> {
@@ -46,8 +46,8 @@ pub fn is_procedure(vm: &mut Vm) -> Result<VCell, Error> {
 
 pub fn is_string(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "string?")?;
-    let _ = vm.stack.pop()?;
-    Ok(false.into())
+    let result = vm.heap.get(vm.stack.pop()?);
+    Ok(result.is_string().into())
 }
 
 pub fn is_symbol(vm: &mut Vm) -> Result<VCell, Error> {

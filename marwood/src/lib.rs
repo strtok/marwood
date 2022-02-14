@@ -331,6 +331,20 @@ mod integration_test {
         ];
 
         evals![
+            "(string? \"foo\")" => "#t",
+            "(symbol? 10)" => "#f"
+        ];
+
+        evals![
+            "(char? #\\a)" => "#t",
+            "(char? 10)" => "#f"
+        ];
+
+        evals![
+            "(symbol? 'apples)" => "#t",
+            "(symbol? 10)" => "#f"
+        ];
+        evals![
             "(null? '())" => "#t",
             "(null? (cdr '(apples)))" => "#t",
             "(null? #f)" => "#f"
