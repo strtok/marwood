@@ -109,10 +109,10 @@ const params = new URLSearchParams(window.location.search);
 
 if (params.has("eval")) {
     let text = params.get("eval");
-    text.replace("-", "+");
-    text.replace("_", "/");
-    text = Buffer.from(params.get("eval"), "base64")
-        .toString('ascii');
+    text = text.replace("-", "+");
+    text = text.replace("_", "/");
+    text = Buffer.from(text, "base64")
+        .toString('utf8');
     if (text != null) {
         term.echo("λMARWOOD");
         term.set_prompt(">");
