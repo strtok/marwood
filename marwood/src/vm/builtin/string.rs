@@ -1,4 +1,4 @@
-use crate::vm::builtin::{pop_argc, pop_char, pop_integer, pop_usize};
+use crate::vm::builtin::{pop_argc, pop_char, pop_usize};
 use crate::vm::vcell::VCell;
 use crate::vm::{Error, Vm};
 
