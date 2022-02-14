@@ -181,7 +181,7 @@ fn pop_char(vm: &mut Vm) -> Result<char, Error> {
 
 fn pop_string(vm: &mut Vm, proc: &str) -> Result<Rc<RefCell<String>>, Error> {
     match vm.heap.get(vm.stack.pop()?) {
-        VCell::String(s) => Ok(s.clone()),
+        VCell::String(s) => Ok(s),
         vcell => {
             return Err(InvalidSyntax(format!(
                 "bad argument to {}: {} is not a string",

@@ -1,12 +1,14 @@
 use crate::number::Number;
-use crate::vm::builtin::{pop_argc, pop_char, pop_string, pop_usize};
+use crate::vm::builtin::{pop_argc, pop_char, pop_index, pop_string, pop_usize};
 use crate::vm::vcell::VCell;
+use crate::vm::Error::InvalidStringIndex;
 use crate::vm::{Error, Vm};
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("make-string", make_string);
     vm.load_builtin("string", string);
     vm.load_builtin("string-length", string_length);
+    vm.load_builtin("string-ref", string_ref);
 }
 
 pub fn string_length(vm: &mut Vm) -> Result<VCell, Error> {
@@ -16,6 +18,17 @@ pub fn string_length(vm: &mut Vm) -> Result<VCell, Error> {
     Ok(Number::from(s.chars().count() as u64).into())
 }
 
+pub fn string_ref(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "string-ref")?;
+    let idx = pop_index(vm)?;
+    let s = pop_string(vm, "string-ref")?;
+    let s = s.borrow();
+    match s.chars().nth(idx) {
+        Some(c) => Ok(c.into()),
+        None => Err(InvalidStringIndex(idx, s.chars().count() - 1)),
+    }
+}
+
 pub fn make_string(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 1, Some(2), "make-string")?;
     let c = match argc {
@@ -23,7 +36,9 @@ pub fn make_string(vm: &mut Vm) -> Result<VCell, Error> {
         _ => pop_char(vm)?,
     };
     let size = pop_usize(vm)?;
-    Ok(VCell::string(std::iter::repeat(c).take(size).collect::<String>()).into())
+    Ok(VCell::string(
+        std::iter::repeat(c).take(size).collect::<String>(),
+    ))
 }
 
 pub fn string(vm: &mut Vm) -> Result<VCell, Error> {
@@ -32,5 +47,5 @@ pub fn string(vm: &mut Vm) -> Result<VCell, Error> {
     for it in 0..argc {
         *v.get_mut(argc - it - 1).unwrap() = pop_char(vm)?;
     }
-    Ok(VCell::string(v.into_iter().collect::<String>()).into())
+    Ok(VCell::string(v.into_iter().collect::<String>()))
 }

@@ -11,7 +11,8 @@ mod integration_test {
     use crate::parse;
     use crate::vm::Error::{
         ExpectedPairButFound, InvalidArgs, InvalidDefineSyntax, InvalidNumArgs, InvalidProcedure,
-        InvalidSyntax, InvalidUsePrimitive, InvalidVectorIndex, UnquotedNil, VariableNotBound,
+        InvalidStringIndex, InvalidSyntax, InvalidUsePrimitive, InvalidVectorIndex, UnquotedNil,
+        VariableNotBound,
     };
     use crate::vm::Vm;
 
@@ -151,6 +152,12 @@ mod integration_test {
             "(string-length \"foo\")" => "3",
             "(string-length \"🐶\")" => "1"
         ];
+        evals![
+            "(string-ref \"o🐶o\" 0)" => "#\\o",
+            "(string-ref \"o🐶o\" 1)" => "#\\🐶",
+            "(string-ref \"o🐶o\" 2)" => "#\\o"
+        ];
+        fails!["(string-ref \"o🐶o\" 3)" => InvalidStringIndex(3, 2)];
     }
 
     #[test]
