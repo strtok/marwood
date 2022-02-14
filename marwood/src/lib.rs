@@ -143,6 +143,10 @@ mod integration_test {
             "(make-string 5)" => "\"\0\0\0\0\0\"",
             "(make-string 5 #\\a)" => "\"aaaaa\""
         ];
+        evals![
+            "(string #\\a)" => "\"a\"",
+            "(string #\\a #\\b)" => "\"ab\""
+        ]
     }
 
     #[test]
