@@ -25,6 +25,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("string-set!", string_set);
     vm.load_builtin("string-upcase", string_upcase);
     vm.load_builtin("string->list", string_list);
+    vm.load_builtin("list->string", list_string);
     vm.load_builtin("string-copy", string_copy);
 }
 
@@ -153,6 +154,30 @@ pub fn string_list(vm: &mut Vm) -> Result<VCell, Error> {
     }
 
     Ok(list)
+}
+
+pub fn list_string(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "list->string")?;
+    let mut rest = vm.heap.get(vm.stack.pop()?);
+    if !rest.is_pair() && !rest.is_nil() {
+        return Err(Error::ExpectedPairButFound(
+            vm.heap.get_as_cell(&rest).to_string(),
+        ));
+    }
+    let mut s = String::new();
+    while rest.is_pair() {
+        match vm.heap.get(&rest.as_car()?) {
+            VCell::Char(c) => s.push(c),
+            vcell => {
+                return Err(InvalidSyntax(format!(
+                    "list->string expected char but found {}",
+                    vm.heap.get_as_cell(&vcell)
+                )))
+            }
+        }
+        rest = vm.heap.get(&rest.as_cdr()?);
+    }
+    Ok(VCell::string(s))
 }
 
 pub fn string_copy(vm: &mut Vm) -> Result<VCell, Error> {

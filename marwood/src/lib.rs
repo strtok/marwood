@@ -238,6 +238,13 @@ mod integration_test {
             "(string->list \"o🐶o\" 2 3)" => "(#\\o)",
             "(string->list \"o🐶o\" 3 3)" => "()"
         ];
+
+        evals![
+            "(list->string '(#\\o #\\🐶 #\\o))" => "\"o🐶o\""
+        ];
+        fails![
+            "(list->string '(10))" => InvalidSyntax("list->string expected char but found 10".into())
+        ];
     }
 
     #[test]
