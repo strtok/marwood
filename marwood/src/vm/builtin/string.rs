@@ -156,7 +156,7 @@ pub fn string_list(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn string_copy(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = pop_argc(vm, 1, Some(3), "string->list")?;
+    let argc = pop_argc(vm, 1, Some(3), "string->copy")?;
 
     let end = match argc {
         3 => Some(pop_index(vm)?),
@@ -168,7 +168,7 @@ pub fn string_copy(vm: &mut Vm) -> Result<VCell, Error> {
         _ => None,
     };
 
-    let s = pop_string(vm, "string->list")?;
+    let s = pop_string(vm, "string->copy")?;
     let s = s.borrow();
     let s = s.as_str();
 
