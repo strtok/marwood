@@ -12,6 +12,7 @@ mod number;
 mod ports;
 mod predicate;
 mod string;
+mod symbol;
 mod vector;
 
 /// Built Ins
@@ -35,6 +36,7 @@ mod vector;
 impl Vm {
     pub fn load_builtins(&mut self) {
         string::load_builtins(self);
+        symbol::load_builtins(self);
         self.load_builtin("*", number::multiply);
         self.load_builtin("/", number::divide);
         self.load_builtin("+", number::plus);
@@ -185,6 +187,19 @@ fn pop_string(vm: &mut Vm, proc: &str) -> Result<Rc<RefCell<String>>, Error> {
         vcell => {
             return Err(InvalidSyntax(format!(
                 "bad argument to {}: {} is not a string",
+                proc,
+                vm.heap.get_as_cell(&vcell)
+            )))
+        }
+    }
+}
+
+fn pop_symbol(vm: &mut Vm, proc: &str) -> Result<Rc<String>, Error> {
+    match vm.heap.get(vm.stack.pop()?) {
+        VCell::Symbol(s) => Ok(s),
+        vcell => {
+            return Err(InvalidSyntax(format!(
+                "bad argument to {}: {} is not a symbol",
                 proc,
                 vm.heap.get_as_cell(&vcell)
             )))

@@ -51,7 +51,10 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
         TokenType::True => Ok(Cell::Bool(true)),
         TokenType::False => Ok(Cell::Bool(false)),
         TokenType::Char => parse_char(text, token),
-        TokenType::String => parse_string(text, token),
+        TokenType::String => parse_string(match token.span(text) {
+            "\"\"" => "",
+            span => &span[1..span.len() - 1],
+        }),
         TokenType::Symbol => Ok(Cell::new_symbol(token.span(text))),
         TokenType::NumberPrefix | TokenType::Number => parse_number(text, cur, token),
         TokenType::Dot | TokenType::WhiteSpace => {
@@ -205,14 +208,8 @@ fn parse_char(text: &str, token: &Token) -> Result<Cell, Error> {
 /// Parse String
 ///
 /// Parse the literal string, processing any espace (e.g. \").
-fn parse_string(text: &str, token: &Token) -> Result<Cell, Error> {
-    let span = match token.span(text) {
-        "\"\"" => "",
-        span => &span[1..span.len() - 1],
-    };
-
+pub fn parse_string(span: &str) -> Result<Cell, Error> {
     let mut cur = span.chars().peekable();
-
     let mut output = String::new();
     while let Some(c) = cur.next() {
         if c == '\\' {

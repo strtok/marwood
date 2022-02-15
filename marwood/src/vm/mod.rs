@@ -1,6 +1,6 @@
 use crate::cell::Cell;
 use crate::lex;
-use crate::parse::parse;
+use crate::parse;
 use crate::vm::environment::GlobalEnvironment;
 use crate::vm::heap::Heap;
 use crate::vm::stack::Stack;
@@ -73,7 +73,7 @@ impl Vm {
         let prelude_tokens = lex::scan(prelude_text).expect("invalid prelude");
         let mut it = prelude_tokens.iter().peekable();
         while it.peek().is_some() {
-            let ast = parse(prelude_text, &mut it).expect("invalid prelude");
+            let ast = parse::parse(prelude_text, &mut it).expect("invalid prelude");
             self.eval(&ast).expect("invalid prelude");
         }
     }
@@ -188,4 +188,7 @@ pub enum Error {
 
     #[error("string index {0} out of range of 0..{1}")]
     InvalidStringIndex(usize, usize),
+
+    #[error(transparent)]
+    ParseError(#[from] parse::Error),
 }

@@ -289,15 +289,15 @@ fn scan_number(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     Ok(Token::new((start, end), TokenType::Number))
 }
 
-fn is_initial_number(c: char) -> bool {
+pub fn is_initial_number(c: char) -> bool {
     c.is_digit(10) || c == '+' || c == '-'
 }
 
-fn is_subsequent_number(c: char) -> bool {
+pub fn is_subsequent_number(c: char) -> bool {
     c.is_digit(10) || c.is_digit(16) || c == '.' || c == '/'
 }
 
-fn is_initial_identifier(c: char) -> bool {
+pub fn is_initial_identifier(c: char) -> bool {
     c.is_alphabetic()
         || c as u32 > 0xFF
         || c == '!'
@@ -306,6 +306,7 @@ fn is_initial_identifier(c: char) -> bool {
         || c == '&'
         || c == '*'
         || c == '/'
+        || c == '\\'
         || c == ':'
         || c == '<'
         || c == '='
@@ -316,11 +317,11 @@ fn is_initial_identifier(c: char) -> bool {
         || c == '~'
 }
 
-fn is_special_subsequent(c: char) -> bool {
-    c == '+' || c == '-' || c == '.' || c == '@'
+pub fn is_special_subsequent(c: char) -> bool {
+    c == '+' || c == '-' || c == '.' || c == '@' || c == ';'
 }
 
-fn is_subsequent_identifier(c: char) -> bool {
+pub fn is_subsequent_identifier(c: char) -> bool {
     is_initial_identifier(c) || c.is_digit(10) || is_special_subsequent(c)
 }
 

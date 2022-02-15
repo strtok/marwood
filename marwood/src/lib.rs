@@ -199,6 +199,15 @@ mod integration_test {
     }
 
     #[test]
+    fn symbol_procedures() {
+        evals!["(string->symbol \"12foo\")" => "\\x31;2foo",
+               "(string->symbol \" foo\")" => "\\x20;foo",
+               "(symbol->string (string->symbol \"12foo\"))" =>  "\"12foo\"",
+               "(symbol->string (string->symbol \" foo\"))" =>  "\" foo\""
+        ];
+    }
+
+    #[test]
     fn eval_quote() {
         evals![
             "'1" => "1",
