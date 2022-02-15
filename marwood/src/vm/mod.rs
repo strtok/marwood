@@ -24,7 +24,9 @@ pub mod vcell;
 pub mod vector;
 
 const HEAP_SIZE: usize = 16 * 1024;
+
 struct Display(Box<dyn Fn(&Cell)>);
+struct Write(Box<dyn Fn(&Cell)>);
 
 #[derive(Debug)]
 pub struct Vm {
@@ -43,6 +45,7 @@ pub struct Vm {
 
     /// Display Callback
     display: Display,
+    write: Write,
 }
 
 impl Vm {
@@ -59,6 +62,7 @@ impl Vm {
             acc: VCell::undefined(),
             bp: 0,
             display: Display(Box::new(|cell| print!("{}", cell))),
+            write: Write(Box::new(|cell| print!("{:#}", cell))),
         };
         vm.load_builtins();
         vm.load_prelude();
@@ -103,8 +107,16 @@ impl Vm {
         self.display = Display(func);
     }
 
+    pub fn set_write_fn(&mut self, func: Box<dyn Fn(&Cell)>) {
+        self.write = Write(func);
+    }
+
     pub fn display(&self, cell: &Cell) {
         self.display.display(cell)
+    }
+
+    pub fn write(&self, cell: &Cell) {
+        self.write.write(cell)
     }
 
     pub fn global_symbols(&self) -> Vec<&str> {
@@ -127,9 +139,21 @@ impl Display {
     }
 }
 
+impl Write {
+    fn write(&self, cell: &Cell) {
+        self.0(cell)
+    }
+}
+
 impl Debug for Display {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Display{{}}")
+    }
+}
+
+impl Debug for Write {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Write{{}}")
     }
 }
 

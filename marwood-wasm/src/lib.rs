@@ -22,7 +22,8 @@ impl Marwood {
         #[cfg(feature = "console_error_panic_hook")]
         console_error_panic_hook::set_once();
         let mut vm = Vm::new();
-        vm.set_display_fn(Box::new(|cell| display(&cell.to_string())));
+        vm.set_display_fn(Box::new(|cell| display(&format!("{}", cell))));
+        vm.set_write_fn(Box::new(|cell| display(&format!("{:#}", cell))));
         Marwood { vm }
     }
 

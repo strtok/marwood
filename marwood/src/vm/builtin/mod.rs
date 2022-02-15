@@ -37,6 +37,7 @@ impl Vm {
     pub fn load_builtins(&mut self) {
         string::load_builtins(self);
         symbol::load_builtins(self);
+        ports::load_builtins(self);
         self.load_builtin("*", number::multiply);
         self.load_builtin("/", number::divide);
         self.load_builtin("+", number::plus);
@@ -74,7 +75,6 @@ impl Vm {
         self.load_builtin("char-foldcase", char::char_foldcase);
         self.load_builtin("cons", list::cons);
         self.load_builtin("digit-value", char::digit_value);
-        self.load_builtin("display", ports::display);
         self.load_builtin("eq?", predicate::eq);
         self.load_builtin("equal?", predicate::equal);
         self.load_builtin("eqv?", predicate::eqv);
