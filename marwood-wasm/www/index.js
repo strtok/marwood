@@ -36,11 +36,12 @@ var term = $('#terminal').terminal((text) => {
             }
 
             if (result.completed) {
-                if (result.ok != null) {
+                if (result.ok != null && result.ok.length > 0) {
                     setTimeout(() => { term.echo(result.ok); });
-                } else if (result.error != null) {
+                } else if (result.error != null && result.error.length > 0) {
                     setTimeout(() => { term.echo(result.error); });
-                } else {
+                } else if (term.marwoodDisplayed) {
+                    term.marwoodDisplayed = false;
                     setTimeout(() => { term.echo(""); });
                 }
                 if (remaining_text != null && remaining_text.length > 0) {
@@ -70,6 +71,7 @@ var term = $('#terminal').terminal((text) => {
     });
 }, {
     name: 'marwood',
+    marwoodDisplayed: false,
     greetings: false,
     keydown: () => { parens.set_position(term) },
     keypress: (e) => { parens.paren_match(term, e) },
@@ -99,7 +101,10 @@ var term = $('#terminal').terminal((text) => {
 });
 
 globalThis.marwood_display = (text) => {
-    setTimeout(() => { term.echo(text, { newline: false }) });
+    term.marwoodDisplayed = true;
+    setTimeout(() => {
+        term.echo(text, { newline: false })
+    });
 }
 
 const params = new URLSearchParams(window.location.search);
@@ -112,10 +117,13 @@ if (params.has("eval")) {
         .toString('utf8');
     if (text != null) {
         term.echo("λMARWOOD");
-        term.set_prompt(">");
+        term.set_prompt("> ");
         console.log(text);
         term.exec(text);
     }
 } else {
-    term.echo("λMARWOOD", { typing: true, delay: 100 });
+    term.echo("λMARWOOD", { typing: true, delay: 100 }).then(() => {
+        term.echo("");
+        term.set_prompt("> ");
+    });
 }
