@@ -19,6 +19,8 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("even?", even);
     vm.load_builtin("exact->inexact", exact_inexact);
     vm.load_builtin("inexact->exact", inexact_exact);
+    vm.load_builtin("min", min);
+    vm.load_builtin("max", max);
     vm.load_builtin("modulo", modulo);
     vm.load_builtin("negative?", negative);
     vm.load_builtin("odd?", odd);
@@ -283,4 +285,28 @@ pub fn abs(vm: &mut Vm) -> Result<VCell, Error> {
     let x = pop_number(vm)?;
     let x = x.abs();
     Ok(x.into())
+}
+
+fn min(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 2, None, "min")?;
+    let mut result = pop_number(vm)?;
+    for _ in 0..argc - 1 {
+        let num = pop_number(vm)?;
+        if num < result {
+            result = num;
+        }
+    }
+    Ok(result.into())
+}
+
+fn max(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 2, None, "min")?;
+    let mut result = pop_number(vm)?;
+    for _ in 0..argc - 1 {
+        let num = pop_number(vm)?;
+        if num > result {
+            result = num;
+        }
+    }
+    Ok(result.into())
 }

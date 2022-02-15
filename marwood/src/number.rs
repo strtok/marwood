@@ -200,6 +200,7 @@ impl Number {
             Number::Rational(num) => num.abs().into(),
         }
     }
+
     pub fn modulo(&self, rhs: &Number) -> Option<Number> {
         match self % rhs {
             Some(num) => &(&num + rhs) % rhs,
