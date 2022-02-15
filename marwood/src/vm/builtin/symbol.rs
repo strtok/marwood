@@ -6,6 +6,7 @@ use crate::{lex, parse};
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("string->symbol", string_symbol);
     vm.load_builtin("symbol->string", symbol_string);
+    vm.load_builtin("symbol=?", symbol_eq);
 }
 
 pub fn string_symbol(vm: &mut Vm) -> Result<VCell, Error> {
@@ -29,4 +30,22 @@ pub fn symbol_string(vm: &mut Vm) -> Result<VCell, Error> {
     let sym = pop_symbol(vm, "symbol->string")?;
     let s = parse::parse_string(sym.as_str())?;
     Ok(VCell::string(s.to_string()))
+}
+
+fn symbol_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, None, "symbol=?")?;
+    let mut result = true;
+
+    let mut y = pop_symbol(vm, "symbol=?")?;
+    for _ in 0..argc - 1 {
+        let x = pop_symbol(vm, "symbol=?")?;
+        {
+            if x.as_str() != y.as_str() {
+                result = false;
+            }
+        }
+        y = x;
+    }
+
+    Ok(result.into())
 }

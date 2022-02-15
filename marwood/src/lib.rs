@@ -205,6 +205,9 @@ mod integration_test {
                "(symbol->string (string->symbol \"12foo\"))" =>  "\"12foo\"",
                "(symbol->string (string->symbol \" foo\"))" =>  "\" foo\""
         ];
+        evals!["(symbol=? 'foo 'foo 'foo)" => "#t",
+               "(symbol=? 'foo 'foo 'bar 'foo)" => "#f"
+        ];
     }
 
     #[test]
