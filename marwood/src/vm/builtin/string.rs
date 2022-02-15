@@ -229,7 +229,7 @@ pub fn string_fill(vm: &mut Vm) -> Result<VCell, Error> {
         _ => s.chars().count(),
     };
 
-    let (start, end) = char_substring_offset(&s, start, end)?;
+    let (start, end) = char_substring_offset(s, start, end)?;
     let fill = std::iter::repeat(c).take(count).collect::<String>();
 
     s.replace_range(start..end, &fill);
