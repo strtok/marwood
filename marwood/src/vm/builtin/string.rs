@@ -3,6 +3,7 @@ use crate::vm::builtin::{pop_argc, pop_char, pop_index, pop_string, pop_usize};
 use crate::vm::vcell::VCell;
 use crate::vm::Error::{InvalidStringIndex, InvalidSyntax};
 use crate::vm::{Error, Vm};
+use std::ops::DerefMut;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("make-string", make_string);
@@ -19,6 +20,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("string-ci>=?", string_ci_gt_eq);
     vm.load_builtin("string-append", string_append);
     vm.load_builtin("string-downcase", string_downcase);
+    vm.load_builtin("string-fill!", string_fill);
     vm.load_builtin("string-foldcase", string_foldcase);
     vm.load_builtin("string-length", string_length);
     vm.load_builtin("string-ref", string_ref);
@@ -200,6 +202,38 @@ pub fn string_copy(vm: &mut Vm) -> Result<VCell, Error> {
     let (start, end) = char_substring_offset(s, start, end)?;
     let substr = &s[start..end];
     Ok(VCell::string(substr))
+}
+
+pub fn string_fill(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 2, Some(4), "string->copy")?;
+
+    let end = match argc {
+        4 => Some(pop_index(vm)?),
+        _ => None,
+    };
+
+    let start = match argc {
+        3 | 4 => Some(pop_index(vm)?),
+        _ => None,
+    };
+
+    let c = pop_char(vm)?;
+
+    let s = pop_string(vm, "string->copy")?;
+    let mut s = s.borrow_mut();
+    let s = s.deref_mut();
+
+    let count = match (start, end) {
+        (Some(start), Some(end)) if end >= start => end - start,
+        (Some(start), None) => s.chars().count() - start,
+        _ => s.chars().count(),
+    };
+
+    let (start, end) = char_substring_offset(&s, start, end)?;
+    let fill = std::iter::repeat(c).take(count).collect::<String>();
+
+    s.replace_range(start..end, &fill);
+    Ok(VCell::void())
 }
 
 pub fn string_set(vm: &mut Vm) -> Result<VCell, Error> {

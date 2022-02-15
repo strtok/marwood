@@ -249,6 +249,18 @@ mod integration_test {
         evals![
             "(list->string (string->list \"o🐶o\"))" => "\"o🐶o\""
         ];
+
+        evals![
+            "(define owo \"o🐶o\")" => "#<void>",
+            "(string-fill! owo #\\z)" => "#<void>",
+            "owo" => "\"zzz\"",
+            "(define owo \"o🐶o\")" => "#<void>",
+            "(string-fill! owo #\\z 1)" => "#<void>",
+            "owo" => "\"ozz\"",
+            "(define owo \"o🐶o\")" => "#<void>",
+            "(string-fill! owo #\\z 1 2)" => "#<void>",
+            "owo" => "\"ozo\""
+        ];
     }
 
     #[test]
