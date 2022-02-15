@@ -2,6 +2,24 @@ use crate::vm::builtin::pop_argc;
 use crate::vm::vcell::VCell;
 use crate::vm::{Error, Vm};
 
+pub fn load_builtins(vm: &mut Vm) {
+    vm.load_builtin("boolean?", is_boolean);
+    vm.load_builtin("char?", is_char);
+    vm.load_builtin("eq?", eq);
+    vm.load_builtin("equal?", equal);
+    vm.load_builtin("eqv?", eqv);
+    vm.load_builtin("list?", is_list);
+    vm.load_builtin("not", not);
+    vm.load_builtin("null?", is_null);
+    vm.load_builtin("number?", is_number);
+    vm.load_builtin("pair?", is_pair);
+    vm.load_builtin("port?", is_port);
+    vm.load_builtin("procedure?", is_procedure);
+    vm.load_builtin("string?", is_string);
+    vm.load_builtin("symbol?", is_symbol);
+    vm.load_builtin("vector?", is_vector);
+}
+
 pub fn is_boolean(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "boolean?")?;
     let result = vm.heap.get(vm.stack.pop()?);

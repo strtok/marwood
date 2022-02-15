@@ -3,6 +3,18 @@ use crate::vm::vcell::VCell;
 use crate::vm::Error::{ExpectedPairButFound, InvalidSyntax};
 use crate::vm::{Error, Vm};
 
+pub fn load_builtins(vm: &mut Vm) {
+    vm.load_builtin("append", append);
+    vm.load_builtin("car", car);
+    vm.load_builtin("cdr", cdr);
+    vm.load_builtin("cons", cons);
+    vm.load_builtin("list-ref", list_ref);
+    vm.load_builtin("list-tail", list_tail);
+    vm.load_builtin("reverse", reverse);
+    vm.load_builtin("set-car!", set_car);
+    vm.load_builtin("set-cdr!", set_cdr);
+}
+
 pub fn car(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "car")?;
     Ok(match vm.heap.get(vm.stack.pop()?) {

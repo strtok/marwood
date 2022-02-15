@@ -4,6 +4,29 @@ use crate::vm::vcell::VCell;
 use crate::vm::Error::{InvalidArgs, InvalidSyntax};
 use crate::vm::{Error, Vm};
 
+pub fn load_builtins(vm: &mut Vm) {
+    vm.load_builtin("*", multiply);
+    vm.load_builtin("/", divide);
+    vm.load_builtin("+", plus);
+    vm.load_builtin("-", minus);
+    vm.load_builtin("<", lt);
+    vm.load_builtin("<=", lteq);
+    vm.load_builtin("=", num_equal);
+    vm.load_builtin(">", gt);
+    vm.load_builtin(">=", gteq);
+    vm.load_builtin("%", remainder);
+    vm.load_builtin("abs", abs);
+    vm.load_builtin("even?", even);
+    vm.load_builtin("exact->inexact", exact_inexact);
+    vm.load_builtin("inexact->exact", inexact_exact);
+    vm.load_builtin("negative?", negative);
+    vm.load_builtin("odd?", odd);
+    vm.load_builtin("positive?", positive);
+    vm.load_builtin("quotient", quotient);
+    vm.load_builtin("remainder", remainder);
+    vm.load_builtin("zero?", zero);
+}
+
 pub fn num_equal(vm: &mut Vm) -> Result<VCell, Error> {
     num_comp(vm, "=", |x, y| x == y)
 }

@@ -4,6 +4,17 @@ use crate::vm::vcell::VCell;
 use crate::vm::Error::{ExpectedPairButFound, InvalidSyntax, InvalidVectorIndex};
 use crate::vm::{Error, Vm};
 
+pub fn load_builtins(vm: &mut Vm) {
+    vm.load_builtin("make-vector", make_vector);
+    vm.load_builtin("vector", vector);
+    vm.load_builtin("vector-length", vector_length);
+    vm.load_builtin("vector->list", vector_to_list);
+    vm.load_builtin("list->vector", list_to_vector);
+    vm.load_builtin("vector-ref", vector_ref);
+    vm.load_builtin("vector-set!", vector_set);
+    vm.load_builtin("vector-fill!", vector_fill);
+}
+
 pub fn vector(vm: &mut Vm) -> Result<VCell, Error> {
     let len = pop_argc(vm, 0, None, "vector")?;
     let mut outv = vec![VCell::Undefined; len];

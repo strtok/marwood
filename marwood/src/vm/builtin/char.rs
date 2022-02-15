@@ -4,6 +4,30 @@ use crate::vm::vcell::VCell;
 use crate::vm::Error::InvalidSyntax;
 use crate::vm::{Error, Vm};
 
+pub fn load_builtins(vm: &mut Vm) {
+    vm.load_builtin("char->integer", char_to_integer);
+    vm.load_builtin("char-alphabetic?", is_alphabetic);
+    vm.load_builtin("char-lower-case?", is_lower_case);
+    vm.load_builtin("char-numeric?", is_numeric);
+    vm.load_builtin("char-upper-case?", is_upper_case);
+    vm.load_builtin("char-whitespace?", is_whtespace);
+    vm.load_builtin("char=?", char_eq);
+    vm.load_builtin("char<?", char_lt);
+    vm.load_builtin("char<=?", char_lt_eq);
+    vm.load_builtin("char>?", char_gt);
+    vm.load_builtin("char>=?", char_gt_eq);
+    vm.load_builtin("char-ci=?", char_ci_eq);
+    vm.load_builtin("char-ci<?", char_ci_lt);
+    vm.load_builtin("char-ci<=?", char_ci_lt_eq);
+    vm.load_builtin("char-ci>?", char_ci_gt);
+    vm.load_builtin("char-ci>=?", char_ci_gt_eq);
+    vm.load_builtin("char-upcase", char_upcase);
+    vm.load_builtin("char-downcase", char_downcase);
+    vm.load_builtin("char-foldcase", char_foldcase);
+    vm.load_builtin("digit-value", digit_value);
+    vm.load_builtin("integer->char", integer_to_char);
+}
+
 pub fn is_alphabetic(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "char-alphabetic?")?;
     let c = pop_char(vm)?;
