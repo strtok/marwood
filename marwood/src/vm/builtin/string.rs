@@ -1,7 +1,7 @@
 use crate::number::Number;
 use crate::vm::builtin::{pop_argc, pop_char, pop_index, pop_string, pop_usize};
 use crate::vm::vcell::VCell;
-use crate::vm::Error::InvalidStringIndex;
+use crate::vm::Error::{InvalidStringIndex, InvalidSyntax};
 use crate::vm::{Error, Vm};
 
 pub fn load_builtins(vm: &mut Vm) {
@@ -24,6 +24,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("string-ref", string_ref);
     vm.load_builtin("string-set!", string_set);
     vm.load_builtin("string-upcase", string_upcase);
+    vm.load_builtin("substring", substring);
 }
 
 pub fn string_append(vm: &mut Vm) -> Result<VCell, Error> {
@@ -75,6 +76,46 @@ pub fn string_ref(vm: &mut Vm) -> Result<VCell, Error> {
     }
 }
 
+fn char_offset(s: &str, idx: usize) -> Result<usize, Error> {
+    s.char_indices()
+        .nth(idx)
+        .map(|it| it.0)
+        .ok_or_else(|| InvalidStringIndex(idx, s.chars().count() - 1))
+}
+
+fn char_offset_inclusive(s: &str, idx: usize) -> Result<usize, Error> {
+    s.char_indices()
+        .nth(idx)
+        .map(|it| it.0 + it.1.len_utf8())
+        .ok_or_else(|| InvalidStringIndex(idx, s.chars().count() - 1))
+}
+
+pub fn substring(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 3, Some(3), "substring")?;
+    let mut end = pop_index(vm)?;
+    let start = pop_index(vm)?;
+
+    if end < start {
+        return Err(InvalidSyntax(
+            "invalid arguments for substring: end < start".into(),
+        ));
+    }
+
+    if end == start {
+        return Ok(VCell::string(""));
+    } else {
+        end -= 1;
+    }
+
+    let s = pop_string(vm, "substring")?;
+    let s = s.borrow();
+    let s = s.as_str();
+
+    let start = char_offset(s, start)?;
+    let end = char_offset_inclusive(s, end)?;
+    Ok(VCell::string(s[start..end].to_string()))
+}
+
 pub fn string_set(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 3, Some(3), "string-set!")?;
     let c = pop_char(vm)?;
@@ -84,7 +125,7 @@ pub fn string_set(vm: &mut Vm) -> Result<VCell, Error> {
     let range = s
         .char_indices()
         .nth(idx)
-        .ok_or_else(|| Error::InvalidStringIndex(idx, s.chars().count() - 1))
+        .ok_or_else(|| InvalidStringIndex(idx, s.chars().count() - 1))
         .map(|it| (it.0, it.0 + it.1.len_utf8()))?;
     s.replace_range(range.0..range.1, &c.to_string());
     Ok(VCell::void())

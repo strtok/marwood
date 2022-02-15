@@ -196,6 +196,19 @@ mod integration_test {
             "(string-upcase \"foo\")" => "\"FOO\"",
             "(string-foldcase \"FOO\")" => "\"foo\""
         ];
+
+        evals![
+            "(substring \"o🐶o\" 0 0)" => "\"\"",
+            "(substring \"o🐶o\" 0 1)" => "\"o\"",
+            "(substring \"o🐶o\" 0 2)" => "\"o🐶\"",
+            "(substring \"o🐶o\" 0 3)" => "\"o🐶o\"",
+            "(substring \"o🐶o\" 1 2)" => "\"🐶\"",
+            "(substring \"o🐶o\" 2 3)" => "\"o\"",
+            "(substring \"o🐶o\" 3 3)" => "\"\""
+        ];
+        fails![
+            "(substring \"o🐶o\" 2 1)" => InvalidSyntax("invalid arguments for substring: end < start".into())
+        ];
     }
 
     #[test]
