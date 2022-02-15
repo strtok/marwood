@@ -170,6 +170,10 @@ mod integration_test {
             "owo" => "\"o🐶f\""
         ];
         fails!["(string-set! \"o🐶o\" 3 #\\f)" => InvalidStringIndex(3, 2)];
+        evals![
+            "(string-append \"foo\")" => "\"foo\"",
+            "(string-append \"foo \" \"bar\")" => "\"foo bar\""
+        ];
     }
 
     #[test]

@@ -7,9 +7,20 @@ use crate::vm::{Error, Vm};
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("make-string", make_string);
     vm.load_builtin("string", string);
+    vm.load_builtin("string-append", string_append);
     vm.load_builtin("string-length", string_length);
     vm.load_builtin("string-ref", string_ref);
     vm.load_builtin("string-set!", string_set);
+}
+
+pub fn string_append(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, None, "string-append")?;
+    let mut output = String::new();
+    for _ in 0..argc {
+        let s = pop_string(vm, "string-append")?;
+        output.insert_str(0, s.borrow().as_str());
+    }
+    Ok(VCell::string(output))
 }
 
 pub fn string_length(vm: &mut Vm) -> Result<VCell, Error> {
