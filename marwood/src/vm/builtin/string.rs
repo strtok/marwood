@@ -18,9 +18,12 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("string-ci<=?", string_ci_lt_eq);
     vm.load_builtin("string-ci>=?", string_ci_gt_eq);
     vm.load_builtin("string-append", string_append);
+    vm.load_builtin("string-downcase", string_downcase);
+    vm.load_builtin("string-foldcase", string_foldcase);
     vm.load_builtin("string-length", string_length);
     vm.load_builtin("string-ref", string_ref);
     vm.load_builtin("string-set!", string_set);
+    vm.load_builtin("string-upcase", string_upcase);
 }
 
 pub fn string_append(vm: &mut Vm) -> Result<VCell, Error> {
@@ -38,6 +41,27 @@ pub fn string_length(vm: &mut Vm) -> Result<VCell, Error> {
     let s = pop_string(vm, "string-length")?;
     let s = s.borrow();
     Ok(Number::from(s.chars().count() as u64).into())
+}
+
+pub fn string_downcase(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "string-downcase")?;
+    let s = pop_string(vm, "string-downcase")?;
+    let s = s.borrow().to_lowercase();
+    Ok(VCell::string(s))
+}
+
+pub fn string_upcase(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "string-upcase")?;
+    let s = pop_string(vm, "string-upcase")?;
+    let s = s.borrow().to_uppercase();
+    Ok(VCell::string(s))
+}
+
+pub fn string_foldcase(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "string-foldcase")?;
+    let s = pop_string(vm, "string-foldcase")?;
+    let s = s.borrow().to_lowercase();
+    Ok(VCell::string(s))
 }
 
 pub fn string_ref(vm: &mut Vm) -> Result<VCell, Error> {

@@ -190,7 +190,12 @@ mod integration_test {
             "(string-ci<=? \"Boo\" \"foo\")" => "#t",
             "(string-ci>=? \"Foo\" \"foo\")" => "#t",
             "(string-ci>=? \"Foo\" \"boo\")" => "#t"
-        ]
+        ];
+        evals![
+            "(string-downcase \"FOO\")" => "\"foo\"",
+            "(string-upcase \"foo\")" => "\"FOO\"",
+            "(string-foldcase \"FOO\")" => "\"foo\""
+        ];
     }
 
     #[test]
