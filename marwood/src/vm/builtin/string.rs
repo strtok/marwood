@@ -24,6 +24,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("string-ref", string_ref);
     vm.load_builtin("string-set!", string_set);
     vm.load_builtin("string-upcase", string_upcase);
+    vm.load_builtin("string->list", string_list);
     vm.load_builtin("substring", substring);
 }
 
@@ -90,29 +91,81 @@ fn char_offset_inclusive(s: &str, idx: usize) -> Result<usize, Error> {
         .ok_or_else(|| InvalidStringIndex(idx, s.chars().count() - 1))
 }
 
+fn char_substring_offset(
+    s: &str,
+    start: Option<usize>,
+    end: Option<usize>,
+) -> Result<(usize, usize), Error> {
+    let len = s.chars().count();
+    if start.is_some() && end.is_some() {
+        let start = start.unwrap();
+        let end = end.unwrap();
+        if start == end {
+            return Ok((0, 0));
+        }
+        if end < start {
+            return Err(InvalidSyntax(
+                "invalid substring indices: end < start".into(),
+            ));
+        }
+    }
+
+    if start == Some(len) {
+        return Ok((0, 0));
+    }
+
+    let start = match start {
+        Some(start) => char_offset(s, start)?,
+        None => 0,
+    };
+
+    let end = match end {
+        Some(end) => char_offset_inclusive(s, end - 1)?,
+        None => s.len(),
+    };
+
+    Ok((start, end))
+}
+
+pub fn string_list(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, Some(3), "string->list")?;
+
+    let end = match argc {
+        3 => Some(pop_index(vm)?),
+        _ => None,
+    };
+
+    let start = match argc {
+        2 | 3 => Some(pop_index(vm)?),
+        _ => None,
+    };
+
+    let s = pop_string(vm, "string->list")?;
+    let s = s.borrow();
+    let s = s.as_str();
+
+    let (start, end) = char_substring_offset(s, start, end)?;
+    let substr = &s[start..end];
+
+    let mut list = vm.heap.put(VCell::nil());
+    for c in substr.chars().rev() {
+        let c = vm.heap.put(VCell::from(c));
+        list = vm.heap.put(VCell::pair(c.as_ptr()?, list.as_ptr()?));
+    }
+
+    Ok(list)
+}
+
 pub fn substring(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 3, Some(3), "substring")?;
-    let mut end = pop_index(vm)?;
+    let end = pop_index(vm)?;
     let start = pop_index(vm)?;
-
-    if end < start {
-        return Err(InvalidSyntax(
-            "invalid arguments for substring: end < start".into(),
-        ));
-    }
-
-    if end == start {
-        return Ok(VCell::string(""));
-    } else {
-        end -= 1;
-    }
 
     let s = pop_string(vm, "substring")?;
     let s = s.borrow();
     let s = s.as_str();
 
-    let start = char_offset(s, start)?;
-    let end = char_offset_inclusive(s, end)?;
+    let (start, end) = char_substring_offset(s, Some(start), Some(end))?;
     Ok(VCell::string(s[start..end].to_string()))
 }
 

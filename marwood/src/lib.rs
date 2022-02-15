@@ -207,7 +207,21 @@ mod integration_test {
             "(substring \"o🐶o\" 3 3)" => "\"\""
         ];
         fails![
-            "(substring \"o🐶o\" 2 1)" => InvalidSyntax("invalid arguments for substring: end < start".into())
+            "(substring \"o🐶o\" 2 1)" => InvalidSyntax("invalid substring indices: end < start".into())
+        ];
+
+        evals![
+            "(string->list \"o🐶o\")" => "(#\\o #\\🐶 #\\o)",
+            "(string->list \"o🐶o\" 0)" => "(#\\o #\\🐶 #\\o)",
+            "(string->list \"o🐶o\" 1)" => "(#\\🐶 #\\o)",
+            "(string->list \"o🐶o\" 2)" => "(#\\o)",
+            "(string->list \"o🐶o\" 3)" => "()",
+            "(string->list \"o🐶o\" 0 1)" => "(#\\o)",
+            "(string->list \"o🐶o\" 0 2)" => "(#\\o #\\🐶)",
+            "(string->list \"o🐶o\" 0 3)" => "(#\\o #\\🐶 #\\o)",
+            "(string->list \"o🐶o\" 1 2)" => "(#\\🐶)",
+            "(string->list \"o🐶o\" 2 3)" => "(#\\o)",
+            "(string->list \"o🐶o\" 3 3)" => "()"
         ];
     }
 
