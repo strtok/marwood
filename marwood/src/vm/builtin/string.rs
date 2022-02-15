@@ -97,9 +97,8 @@ fn char_substring_offset(
     end: Option<usize>,
 ) -> Result<(usize, usize), Error> {
     let len = s.chars().count();
-    if start.is_some() && end.is_some() {
-        let start = start.unwrap();
-        let end = end.unwrap();
+
+    if let (Some(start), Some(end)) = (start, end) {
         if start == end {
             return Ok((0, 0));
         }
