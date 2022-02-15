@@ -74,8 +74,8 @@ var term = $('#terminal').terminal((text) => {
     keydown: () => { parens.set_position(term) },
     keypress: (e) => { parens.paren_match(term, e) },
     keymap: {
-        ENTER: async (e, original) => {
-            let check = await vm.check(term.get_command());
+        ENTER: (e, original) => {
+            let check = vm.check(term.get_command());
             if (check.eof) {
                 term.insert('\n')
             } else {
@@ -86,14 +86,14 @@ var term = $('#terminal').terminal((text) => {
     doubleTab: (text, matches, echo_command) => {
         echo_command();
         term.echo(matches
-            .map(async (match) => await vm.last_token(match))
+            .map((match) => vm.last_token(match))
             .join(" "));
     },
     clear: false,
     completionEscape: false,
     wordAutocomplete: false,
-    completion: async (text) => {
-        let result = await vm.autocomplete(text);
+    completion: (text) => {
+        let result = vm.autocomplete(text);
         return result.completions;
     }
 });
