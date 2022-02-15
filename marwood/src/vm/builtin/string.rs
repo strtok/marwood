@@ -7,6 +7,16 @@ use crate::vm::{Error, Vm};
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("make-string", make_string);
     vm.load_builtin("string", string);
+    vm.load_builtin("string=?", string_eq);
+    vm.load_builtin("string<?", string_lt);
+    vm.load_builtin("string>?", string_gt);
+    vm.load_builtin("string<=?", string_lt_eq);
+    vm.load_builtin("string>=?", string_gt_eq);
+    vm.load_builtin("string-ci=?", string_ci_eq);
+    vm.load_builtin("string-ci<?", string_ci_lt);
+    vm.load_builtin("string-ci>?", string_ci_gt);
+    vm.load_builtin("string-ci<=?", string_ci_lt_eq);
+    vm.load_builtin("string-ci>=?", string_ci_gt_eq);
     vm.load_builtin("string-append", string_append);
     vm.load_builtin("string-length", string_length);
     vm.load_builtin("string-ref", string_ref);
@@ -75,4 +85,74 @@ pub fn string(vm: &mut Vm) -> Result<VCell, Error> {
         *v.get_mut(argc - it - 1).unwrap() = pop_char(vm)?;
     }
     Ok(VCell::string(v.into_iter().collect::<String>()))
+}
+
+pub fn string_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string=?", |x, y| x == y)
+}
+
+pub fn string_lt(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string<?", |x, y| x < y)
+}
+
+pub fn string_gt(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string>?", |x, y| x > y)
+}
+
+pub fn string_lt_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string<=?", |x, y| x <= y)
+}
+
+pub fn string_gt_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string>=?", |x, y| x >= y)
+}
+
+pub fn string_ci_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string-ci=?", |x, y| {
+        x.to_lowercase() == y.to_lowercase()
+    })
+}
+
+pub fn string_ci_lt(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string-ci<?", |x, y| {
+        x.to_lowercase() < y.to_lowercase()
+    })
+}
+
+pub fn string_ci_gt(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string-ci>?", |x, y| {
+        x.to_lowercase() > y.to_lowercase()
+    })
+}
+
+pub fn string_ci_lt_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string-ci<=?", |x, y| {
+        x.to_lowercase() <= y.to_lowercase()
+    })
+}
+
+pub fn string_ci_gt_eq(vm: &mut Vm) -> Result<VCell, Error> {
+    string_comp(vm, "string-ci>=?", |x, y| {
+        x.to_lowercase() >= y.to_lowercase()
+    })
+}
+
+fn string_comp(vm: &mut Vm, name: &str, comp: impl Fn(&str, &str) -> bool) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, None, name)?;
+    let mut result = true;
+
+    let mut y = pop_string(vm, name)?;
+    for _ in 0..argc - 1 {
+        let x = pop_string(vm, name)?;
+        {
+            let y_s = y.borrow();
+            let x_s = x.borrow();
+            if !comp(x_s.as_str(), y_s.as_str()) {
+                result = false;
+            }
+        }
+        y = x;
+    }
+
+    Ok(result.into())
 }

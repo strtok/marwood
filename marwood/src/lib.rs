@@ -174,6 +174,23 @@ mod integration_test {
             "(string-append \"foo\")" => "\"foo\"",
             "(string-append \"foo \" \"bar\")" => "\"foo bar\""
         ];
+
+        evals![
+            "(string=? \"foo\" \"foo\")" => "#t",
+            "(string<? \"boo\" \"foo\")" => "#t",
+            "(string>? \"foo\" \"boo\")" => "#t",
+            "(string<=? \"foo\" \"foo\")" => "#t",
+            "(string<=? \"boo\" \"foo\")" => "#t",
+            "(string>=? \"foo\" \"foo\")" => "#t",
+            "(string>=? \"foo\" \"boo\")" => "#t",
+            "(string-ci=? \"Foo\" \"foo\")" => "#t",
+            "(string-ci<? \"Boo\" \"foo\")" => "#t",
+            "(string-ci>? \"Foo\" \"boo\")" => "#t",
+            "(string-ci<=? \"Foo\" \"foo\")" => "#t",
+            "(string-ci<=? \"Boo\" \"foo\")" => "#t",
+            "(string-ci>=? \"Foo\" \"foo\")" => "#t",
+            "(string-ci>=? \"Foo\" \"boo\")" => "#t"
+        ]
     }
 
     #[test]
