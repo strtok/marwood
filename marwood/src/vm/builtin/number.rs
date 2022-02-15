@@ -19,6 +19,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("even?", even);
     vm.load_builtin("exact->inexact", exact_inexact);
     vm.load_builtin("inexact->exact", inexact_exact);
+    vm.load_builtin("modulo", modulo);
     vm.load_builtin("negative?", negative);
     vm.load_builtin("odd?", odd);
     vm.load_builtin("positive?", positive);
@@ -210,6 +211,27 @@ pub fn remainder(vm: &mut Vm) -> Result<VCell, Error> {
         None => {
             return Err(InvalidSyntax(format!(
                 "remainder is undefined for {} % {}",
+                x, y
+            )))
+        }
+    };
+    Ok(result.into())
+}
+
+pub fn modulo(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "modulo")?;
+    let y = pop_integer(vm)?;
+    let x = pop_integer(vm)?;
+
+    if y.is_zero() {
+        return Err(InvalidSyntax("modulo is undefined for 0".into()));
+    }
+
+    let result = match x.modulo(&y) {
+        Some(num) => num,
+        None => {
+            return Err(InvalidSyntax(format!(
+                "modulo is undefined for {} % {}",
                 x, y
             )))
         }

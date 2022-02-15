@@ -120,7 +120,9 @@ impl Number {
     pub fn to_usize(&self) -> Option<usize> {
         match self {
             Number::Fixnum(num) if *num >= 0 => Some(*num as usize),
-            Number::BigInt(num) if **num >= BigInt::from(0) && **num <= BigInt::from(usize::MAX) => {
+            Number::BigInt(num)
+                if **num >= BigInt::from(0) && **num <= BigInt::from(usize::MAX) =>
+            {
                 Some(num.to_usize().unwrap())
             }
             _ => None,
@@ -196,6 +198,12 @@ impl Number {
             Number::Float(num) => num.abs().into(),
             Number::BigInt(num) => num.abs().into(),
             Number::Rational(num) => num.abs().into(),
+        }
+    }
+    pub fn modulo(&self, rhs: &Number) -> Option<Number> {
+        match self % rhs {
+            Some(num) => &(&num + rhs) % rhs,
+            None => None,
         }
     }
 }
@@ -1171,5 +1179,13 @@ mod tests {
         );
 
         assert_eq!(Number::from(Rational32::new(1, 2)) % Number::from(70), None);
+    }
+
+    #[test]
+    fn modulo() {
+        assert_eq!(
+            Number::from(-21).modulo(&Number::from(4)),
+            Some(Number::from(3))
+        );
     }
 }

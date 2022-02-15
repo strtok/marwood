@@ -380,6 +380,10 @@ mod integration_test {
             "(remainder 10 0)" => InvalidSyntax("remainder is undefined for 0".into()),
             "(quotient 10 0)" => InvalidSyntax("quotient is undefined for 0".into())
         ];
+
+        evals![
+            "(modulo -21 4)" => "3"
+        ];
     }
 
     #[test]
