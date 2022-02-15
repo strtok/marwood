@@ -158,6 +158,18 @@ mod integration_test {
             "(string-ref \"o🐶o\" 2)" => "#\\o"
         ];
         fails!["(string-ref \"o🐶o\" 3)" => InvalidStringIndex(3, 2)];
+        evals![
+            "(define owo \"o🐶o\")" => "#<void>",
+            "(string-set! owo 0 #\\f)" => "#<void>",
+            "owo" => "\"f🐶o\"",
+            "(define owo \"o🐶o\")" => "#<void>",
+            "(string-set! owo 1 #\\w)" => "#<void>",
+            "owo" => "\"owo\"",
+            "(define owo \"o🐶o\")" => "#<void>",
+            "(string-set! owo 2 #\\f)" => "#<void>",
+            "owo" => "\"o🐶f\""
+        ];
+        fails!["(string-set! \"o🐶o\" 3 #\\f)" => InvalidStringIndex(3, 2)];
     }
 
     #[test]
