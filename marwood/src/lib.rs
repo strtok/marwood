@@ -245,6 +245,10 @@ mod integration_test {
         fails![
             "(list->string '(10))" => InvalidSyntax("list->string expected char but found 10".into())
         ];
+
+        evals![
+            "(list->string (string->list \"o🐶o\"))" => "\"o🐶o\""
+        ];
     }
 
     #[test]

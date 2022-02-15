@@ -25,17 +25,17 @@ pub fn named_to_char(text: &str) -> Option<char> {
 
 pub fn write_escaped_char(c: char, f: &mut Formatter<'_>) -> std::fmt::Result {
     match c {
-        ' ' => write!(f, "\\#space"),
-        '\n' => write!(f, "\\#newline"),
+        ' ' => write!(f, "#\\space"),
+        '\n' => write!(f, "#\\newline"),
         c => match c as u32 {
-            ALARM => write!(f, "\\#alarm"),
-            BACKSPACE => write!(f, "\\#backspace"),
-            DELETE => write!(f, "\\#delete"),
-            ESCAPE => write!(f, "\\#escape"),
-            NULL => write!(f, "\\#null"),
-            RETURN => write!(f, "\\#return"),
-            TAB => write!(f, "\\#tab"),
-            _ => write!(f, "\\#{}", c),
+            ALARM => write!(f, "#\\alarm"),
+            BACKSPACE => write!(f, "#\\backspace"),
+            DELETE => write!(f, "#\\delete"),
+            ESCAPE => write!(f, "#\\escape"),
+            NULL => write!(f, "#\\null"),
+            RETURN => write!(f, "#\\return"),
+            TAB => write!(f, "#\\tab"),
+            _ => write!(f, "#\\{}", c),
         },
     }
 }
