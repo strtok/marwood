@@ -306,6 +306,7 @@ mod integration_test {
 
         evals![
             "(eq? 0 0)" => "#t",
+            "(eq? #\\a #\\a)" => "#t",
             "(eq? '() '())" => "#t",
             "(eq? #f #f)" => "#t",
             "(eq? #t #t)" => "#t",
@@ -331,7 +332,9 @@ mod integration_test {
             "(equal? #f #f)" => "#t",
             "(equal? #t #t)" => "#t",
             "(equal? 'foo 'foo)" => "#t",
-            "(equal? #(1 2 3) #(1 2 3))" => "#t"
+            "(equal? #(1 2 3) #(1 2 3))" => "#t",
+            "(equal? \"foo\" \"foo\")" => "#t",
+            "(equal? #\\a #\\a)" => "#t"
         ];
     }
 

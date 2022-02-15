@@ -43,6 +43,7 @@ impl Vm {
             (VCell::Number(left), VCell::Number(right)) => Ok(left == right),
             (VCell::Nil, VCell::Nil) => Ok(true),
             (VCell::Pair(_, _), VCell::Pair(_, _)) => Ok(left == right),
+            (VCell::Char(left), VCell::Char(right)) => Ok(left == right),
             _ => Ok(false),
         }
     }
@@ -72,6 +73,9 @@ impl Vm {
         }
         if left.is_vector() && right.is_vector() {
             return self.compare_vector(left, right);
+        }
+        if left.is_string() && right.is_string() {
+            return Ok(left.as_string()?.borrow().as_str() == right.as_string()?.borrow().as_str());
         }
         self.eqv(&left, &right)
     }
