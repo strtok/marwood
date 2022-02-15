@@ -25,7 +25,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("string-set!", string_set);
     vm.load_builtin("string-upcase", string_upcase);
     vm.load_builtin("string->list", string_list);
-    vm.load_builtin("substring", substring);
+    vm.load_builtin("string-copy", string_copy);
 }
 
 pub fn string_append(vm: &mut Vm) -> Result<VCell, Error> {
@@ -156,17 +156,26 @@ pub fn string_list(vm: &mut Vm) -> Result<VCell, Error> {
     Ok(list)
 }
 
-pub fn substring(vm: &mut Vm) -> Result<VCell, Error> {
-    pop_argc(vm, 3, Some(3), "substring")?;
-    let end = pop_index(vm)?;
-    let start = pop_index(vm)?;
+pub fn string_copy(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, Some(3), "string->list")?;
 
-    let s = pop_string(vm, "substring")?;
+    let end = match argc {
+        3 => Some(pop_index(vm)?),
+        _ => None,
+    };
+
+    let start = match argc {
+        2 | 3 => Some(pop_index(vm)?),
+        _ => None,
+    };
+
+    let s = pop_string(vm, "string->list")?;
     let s = s.borrow();
     let s = s.as_str();
 
-    let (start, end) = char_substring_offset(s, Some(start), Some(end))?;
-    Ok(VCell::string(s[start..end].to_string()))
+    let (start, end) = char_substring_offset(s, start, end)?;
+    let substr = &s[start..end];
+    Ok(VCell::string(substr))
 }
 
 pub fn string_set(vm: &mut Vm) -> Result<VCell, Error> {

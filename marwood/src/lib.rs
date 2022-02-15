@@ -211,6 +211,21 @@ mod integration_test {
         ];
 
         evals![
+            "(string-copy \"o🐶o\")" => "\"o🐶o\"",
+            "(string-copy \"o🐶o\" 0)" => "\"o🐶o\"",
+            "(string-copy \"o🐶o\" 1)" => "\"🐶o\"",
+            "(string-copy \"o🐶o\" 2)" => "\"o\"",
+            "(string-copy \"o🐶o\" 3)" => "\"\"",
+            "(string-copy \"o🐶o\" 0 0)" => "\"\"",
+            "(string-copy \"o🐶o\" 0 1)" => "\"o\"",
+            "(string-copy \"o🐶o\" 0 2)" => "\"o🐶\"",
+            "(string-copy \"o🐶o\" 0 3)" => "\"o🐶o\"",
+            "(string-copy \"o🐶o\" 1 2)" => "\"🐶\"",
+            "(string-copy \"o🐶o\" 2 3)" => "\"o\"",
+            "(string-copy \"o🐶o\" 3 3)" => "\"\""
+        ];
+
+        evals![
             "(string->list \"o🐶o\")" => "(#\\o #\\🐶 #\\o)",
             "(string->list \"o🐶o\" 0)" => "(#\\o #\\🐶 #\\o)",
             "(string->list \"o🐶o\" 1)" => "(#\\🐶 #\\o)",

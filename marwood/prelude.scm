@@ -151,3 +151,6 @@
     ((and (pair? (car alist))
           (equal? (caar alist) obj)) (car alist))
     (else (assoc obj (cdr alist)))))
+
+(define (substring string start end)
+    (string-copy string start end))
