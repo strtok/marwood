@@ -116,10 +116,11 @@ if (params.has("eval")) {
     text = Buffer.from(text, "base64")
         .toString('utf8');
     if (text != null) {
-        term.echo("λMARWOOD");
-        term.set_prompt("> ");
-        console.log(text);
-        term.exec(text);
+        term.echo("λMARWOOD", { typing: true, delay: 100 }).then(() => {
+            term.echo("");
+            term.set_prompt("> ");
+            term.exec(text);
+        });
     }
 } else {
     term.echo("λMARWOOD", { typing: true, delay: 100 }).then(() => {
