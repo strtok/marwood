@@ -119,7 +119,9 @@ if (params.has("eval")) {
         term.echo("λMARWOOD", { typing: true, delay: 100 }).then(() => {
             term.echo("");
             term.set_prompt("> ");
-            term.exec(text);
+            term.exec(text).then(() => {
+                term.history().append(text);
+            });
         });
     }
 } else {
