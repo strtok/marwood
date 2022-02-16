@@ -412,6 +412,12 @@ mod integration_test {
             "(round 3.5)" => "4",
             "(round 7/2)" => "4"
         ];
+
+        evals![
+            "(numerator (/ 6 4))" => "3",
+            "(denominator (/ 6 4))" => "2",
+            "(denominator (exact->inexact (/ 6 4)))" => "2"
+        ];
     }
 
     #[test]

@@ -17,6 +17,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("%", remainder);
     vm.load_builtin("abs", abs);
     vm.load_builtin("ceiling", ceiling);
+    vm.load_builtin("denominator", denominator);
     vm.load_builtin("even?", even);
     vm.load_builtin("exact->inexact", exact_inexact);
     vm.load_builtin("floor", floor);
@@ -24,6 +25,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("min", min);
     vm.load_builtin("max", max);
     vm.load_builtin("modulo", modulo);
+    vm.load_builtin("numerator", numerator);
     vm.load_builtin("negative?", negative);
     vm.load_builtin("odd?", odd);
     vm.load_builtin("positive?", positive);
@@ -316,6 +318,20 @@ pub fn truncate(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "truncate")?;
     let x = pop_number(vm)?;
     let x = x.truncate();
+    Ok(x.into())
+}
+
+pub fn numerator(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "numerator")?;
+    let x = pop_number(vm)?;
+    let x = x.numerator();
+    Ok(x.into())
+}
+
+pub fn denominator(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "denominator")?;
+    let x = pop_number(vm)?;
+    let x = x.denominator();
     Ok(x.into())
 }
 

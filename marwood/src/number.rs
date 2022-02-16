@@ -209,6 +209,30 @@ impl Number {
         }
     }
 
+    pub fn numerator(&self) -> Number {
+        match self {
+            Number::Fixnum(_) => self.clone(),
+            Number::Float(num) => match BigRational::from_f64(*num) {
+                Some(rational) => Number::from(rational.numer().clone()),
+                None => self.clone(),
+            },
+            Number::BigInt(_) => self.clone(),
+            Number::Rational(num) => (*num.numer() as i64).into(),
+        }
+    }
+
+    pub fn denominator(&self) -> Number {
+        match self {
+            Number::Fixnum(_) => 1.into(),
+            Number::Float(num) => match BigRational::from_f64(*num) {
+                Some(rational) => Number::from(rational.denom().clone()),
+                None => self.clone(),
+            },
+            Number::BigInt(_) => 1.into(),
+            Number::Rational(num) => (*num.denom() as i64).into(),
+        }
+    }
+
     pub fn abs(&self) -> Number {
         match self {
             Number::Fixnum(num) => num.abs().into(),
