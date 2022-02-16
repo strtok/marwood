@@ -16,8 +16,10 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin(">=", gteq);
     vm.load_builtin("%", remainder);
     vm.load_builtin("abs", abs);
+    vm.load_builtin("ceiling", ceiling);
     vm.load_builtin("even?", even);
     vm.load_builtin("exact->inexact", exact_inexact);
+    vm.load_builtin("floor", floor);
     vm.load_builtin("inexact->exact", inexact_exact);
     vm.load_builtin("min", min);
     vm.load_builtin("max", max);
@@ -27,6 +29,8 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("positive?", positive);
     vm.load_builtin("quotient", quotient);
     vm.load_builtin("remainder", remainder);
+    vm.load_builtin("round", round);
+    vm.load_builtin("truncate", truncate);
     vm.load_builtin("zero?", zero);
 }
 
@@ -284,6 +288,34 @@ pub fn abs(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "exact->inexact")?;
     let x = pop_number(vm)?;
     let x = x.abs();
+    Ok(x.into())
+}
+
+pub fn ceiling(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "ceiling")?;
+    let x = pop_number(vm)?;
+    let x = x.ceil();
+    Ok(x.into())
+}
+
+pub fn floor(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "floor")?;
+    let x = pop_number(vm)?;
+    let x = x.floor();
+    Ok(x.into())
+}
+
+pub fn round(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "round")?;
+    let x = pop_number(vm)?;
+    let x = x.round();
+    Ok(x.into())
+}
+
+pub fn truncate(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "truncate")?;
+    let x = pop_number(vm)?;
+    let x = x.truncate();
     Ok(x.into())
 }
 

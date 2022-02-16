@@ -400,6 +400,18 @@ mod integration_test {
             "(max 0 100)" => "100",
             "(max 0 -100 100)" => "100"
         ];
+
+        evals![
+            "(floor -4.3)" => "-5",
+            "(ceiling -4.3)" => "-4",
+            "(truncate -4.3)" => "-4",
+            "(round -4.3)" => "-4",
+            "(floor 3.5)" => "3",
+            "(ceiling 3.5)" => "4",
+            "(truncate 3.5)" => "3",
+            "(round 3.5)" => "4",
+            "(round 7/2)" => "4"
+        ]
     }
 
     #[test]

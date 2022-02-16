@@ -207,6 +207,42 @@ impl Number {
             None => None,
         }
     }
+
+    pub fn round(&self) -> Number {
+        match self {
+            Number::Fixnum(_) => self.clone(),
+            Number::Float(num) => num.round().into(),
+            Number::BigInt(_) => self.clone(),
+            Number::Rational(num) => num.round().into(),
+        }
+    }
+
+    pub fn floor(&self) -> Number {
+        match self {
+            Number::Fixnum(_) => self.clone(),
+            Number::Float(num) => num.floor().into(),
+            Number::BigInt(_) => self.clone(),
+            Number::Rational(num) => num.floor().into(),
+        }
+    }
+
+    pub fn ceil(&self) -> Number {
+        match self {
+            Number::Fixnum(_) => self.clone(),
+            Number::Float(num) => num.ceil().into(),
+            Number::BigInt(_) => self.clone(),
+            Number::Rational(num) => num.ceil().into(),
+        }
+    }
+
+    pub fn truncate(&self) -> Number {
+        match self {
+            Number::Fixnum(_) => self.clone(),
+            Number::Float(num) => num.trunc().into(),
+            Number::BigInt(_) => self.clone(),
+            Number::Rational(num) => num.trunc().into(),
+        }
+    }
 }
 
 impl Eq for Number {}
@@ -1188,5 +1224,20 @@ mod tests {
             Number::from(-21).modulo(&Number::from(4)),
             Some(Number::from(3))
         );
+    }
+
+    #[test]
+    fn round() {
+        assert_eq!(Number::from(-4.3).floor(), Number::from(-5));
+        assert_eq!(Number::from(-4.3).ceil(), Number::from(-4));
+        assert_eq!(Number::from(-4.3).truncate(), Number::from(-4));
+        assert_eq!(Number::from(-4.3).round(), Number::from(-4));
+
+        assert_eq!(Number::from(3.5).floor(), Number::from(3));
+        assert_eq!(Number::from(3.5).ceil(), Number::from(4));
+        assert_eq!(Number::from(3.5).truncate(), Number::from(3));
+        assert_eq!(Number::from(3.5).round(), Number::from(4));
+
+        assert_eq!(Number::from(Rational32::new(7, 2)).round(), Number::from(4));
     }
 }
