@@ -11,13 +11,18 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("list?", is_list);
     vm.load_builtin("not", not);
     vm.load_builtin("null?", is_null);
-    vm.load_builtin("number?", is_number);
     vm.load_builtin("pair?", is_pair);
     vm.load_builtin("port?", is_port);
     vm.load_builtin("procedure?", is_procedure);
     vm.load_builtin("string?", is_string);
     vm.load_builtin("symbol?", is_symbol);
     vm.load_builtin("vector?", is_vector);
+
+    vm.load_builtin("number?", is_number);
+    vm.load_builtin("complex?", is_complex);
+    vm.load_builtin("real?", is_real);
+    vm.load_builtin("rational?", is_rational);
+    vm.load_builtin("integer?", is_integer);
 }
 
 pub fn is_boolean(vm: &mut Vm) -> Result<VCell, Error> {
@@ -42,6 +47,46 @@ pub fn is_number(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "number?")?;
     let result = vm.heap.get(vm.stack.pop()?);
     Ok(result.is_number().into())
+}
+
+pub fn is_complex(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "complex?")?;
+    let result = vm.heap.get(vm.stack.pop()?);
+    Ok(result
+        .as_number()
+        .map(|it| it.is_complex())
+        .unwrap_or(false)
+        .into())
+}
+
+pub fn is_real(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "real?")?;
+    let result = vm.heap.get(vm.stack.pop()?);
+    Ok(result
+        .as_number()
+        .map(|it| it.is_real())
+        .unwrap_or(false)
+        .into())
+}
+
+pub fn is_rational(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "rational?")?;
+    let result = vm.heap.get(vm.stack.pop()?);
+    Ok(result
+        .as_number()
+        .map(|it| it.is_rational())
+        .unwrap_or(false)
+        .into())
+}
+
+pub fn is_integer(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "integer?")?;
+    let result = vm.heap.get(vm.stack.pop()?);
+    Ok(result
+        .as_number()
+        .map(|it| it.is_integer())
+        .unwrap_or(false)
+        .into())
 }
 
 pub fn is_pair(vm: &mut Vm) -> Result<VCell, Error> {

@@ -349,6 +349,13 @@ impl VCell {
         }
     }
 
+    pub fn as_number(&self) -> Result<&Number, Error> {
+        match self {
+            VCell::Number(num) => Ok(num),
+            _ => Err(ExpectedType(NUMBER_TYPE_TEXT, self.type_text())),
+        }
+    }
+
     pub fn as_ip(&self) -> Result<(usize, usize), Error> {
         match self {
             VCell::InstructionPointer(lambda, ip) => Ok((*lambda, *ip)),

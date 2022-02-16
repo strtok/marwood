@@ -169,6 +169,23 @@ impl Number {
         }
     }
 
+    pub fn is_complex(&self) -> bool {
+        true
+    }
+
+    pub fn is_real(&self) -> bool {
+        true
+    }
+
+    pub fn is_rational(&self) -> bool {
+        match self {
+            Number::Fixnum(_) => true,
+            Number::Float(_) => false,
+            Number::BigInt(_) => true,
+            Number::Rational(_) => true,
+        }
+    }
+
     pub fn is_zero(&self) -> bool {
         self == &Number::from(0)
     }

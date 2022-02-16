@@ -411,7 +411,7 @@ mod integration_test {
             "(truncate 3.5)" => "3",
             "(round 3.5)" => "4",
             "(round 7/2)" => "4"
-        ]
+        ];
     }
 
     #[test]
@@ -475,7 +475,31 @@ mod integration_test {
         evals![
             "(number? 10)" => "#t",
             "(number? '10)" => "#t",
-            "(number? 'apples)" => "#f"
+            "(number? 'apples)" => "#f",
+            "(integer? 10)" => "#t",
+            "(integer? 10/5)" => "#t",
+            "(integer? 10/3)" => "#f",
+            "(integer? 10.3)" => "#f",
+
+            "(integer? 10)" => "#t",
+            "(integer? 10/5)" => "#t",
+            "(integer? 10/3)" => "#f",
+            "(integer? 10.3)" => "#f",
+
+            "(real? 10)" => "#t",
+            "(real? 10/5)" => "#t",
+            "(real? 10/3)" => "#t",
+            "(real? 10.3)" => "#t",
+
+            "(complex? 10)" => "#t",
+            "(complex? 10/5)" => "#t",
+            "(complex? 10/3)" => "#t",
+            "(complex? 10.3)" => "#t",
+
+            "(rational? 10)" => "#t",
+            "(rational? 10/5)" => "#t",
+            "(rational? 10/3)" => "#t",
+            "(rational? 10.3)" => "#f"
         ];
 
         evals![
