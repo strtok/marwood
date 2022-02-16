@@ -45,7 +45,13 @@ var term = $('#terminal').terminal((text) => {
                     setTimeout(() => { term.echo(""); });
                 }
                 if (remaining_text != null && remaining_text.length > 0) {
-                    setTimeout(() => { term.exec(remaining_text); });
+                    console.log(`REMAINING: ${remaining_text}`);
+                    setTimeout(() => {
+                        term.history().disable();
+                        term.exec(remaining_text).then(() => {
+                            term.history().enable();
+                        });
+                    });
                 }
                 return true;
             }
@@ -119,9 +125,8 @@ if (params.has("eval")) {
         term.echo("λMARWOOD", { typing: true, delay: 100 }).then(() => {
             term.echo("");
             term.set_prompt("> ");
-            term.exec(text).then(() => {
-                term.history().append(text);
-            });
+            term.history().append(text);
+            term.exec(text);
         });
     }
 } else {
