@@ -285,6 +285,24 @@ impl Number {
             Number::Rational(num) => num.trunc().into(),
         }
     }
+
+    pub fn pow(&self, exp: u32) -> Number {
+        match self {
+            Number::Fixnum(num) => match num.checked_pow(exp) {
+                Some(num) => num.into(),
+                None => BigInt::from(*num).pow(exp).into(),
+            },
+            Number::Float(num) => num.powf(exp as f64).into(),
+            Number::BigInt(lhs) => lhs.pow(exp).into(),
+            Number::Rational(num) => {
+                if exp.to_i32().is_some() {
+                    num.pow(exp as i32).into()
+                } else {
+                    num.to_f64().unwrap_or(f64::NAN).powf(exp as f64).into()
+                }
+            }
+        }
+    }
 }
 
 impl Eq for Number {}

@@ -20,6 +20,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("denominator", denominator);
     vm.load_builtin("even?", even);
     vm.load_builtin("exact->inexact", exact_inexact);
+    vm.load_builtin("expt", expt);
     vm.load_builtin("floor", floor);
     vm.load_builtin("inexact->exact", inexact_exact);
     vm.load_builtin("min", min);
@@ -29,6 +30,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("number->string", number_string);
     vm.load_builtin("negative?", negative);
     vm.load_builtin("odd?", odd);
+    vm.load_builtin("pow", expt);
     vm.load_builtin("positive?", positive);
     vm.load_builtin("quotient", quotient);
     vm.load_builtin("remainder", remainder);
@@ -268,6 +270,21 @@ pub fn quotient(vm: &mut Vm) -> Result<VCell, Error> {
         }
     };
     Ok(result.into())
+}
+
+pub fn expt(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 2, Some(2), "expt")?;
+    let exp = pop_integer(vm)?;
+    let x = pop_number(vm)?;
+
+    let exp = match exp.to_u32() {
+        Some(exp) => exp,
+        None => {
+            return Err(InvalidSyntax("expt: exponent is too large".into()));
+        }
+    };
+
+    Ok(x.pow(exp).into())
 }
 
 pub fn exact_inexact(vm: &mut Vm) -> Result<VCell, Error> {

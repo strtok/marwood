@@ -459,6 +459,12 @@ mod integration_test {
             "(denominator (/ 6 4))" => "2",
             "(denominator (exact->inexact (/ 6 4)))" => "2"
         ];
+
+        evals![
+            "(expt 2 2)" => "4",
+            "(expt 3.5 2)" => "12.25",
+            "(expt 5/7 3)" => "125/343"
+        ];
     }
 
     #[test]
