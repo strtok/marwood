@@ -1,5 +1,5 @@
-use crate::number::Number;
-use crate::vm::builtin::{pop_argc, pop_integer, pop_number, pop_usize};
+use crate::number::{Exactness, Number};
+use crate::vm::builtin::{pop_argc, pop_integer, pop_number, pop_string, pop_usize};
 use crate::vm::vcell::VCell;
 use crate::vm::Error::{InvalidArgs, InvalidSyntax};
 use crate::vm::{Error, Vm};
@@ -33,6 +33,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("quotient", quotient);
     vm.load_builtin("remainder", remainder);
     vm.load_builtin("round", round);
+    vm.load_builtin("string->number", string_number);
     vm.load_builtin("truncate", truncate);
     vm.load_builtin("zero?", zero);
 }
@@ -376,4 +377,20 @@ fn number_string(vm: &mut Vm) -> Result<VCell, Error> {
     };
 
     Ok(VCell::string(result))
+}
+
+fn string_number(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, Some(2), "string->number")?;
+
+    let radix = match argc {
+        2 => pop_usize(vm)? as u32,
+        _ => 10_u32,
+    };
+    let s = pop_string(vm, "string->number")?;
+    let s = s.borrow();
+    let s = s.as_str();
+    match Number::parse_with_exactness(s, Exactness::Unspecified, radix) {
+        Some(num) => Ok(VCell::Number(num)),
+        None => Ok(false.into()),
+    }
 }
