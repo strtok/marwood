@@ -1,5 +1,5 @@
 use crate::number::Number;
-use crate::vm::builtin::{pop_argc, pop_integer, pop_number};
+use crate::vm::builtin::{pop_argc, pop_integer, pop_number, pop_usize};
 use crate::vm::vcell::VCell;
 use crate::vm::Error::{InvalidArgs, InvalidSyntax};
 use crate::vm::{Error, Vm};
@@ -26,6 +26,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("max", max);
     vm.load_builtin("modulo", modulo);
     vm.load_builtin("numerator", numerator);
+    vm.load_builtin("number->string", number_string);
     vm.load_builtin("negative?", negative);
     vm.load_builtin("odd?", odd);
     vm.load_builtin("positive?", positive);
@@ -348,7 +349,7 @@ fn min(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 fn max(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = pop_argc(vm, 2, None, "min")?;
+    let argc = pop_argc(vm, 2, None, "max")?;
     let mut result = pop_number(vm)?;
     for _ in 0..argc - 1 {
         let num = pop_number(vm)?;
@@ -357,4 +358,22 @@ fn max(vm: &mut Vm) -> Result<VCell, Error> {
         }
     }
     Ok(result.into())
+}
+
+fn number_string(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, Some(2), "number->string")?;
+
+    let radix = match argc {
+        2 => pop_usize(vm)?,
+        _ => 10,
+    };
+    let num = pop_number(vm)?;
+    let result = match radix {
+        16 => format!("{:x}", num),
+        8 => format!("{:o}", num),
+        2 => format!("{:b}", num),
+        _ => format!("{}", num),
+    };
+
+    Ok(VCell::string(result))
 }

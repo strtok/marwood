@@ -3,6 +3,7 @@ use num::{BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimi
 use num::{Num, Rational32, ToPrimitive};
 use std::cmp::Ordering;
 use std::fmt;
+use std::fmt::{Binary, Formatter, LowerHex, Octal};
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, Sub};
 use std::rc::Rc;
@@ -880,9 +881,68 @@ impl fmt::Display for Number {
         match self {
             Number::Fixnum(num) => write!(f, "{}", num),
             Number::BigInt(num) => write!(f, "{}", num),
-            Number::Float(num) if *num > 1E10 => write!(f, "{:E}", num),
+            Number::Float(num) if *num > 1E10 => write!(f, "{:e}", num),
             Number::Float(num) => write!(f, "{}", num),
             Number::Rational(num) => write!(f, "{}", num),
+        }
+    }
+}
+
+fn write_float_fract(mut num: f64, radix: usize, f: &mut Formatter<'_>) -> fmt::Result {
+    let mut first_digit = true;
+    loop {
+        num = num.fract() * radix as f64;
+        if num == 0_f64 {
+            break;
+        }
+        if first_digit {
+            write!(f, ".{:x}", num.trunc() as i64)?;
+            first_digit = false;
+        } else {
+            write!(f, "{:x}", num.trunc() as i64)?;
+        }
+    }
+    Ok(())
+}
+
+impl LowerHex for Number {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Number::Fixnum(num) => fmt::LowerHex::fmt(num, f),
+            Number::Float(num) => {
+                write!(f, "{:x}", num.trunc() as i64)?;
+                write_float_fract(*num, 16, f)
+            }
+            Number::BigInt(num) => fmt::LowerHex::fmt(num.as_ref(), f),
+            Number::Rational(num) => fmt::LowerHex::fmt(num, f),
+        }
+    }
+}
+
+impl Octal for Number {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Number::Fixnum(num) => fmt::Octal::fmt(num, f),
+            Number::Float(num) => {
+                write!(f, "{:o}", num.trunc() as i64)?;
+                write_float_fract(*num, 8, f)
+            }
+            Number::BigInt(num) => fmt::Octal::fmt(num.as_ref(), f),
+            Number::Rational(num) => fmt::Octal::fmt(num, f),
+        }
+    }
+}
+
+impl Binary for Number {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Number::Fixnum(num) => fmt::Binary::fmt(num, f),
+            Number::Float(num) => {
+                write!(f, "{:b}", num.trunc() as i64)?;
+                write_float_fract(*num, 2, f)
+            }
+            Number::BigInt(num) => fmt::Binary::fmt(num.as_ref(), f),
+            Number::Rational(num) => fmt::Binary::fmt(num, f),
         }
     }
 }
