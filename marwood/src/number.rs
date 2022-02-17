@@ -896,10 +896,10 @@ fn write_float_fract(mut num: f64, radix: usize, f: &mut Formatter<'_>) -> fmt::
             break;
         }
         if first_digit {
-            write!(f, ".{:x}", num.trunc() as i64)?;
+            write!(f, ".{:x}", num.trunc().abs() as i64)?;
             first_digit = false;
         } else {
-            write!(f, "{:x}", num.trunc() as i64)?;
+            write!(f, "{:x}", num.trunc().abs() as i64)?;
         }
     }
     Ok(())
@@ -910,7 +910,10 @@ impl LowerHex for Number {
         match self {
             Number::Fixnum(num) => fmt::LowerHex::fmt(num, f),
             Number::Float(num) => {
-                write!(f, "{:x}", num.trunc() as i64)?;
+                if *num < 0_f64 {
+                    write!(f, "-")?;
+                }
+                write!(f, "{:x}", num.trunc().abs() as i64)?;
                 write_float_fract(*num, 16, f)
             }
             Number::BigInt(num) => fmt::LowerHex::fmt(num.as_ref(), f),
@@ -924,7 +927,10 @@ impl Octal for Number {
         match self {
             Number::Fixnum(num) => fmt::Octal::fmt(num, f),
             Number::Float(num) => {
-                write!(f, "{:o}", num.trunc() as i64)?;
+                if *num < 0_f64 {
+                    write!(f, "-")?;
+                }
+                write!(f, "{:o}", num.trunc().abs() as i64)?;
                 write_float_fract(*num, 8, f)
             }
             Number::BigInt(num) => fmt::Octal::fmt(num.as_ref(), f),
@@ -938,7 +944,10 @@ impl Binary for Number {
         match self {
             Number::Fixnum(num) => fmt::Binary::fmt(num, f),
             Number::Float(num) => {
-                write!(f, "{:b}", num.trunc() as i64)?;
+                if *num < 0_f64 {
+                    write!(f, "-")?;
+                }
+                write!(f, "{:b}", num.trunc().abs() as i64)?;
                 write_float_fract(*num, 2, f)
             }
             Number::BigInt(num) => fmt::Binary::fmt(num.as_ref(), f),
