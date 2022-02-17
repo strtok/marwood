@@ -159,6 +159,9 @@ impl Debug for Write {
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum Error {
+    #[error("{}", .0.iter().map(|it| it.to_string()).collect::<Vec<_>>().join(" "))]
+    ErrorSignal(Vec<Cell>),
+
     #[error("expected {0}")]
     ExpectedType(&'static str, &'static str),
 
