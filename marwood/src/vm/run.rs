@@ -4,7 +4,9 @@ use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell::LexicalEnvPtr;
 use crate::vm::vcell::{BuiltInProc, VCell};
-use crate::vm::Error::{InvalidBytecode, InvalidNumArgs, InvalidProcedure, VariableNotBound};
+use crate::vm::Error::{
+    InvalidBytecode, InvalidNumArgs, InvalidProcedure, InvalidSyntax, VariableNotBound,
+};
 use crate::vm::{Error, Vm};
 use log::trace;
 use std::rc::Rc;
@@ -120,6 +122,16 @@ impl Vm {
                         };
                         return Ok(false);
                     }
+                    VCell::Continuation(cont) => {
+                        let cont = &*cont;
+                        if self.stack.pop()?.as_argc()? == 0 {
+                            return Err(InvalidSyntax("expected value".into()));
+                        }
+                        let result = self.stack.pop()?.clone();
+                        self.restore_continuation(cont);
+                        self.acc = result;
+                        return Ok(false);
+                    }
                     other => {
                         return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
                     }
@@ -139,6 +151,16 @@ impl Vm {
                             VCell::Ptr(ptr) => VCell::Ptr(ptr),
                             vcell => self.heap.put(vcell),
                         };
+                        return Ok(false);
+                    }
+                    VCell::Continuation(cont) => {
+                        let cont = &*cont;
+                        if self.stack.pop()?.as_argc()? == 0 {
+                            return Err(InvalidSyntax("expected value".into()));
+                        }
+                        let result = self.stack.pop()?.clone();
+                        self.restore_continuation(cont);
+                        self.acc = result;
                         return Ok(false);
                     }
                     other => {

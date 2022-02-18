@@ -19,6 +19,7 @@ pub enum Cell {
 
     // Types that exist in VCell, but need Cell representation for
     // printing purposes. These are never created by the lexer/parser.
+    Continuation,
     Closure,
     Macro,
     Lambda,
@@ -431,6 +432,9 @@ impl Display for Cell {
                     }
                 }
                 write!(f, ")")
+            }
+            Cell::Continuation => {
+                write!(f, "#<continuation>")
             }
             Cell::Closure => {
                 write!(f, "#<procedure>")

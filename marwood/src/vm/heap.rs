@@ -1,5 +1,6 @@
 use crate::cell;
 use crate::cell::Cell;
+use crate::vm::continuation::Continuation;
 use crate::vm::gc;
 use crate::vm::gc::State;
 use crate::vm::lambda::Lambda;
@@ -101,6 +102,7 @@ impl Heap {
             }
             cell::Cell::String(ref s) => self.put(VCell::string(s.clone())),
             cell::Cell::Symbol(ref sym) => self.put(VCell::symbol(sym.clone())),
+            cell::Cell::Continuation => panic!("unexpected continuation"),
             cell::Cell::Closure => panic!("unexpected closure"),
             cell::Cell::Macro => panic!("unexpected macro"),
             cell::Cell::Lambda => panic!("unexpected lambda"),
@@ -187,6 +189,7 @@ impl Heap {
             VCell::Symbol(s) => Cell::Symbol(s.deref().into()),
             VCell::Undefined => Cell::Undefined,
             VCell::Void => Cell::Void,
+            VCell::Continuation(_) => Cell::Continuation,
             VCell::Closure(_, _) => Cell::Closure,
             VCell::Lambda(_) => Cell::Lambda,
             VCell::BuiltInProc(_) => Cell::Lambda,
@@ -249,6 +252,9 @@ impl Heap {
                 VCell::Ptr(cdr) => {
                     ptr = cdr;
                 }
+                VCell::Continuation(cont) => {
+                    self.mark_continuation(&*cont);
+                }
                 VCell::Lambda(ptr) => {
                     self.mark_lambda(&*ptr);
                 }
@@ -297,6 +303,9 @@ impl Heap {
             VCell::InstructionPointer(lambda, _) => {
                 self.mark(*lambda);
             }
+            VCell::Continuation(cont) => {
+                self.mark_continuation(&*cont);
+            }
             VCell::Lambda(lambda) => self.mark_lambda(lambda.as_ref()),
             VCell::Closure(lambda, env) => {
                 self.mark(*lambda);
@@ -338,6 +347,17 @@ impl Heap {
             | VCell::Undefined
             | VCell::Void => {}
         }
+    }
+
+    /// Mark Continuation
+    ///
+    /// Iterate the saved VM state in the continuation
+    pub fn mark_continuation(&mut self, cont: &Continuation) {
+        for it in cont.stack().iter() {
+            self.mark_vcell(it);
+        }
+        self.mark(cont.ip().0);
+        self.mark(cont.ep());
     }
 
     /// Mark Lambda

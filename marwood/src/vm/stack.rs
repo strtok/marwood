@@ -168,6 +168,21 @@ impl Stack {
             );
         }
     }
+
+    pub fn to_continuation(&self) -> Stack {
+        Stack {
+            stack: self.stack[0..self.sp + 1].to_vec(),
+            sp: self.sp,
+        }
+    }
+
+    pub fn restore_continuation(&mut self, cont: &Stack) {
+        self.stack
+            .split_at_mut(cont.stack.len())
+            .0
+            .clone_from_slice(&cont.stack);
+        self.sp = cont.sp;
+    }
 }
 
 impl Default for Stack {
@@ -213,5 +228,28 @@ mod tests {
         assert_eq!(stack.pop(), Ok(&VCell::number(2)));
         assert_eq!(stack.pop(), Ok(&VCell::number(1)));
         assert_eq!(stack.pop(), Err(InvalidStackIndex(0)));
+    }
+
+    #[test]
+    fn continuation() {
+        let mut stack = Stack::new();
+        stack.push(VCell::number(1));
+        stack.push(VCell::number(2));
+        stack.push(VCell::number(3));
+        assert_eq!(stack.get_sp(), 3);
+        let cont = stack.to_continuation();
+
+        *stack.get_sp_mut() = 0;
+        stack.push(VCell::number(4));
+        stack.push(VCell::number(5));
+        assert_eq!(stack.get_sp(), 2);
+        assert_eq!(stack.get_offset(0), Ok(&VCell::number(5)));
+        assert_eq!(stack.get_offset(-1), Ok(&VCell::number(4)));
+
+        stack.restore_continuation(&cont);
+        assert_eq!(stack.get_sp(), 3);
+        assert_eq!(stack.get_offset(0), Ok(&VCell::number(3)));
+        assert_eq!(stack.get_offset(-1), Ok(&VCell::number(2)));
+        assert_eq!(stack.get_offset(-2), Ok(&VCell::number(1)));
     }
 }

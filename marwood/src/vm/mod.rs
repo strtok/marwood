@@ -12,6 +12,7 @@ pub mod builtin;
 pub mod char;
 pub mod compare;
 pub mod compile;
+pub mod continuation;
 pub mod environment;
 pub mod gc;
 pub mod heap;
@@ -162,7 +163,7 @@ pub enum Error {
     #[error("{}", .0.iter().map(|it| it.to_string()).collect::<Vec<_>>().join(" "))]
     ErrorSignal(Vec<Cell>),
 
-    #[error("expected {0}")]
+    #[error("expected {0} but encountered {1}")]
     ExpectedType(&'static str, &'static str),
 
     #[error("expected pair, but found {0}")]

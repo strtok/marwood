@@ -1,5 +1,6 @@
 use crate::number::Number;
 use crate::vm::char::write_escaped_char;
+use crate::vm::continuation::Continuation;
 use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
@@ -40,6 +41,7 @@ pub enum VCell {
     Void,
 
     // lambda, closure and lexical environments
+    Continuation(Rc<Continuation>),
     Closure(usize, usize),
     Lambda(Rc<Lambda>),
     LexicalEnv(Rc<LexicalEnvironment>),
@@ -84,6 +86,7 @@ pub const BASE_POINTER_OFFSET_TYPE_TEXT: &str = "#<base-pointer-offset>";
 pub const BOOL_TYPE_TEXT: &str = "#<bool>";
 pub const CHAR_TYPE_TEXT: &str = "#<char>";
 pub const CLOSURE_TYPE_TEXT: &str = "#<closure>";
+pub const CONTINUATION_TYPE_TEXT: &str = "#<continuation>";
 pub const GLOBAL_ENV_SLOT_TYPE_TEXT: &str = "#<global-environment-slot>";
 pub const ENVIRONMENT_POINTER_TYPE_TEXT: &str = "#<environment-pointer>";
 pub const MACRO_TYPE_TEXT: &str = "#<macro>";
@@ -118,6 +121,7 @@ impl VCell {
             VCell::BasePointerOffset(_) => BASE_POINTER_OFFSET_TYPE_TEXT,
             VCell::Bool(_) => BOOL_TYPE_TEXT,
             VCell::Char(_) => CHAR_TYPE_TEXT,
+            VCell::Continuation(_) => CONTINUATION_TYPE_TEXT,
             VCell::Closure(_, _) => CLOSURE_TYPE_TEXT,
             VCell::EnvironmentPointer(_) => ENVIRONMENT_POINTER_TYPE_TEXT,
             VCell::GlobalEnvSlot(_) => GLOBAL_ENV_SLOT_TYPE_TEXT,
@@ -447,6 +451,7 @@ impl fmt::Display for VCell {
             VCell::Bool(false) => write!(f, "#f"),
             VCell::Char(c) => write_escaped_char(*c, f),
             VCell::Closure(_, _) => write!(f, "#<closure>"),
+            VCell::Continuation(_) => write!(f, "#<continuation>"),
             VCell::EnvironmentPointer(ep) => write!(f, "%ep[${:02x}]", ep),
             VCell::GlobalEnvSlot(slot) => write!(f, "genv[${:02x}]", slot),
             VCell::InstructionPointer(lambda, ip) => {

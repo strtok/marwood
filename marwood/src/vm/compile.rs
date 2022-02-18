@@ -76,6 +76,7 @@ impl Vm {
             Cell::Symbol(_) => self.compile_symbol_expression(lambda, expr),
             Cell::Nil => Err(UnquotedNil),
             Cell::Bool(_)
+            | Cell::Continuation
             | Cell::Char(_)
             | Cell::Number(_)
             | Cell::Closure
