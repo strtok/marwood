@@ -41,7 +41,7 @@ impl Vm {
     pub fn restore_continuation(&mut self, cont: &Continuation) {
         self.stack.restore_continuation(cont.stack());
         self.ep = cont.ep();
-        self.ip = cont.ip().clone();
+        self.ip = *cont.ip();
         self.bp = cont.bp();
         self.acc = VCell::Undefined;
     }
