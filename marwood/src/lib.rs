@@ -1121,4 +1121,20 @@ mod integration_test {
             "(* 2 (add100 16))" => "116"
         ];
     }
+
+    #[test]
+    fn apply() {
+        evals![
+            "(apply + '())" => "0",
+            "(apply + 10 '())" => "10",
+            "(apply + '(10))" => "10",
+            "(apply + 10 '(20))" => "30",
+            "(apply + 10 20 '(30 40))" => "100"
+        ];
+
+        fails![
+            "(apply + 10 20)" => InvalidSyntax("the last argument to apply must be a proper list".into()),
+            "(apply + 10 '(10 . 20))" => InvalidSyntax("the last argument to apply must be a proper list".into())
+        ];
+    }
 }

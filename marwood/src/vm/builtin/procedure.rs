@@ -8,6 +8,7 @@ use log::trace;
 use std::rc::Rc;
 
 pub fn load_builtins(vm: &mut Vm) {
+    vm.load_builtin("apply", apply);
     vm.load_builtin("error", error);
     vm.load_builtin("call/cc", call_cc);
     vm.load_builtin("call-with-current-continuation", call_cc);
@@ -21,6 +22,53 @@ fn error(vm: &mut Vm) -> Result<VCell, Error> {
         *result.get_mut(argc - it - 1).unwrap() = vm.heap.get_as_cell(vcell);
     }
     Err(ErrorSignal(result))
+}
+
+/// Apply
+///
+/// 1. Pop the last arg off the stack. It -must- be a list of args
+///    that will be pushed.
+/// 2. Save procedure, which is the first arg on the stack.
+/// 3. If there were any additional args, shift them down by 1
+///    each to overwrite procedure.
+/// 4. Push each arg rest on to the stack.
+/// 5. Push a new argc on the stack.
+/// 6. Set the applied procedure as the continuation by placing it
+///    in %acc and decrementing %ip by 1 so that the next instruction
+///    is CALL %acc.
+fn apply(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 2, None, "apply")?;
+
+    let mut rest = vm.pop()?;
+    if !rest.is_nil() && !rest.is_pair() {
+        return Err(InvalidSyntax(
+            "the last argument to apply must be a proper list".into(),
+        ));
+    }
+
+    let proc = vm.stack.get_offset((argc - 2) as i64 * -1)?.clone();
+    for it in (0..argc - 2).rev() {
+        let from = 0_i64 - it as i64;
+        let to = from - 1;
+        let val = vm.stack.get_offset(from)?.clone();
+        *vm.stack.get_offset_mut(to)? = val;
+    }
+    let _ = vm.stack.pop()?;
+
+    let mut argc = argc - 2;
+    while rest.is_pair() {
+        argc += 1;
+        vm.stack.push(rest.as_car()?);
+        rest = vm.heap.get(&rest.as_cdr()?);
+    }
+    if !rest.is_nil() {
+        return Err(InvalidSyntax(
+            "the last argument to apply must be a proper list".into(),
+        ));
+    }
+    vm.stack.push(VCell::ArgumentCount(argc));
+    vm.ip.1 -= 1;
+    Ok(proc.clone())
 }
 
 /// call/cc

@@ -536,6 +536,17 @@ impl Vm {
         Ok(lexical_env)
     }
 
+    /// Pop
+    ///
+    /// Pop is a wrapper around vm.stack.pop(), providing automatic dereference
+    /// if the popped value is a heap reference.
+    pub fn pop(&mut self) -> Result<VCell, Error> {
+        match self.stack.pop()? {
+            VCell::Ptr(ptr) => Ok(self.heap.get_at_index(*ptr).clone()),
+            vcell => Ok(vcell.clone()),
+        }
+    }
+
     #[allow(dead_code)]
     fn trace_environment_map(&self, envmap: &EnvironmentMap) {
         trace!("--- ENVIRONMENT MAP ---");
