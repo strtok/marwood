@@ -112,16 +112,12 @@ globalThis.marwood_display = (text) => {
     setTimeout(() => {
         if (last_index >= 0) {
             let last = term.get_output(true)[last_index];
-            // console.log(last);
             if (!last[1].newline) {
-                // console.log("===updating last line===");
                 let updateText = last[0] + text;
-                // console.log(`${updateText} = ${last[0]} + ${text}`);
                 term.update(last_index, updateText);
             } else {
                 term.echo(text, { newline: false });
             }
-            // console.log(last[1].newline);
         } else {
             term.echo(text, { newline: false });
         }
