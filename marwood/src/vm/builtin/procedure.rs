@@ -40,14 +40,17 @@ fn error(vm: &mut Vm) -> Result<VCell, Error> {
 /// instruction to execute is CALL %acc.
 fn eval(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "eval")?;
+
     let expr = vm.pop()?;
     let expr = vm.heap.get_as_cell(&expr);
+
     let mut lambda = Lambda::new(vec![]);
     lambda.set_top_level();
     lambda.emit(OpCode::Enter);
     vm.compile_expression(&mut lambda, true, &expr)?;
     lambda.emit(OpCode::Ret);
     let lambda = vm.heap.put(lambda);
+
     vm.stack.push(ArgumentCount(0));
     vm.ip.1 -= 1;
     Ok(lambda)
