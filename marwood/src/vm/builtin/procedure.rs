@@ -1,5 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::builtin::pop_argc;
+use crate::vm::lambda::Lambda;
+use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::ArgumentCount;
 use crate::vm::Error::{ErrorSignal, InvalidSyntax};
@@ -9,9 +11,10 @@ use std::rc::Rc;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("apply", apply);
-    vm.load_builtin("error", error);
     vm.load_builtin("call/cc", call_cc);
     vm.load_builtin("call-with-current-continuation", call_cc);
+    vm.load_builtin("error", error);
+    vm.load_builtin("eval", eval);
 }
 
 fn error(vm: &mut Vm) -> Result<VCell, Error> {
@@ -22,6 +25,32 @@ fn error(vm: &mut Vm) -> Result<VCell, Error> {
         *result.get_mut(argc - it - 1).unwrap() = vm.heap.get_as_cell(vcell);
     }
     Err(ErrorSignal(result))
+}
+
+/// Eval
+///
+/// Eval pops the expr off the stack to eval, converts ot an AST
+/// (Cell) and then compiles a new top level Lambda given the AST
+/// with no IOF environment.
+///
+/// The lambda is returned by eval() to immediately be placed into
+/// %acc by the calling code.
+///
+/// Before returning, this function decrements %ip so that the next
+/// instruction to execute is CALL %acc.
+fn eval(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "eval")?;
+    let expr = vm.pop()?;
+    let expr = vm.heap.get_as_cell(&expr);
+    let mut lambda = Lambda::new(vec![]);
+    lambda.set_top_level();
+    lambda.emit(OpCode::Enter);
+    vm.compile_expression(&mut lambda, true, &expr)?;
+    lambda.emit(OpCode::Ret);
+    let lambda = vm.heap.put(lambda);
+    vm.stack.push(ArgumentCount(0));
+    vm.ip.1 -= 1;
+    Ok(lambda)
 }
 
 /// Apply
@@ -46,7 +75,7 @@ fn apply(vm: &mut Vm) -> Result<VCell, Error> {
         ));
     }
 
-    let proc = vm.stack.get_offset((argc - 2) as i64 * -1)?.clone();
+    let proc = vm.stack.get_offset(-(argc as i64 - 2))?.clone();
     for it in (0..argc - 2).rev() {
         let from = 0_i64 - it as i64;
         let to = from - 1;
@@ -68,7 +97,7 @@ fn apply(vm: &mut Vm) -> Result<VCell, Error> {
     }
     vm.stack.push(VCell::ArgumentCount(argc));
     vm.ip.1 -= 1;
-    Ok(proc.clone())
+    Ok(proc)
 }
 
 /// call/cc

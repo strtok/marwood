@@ -1123,6 +1123,19 @@ mod integration_test {
     }
 
     #[test]
+    fn eval() {
+        evals![
+            "(eval 10)" => "10",
+            "(define x 42)" => "#<void>",
+            "(eval 'x)" => "42"
+        ];
+
+        evals![
+            "(eval '((lambda (x y) (+ x y)) 10 20))" => "30"
+        ];
+    }
+
+    #[test]
     fn apply() {
         evals![
             "(apply + '())" => "0",
