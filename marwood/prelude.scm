@@ -155,6 +155,11 @@
 (define (substring string start end)
     (string-copy string start end))
 
+(define-syntax delay-force
+  (syntax-rules ()
+    ((delay-force expression)
+     (make-promise #f (lambda () expression)))))
+
 (define-syntax delay
    (syntax-rules ()
      ((delay expression)
