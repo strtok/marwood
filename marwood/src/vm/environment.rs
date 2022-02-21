@@ -352,7 +352,7 @@ pub fn free_symbols(cell: &Cell) -> Result<HashSet<&Cell>, Error> {
 
 /// Find Free Symbols
 ///
-/// This is a recursive call from free_syumbols.
+/// This is a recursive call from free_symbols.
 fn find_free_symbols<'a>(
     cell: &'a Cell,
     env: &mut HashSet<&'a Cell>,
@@ -369,7 +369,8 @@ fn find_free_symbols<'a>(
         Cell::Pair(car, cdr) => {
             let car = car.as_ref();
             let cdr = cdr.as_ref();
-            find_free_symbols_in_proc((car, cdr), env, free)?;
+            let mut env = env.clone();
+            find_free_symbols_in_proc((car, cdr), &mut env, free)?;
             Ok(())
         }
         _ => Ok(()),

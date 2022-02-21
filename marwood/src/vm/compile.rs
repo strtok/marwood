@@ -64,7 +64,9 @@ impl Vm {
     /// # Arguments
     /// `expr` - The expression to compile.
     pub fn compile(&mut self, lambda: &mut Lambda, tail: bool, expr: &Cell) -> Result<(), Error> {
+        trace!("transforming: {}", expr);
         let expr = self.transform(expr)?;
+        trace!("compilnig: {}", expr);
         self.compile_expression(lambda, tail, &expr)?;
         Ok(())
     }

@@ -715,6 +715,14 @@ mod integration_test {
             "(define add-1000-100 (make-adder 100))" => "#<void>",
             "(add-1000-100 10)" => "1110"
         ];
+
+        evals![
+            "(define f 0)" => "#<void>",
+            "(define (make-make-adder x) (lambda (y) (set! f (lambda (x) x)) (lambda (z) (+ x y z))))" => "#<void>",
+            "(define make-adder (make-make-adder 1000))" => "#<void>",
+            "(define add-1000-100 (make-adder 100))" => "#<void>",
+            "(add-1000-100 10)" => "1110"
+        ];
     }
 
     #[test]
