@@ -334,9 +334,13 @@ impl Transform {
         env: &'b mut PatternEnvironment<'a>,
     ) -> bool {
         // expr and pattern must either both be lists or improper lists
+        if (pattern.is_pair() || pattern.is_nil()) && !(expr.is_pair() || expr.is_nil()) {
+            return false;
+        }
         if expr.is_pair() && pattern.is_pair() && (expr.is_list() != pattern.is_list()) {
             return false;
         }
+
         let mut expr_iter = expr.iter().peekable();
         let mut pattern_iter = pattern.iter().peekable();
 

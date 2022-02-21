@@ -1158,4 +1158,11 @@ mod integration_test {
             "(apply + 10 '(10 . 20))" => InvalidSyntax("the last argument to apply must be a proper list".into())
         ];
     }
+
+    #[test]
+    fn case() {
+        evals!["(case (+ 3 5)
+                [(1 2 3 4 5) 'small]
+                [(6 7 8 9 10) 'big])" => "big"];
+    }
 }
