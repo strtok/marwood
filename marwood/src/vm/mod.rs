@@ -96,7 +96,7 @@ impl Vm {
     }
 
     pub fn prepare_eval(&mut self, cell: &Cell) -> Result<(), Error> {
-        let lambda = self.compile(cell)?;
+        let lambda = self.compile_runnable(cell)?;
         trace!("entry: \n{}", self.decompile_text(&lambda));
         let lambda = self.heap.put(lambda);
         self.ip.0 = lambda.as_ptr().unwrap();

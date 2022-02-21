@@ -47,7 +47,7 @@ fn eval(vm: &mut Vm) -> Result<VCell, Error> {
     let mut lambda = Lambda::new(vec![]);
     lambda.set_top_level();
     lambda.emit(OpCode::Enter);
-    vm.compile_expression(&mut lambda, true, &expr)?;
+    vm.compile(&mut lambda, true, &expr)?;
     lambda.emit(OpCode::Ret);
     let lambda = vm.heap.put(lambda);
 

@@ -31,18 +31,18 @@ macro_rules! cdr {
 }
 
 impl Vm {
-    /// Compile
+    /// Compile Runnable
     ///
     /// Compile compiles a single top level expression, returning a Lambda that represents
     /// the top level expression of an Error if compilation failed.
     ///
     /// `expr` - The expression to compile.
-    pub fn compile(&mut self, expr: &Cell) -> Result<Lambda, Error> {
+    pub fn compile_runnable(&mut self, expr: &Cell) -> Result<Lambda, Error> {
         let mut entry_lambda = Lambda::new(vec![]);
         let mut lambda = Lambda::new_from_iof(vec![], vec![], &entry_lambda, &[], false);
         lambda.set_top_level();
         lambda.emit(OpCode::Enter);
-        self.compile_expression(&mut lambda, true, expr)?;
+        self.compile(&mut lambda, true, expr)?;
         lambda.emit(OpCode::Ret);
         trace!("main: \n{}", self.decompile_text(&lambda));
         let lambda = self.heap.put(lambda);
@@ -54,6 +54,68 @@ impl Vm {
         entry_lambda.emit(OpCode::CallAcc);
         entry_lambda.emit(OpCode::Halt);
         Ok(entry_lambda)
+    }
+
+    /// Compile
+    ///
+    /// Apply any pre-compilation transforms to expr, compile it, and return
+    /// the resulting bytecode.
+    ///
+    /// # Arguments
+    /// `expr` - The expression to compile.
+    pub fn compile(&mut self, lambda: &mut Lambda, tail: bool, expr: &Cell) -> Result<(), Error> {
+        let expr = self.transform(expr)?;
+        self.compile_expression(lambda, tail, &expr)?;
+        Ok(())
+    }
+
+    /// Transform
+    ///
+    /// Apply pre-compilation transforms to expr, returning the transformed
+    /// AST.
+    pub fn transform(&mut self, expr: &Cell) -> Result<Cell, Error> {
+        match expr {
+            Cell::Pair(_, _) => self.transform_procedure_application(expr),
+            cell => Ok(cell.clone()),
+        }
+    }
+
+    pub fn transform_procedure_application(&mut self, expr: &Cell) -> Result<Cell, Error> {
+        let proc = expr.car().unwrap();
+        let mut rest = expr.cdr().unwrap();
+
+        match proc.deref() {
+            Cell::Symbol(proc) => match proc.as_str() {
+                "quote" | "define-syntax" => return Ok(expr.clone()),
+                _ => {}
+            },
+            _ => {}
+        }
+
+        if let Some(sym) = self.heap.get_sym_ref(proc) {
+            let vcell = match self.globenv.get(sym.as_ptr()?) {
+                Some(VCell::Ptr(ptr)) => Some(self.heap.get_at_index(ptr).clone()),
+                vcell => vcell,
+            };
+            if let Some(VCell::Macro(transform)) = vcell {
+                let expansion = transform.transform(expr)?;
+                trace!("macro expansion: {} => {}", expr, expansion);
+                return self.transform(&expansion);
+            }
+        }
+
+        let mut v = vec![];
+        v.push(self.transform(proc)?);
+        while rest.is_pair() {
+            v.push(self.transform(rest.car().unwrap())?);
+            rest = rest.cdr().unwrap();
+        }
+        if rest.is_nil() {
+            Ok(Cell::new_list(v))
+        } else {
+            let rest = self.transform(rest)?;
+            Ok(Cell::new_improper_list(v, rest))
+        }
     }
 
     /// Compile Expression
@@ -110,21 +172,6 @@ impl Vm {
     ) -> Result<(), Error> {
         let proc = expr.car().unwrap();
         let rest = expr.cdr().unwrap();
-
-        if let Some(sym) = self.heap.get_sym_ref(proc) {
-            let vcell = match self.globenv.get(sym.as_ptr()?) {
-                Some(VCell::Ptr(ptr)) => Some(self.heap.get_at_index(ptr).clone()),
-                vcell => vcell,
-            };
-
-            if let Some(VCell::Macro(transform)) = vcell {
-                let expansion = transform.transform(expr)?;
-                trace!("macro expansion: {} => {}", expr, expansion);
-                self.compile_expression(lambda, tail, &expansion)?;
-                return Ok(());
-            }
-        }
-
         match proc.deref() {
             Cell::Symbol(proc) => match proc.as_str() {
                 "define" => self.compile_define(lambda, expr),
