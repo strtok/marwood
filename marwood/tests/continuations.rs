@@ -29,3 +29,35 @@ fn continuations() {
         "(* 2 (add100 16))" => "116"
     ];
 }
+
+#[test]
+fn hello_world() {
+    evals![
+        "(let ([x (call/cc (λ (k) k))])
+         (x (λ (ignore) \"hello world\")))"
+
+        => "\"hello world\""
+    ];
+    evals![
+        "(((call/cc (λ (k) k))
+            (λ (x) x)) \"hello world\")"
+
+        => "\"hello world\""
+    ];
+}
+
+#[test]
+fn factorial_cps() {
+    evals!["(define (factorial n)
+            (define (factorial n k)
+                (cond
+                   [(zero? n) (k 1)]
+                   [else 
+                      (factorial (- n 1) 
+                                 (λ (v) (k (* v n))))]))
+            (factorial n (λ (v) v)))"
+            => "#<void>",
+        
+            "(factorial 10)" 
+            => "3628800"];
+}
