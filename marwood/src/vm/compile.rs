@@ -106,8 +106,7 @@ impl Vm {
             }
         }
 
-        let mut v = vec![];
-        v.push(self.transform(proc)?);
+        let mut v = vec![self.transform(proc)?];
         while rest.is_pair() {
             v.push(self.transform(rest.car().unwrap())?);
             rest = rest.cdr().unwrap();
