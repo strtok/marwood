@@ -614,7 +614,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
     fn error_on_bad_form() {
         assert!(Transform::try_new(&parse!("(define-syntax)")).is_err());
         assert!(Transform::try_new(&parse!("(define-syntax 100)")).is_err());

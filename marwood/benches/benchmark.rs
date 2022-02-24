@@ -8,7 +8,7 @@ fn sum_of_triangles(n: u64) -> Cell {
     vm.eval(&parse!(
         r#"
     (define (sum-of-triangles n)
-         (define (triangle n) (/ (* n (+ n 1)) 2))
+         (define (triangle n) (quotient (* n (+ n 1)) 2))
          (define (sum-of-triangles n acc)
             (cond
                ((zero? n) acc)
@@ -24,9 +24,34 @@ fn sum_of_triangles(n: u64) -> Cell {
     result
 }
 
+fn factorial_cps(n: u64) -> Cell {
+    let mut vm = Vm::new();
+    vm.eval(&parse!(
+        r#"
+    (define (factorial n)
+        (define (factorial n k)
+             (cond
+              [(zero? n) (k 1)]
+         [else
+         (factorial (- n 1)
+             (λ (v) (k (* v n))))]))
+        (factorial n (λ (v) v)))
+    "#
+    ))
+        .unwrap();
+    let result = vm
+        .eval(&parse!(&format!("(factorial {})", n)))
+        .unwrap();
+    assert_eq!(result, cell![3628800]);
+    result
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("sum-of-triangles 1000", |b| {
         b.iter(|| sum_of_triangles(black_box(1000)))
+    });
+    c.bench_function("factorial 10", |b| {
+        b.iter(|| factorial_cps(black_box(10)))
     });
 }
 

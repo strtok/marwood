@@ -8,9 +8,9 @@ use crate::vm::vcell::VCell;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Lambda {
     pub top_level: bool,
+    pub is_vararg: bool,
     pub envmap: EnvironmentMap,
     pub args: Vec<VCell>,
-    pub is_vararg: bool,
     pub bc: Vec<VCell>,
 }
 
