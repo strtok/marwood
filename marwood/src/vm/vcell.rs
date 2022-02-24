@@ -249,12 +249,16 @@ impl VCell {
         matches!(self, VCell::Closure(_, _))
     }
 
+    pub fn is_continuation(&self) -> bool {
+        matches!(self, VCell::Continuation(_))
+    }
+
     pub fn is_builtin_proc(&self) -> bool {
         matches!(self, VCell::BuiltInProc(_))
     }
 
     pub fn is_procedure(&self) -> bool {
-        self.is_lambda() || self.is_closure() || self.is_builtin_proc()
+        self.is_lambda() || self.is_closure() || self.is_builtin_proc() || self.is_continuation()
     }
 
     pub fn is_lexical_env(&self) -> bool {

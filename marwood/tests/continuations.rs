@@ -6,6 +6,13 @@ use marwood::parse;
 use marwood::vm::Vm;
 
 #[test]
+fn continuations_are_procedures() {
+    evals![
+      "(call/cc procedure?)" => "#t"
+    ];
+}
+
+#[test]
 fn continuations() {
     evals![
         "(call/cc (lambda (cc) (cc 10)))" => "10"
