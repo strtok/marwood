@@ -35,8 +35,8 @@
     [(or) #f]
     [(or test) test]
     [(or test1 test2 ...)
-     (let ((x test1))
-       (if x x (or test2 ...)))]))
+     (let ((var1 test1))
+       (if var1 var1 (or test2 ...)))]))
 
 (define-syntax and
  (syntax-rules ()
