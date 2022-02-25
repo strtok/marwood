@@ -103,9 +103,8 @@ impl Heap {
             cell::Cell::String(ref s) => self.put(VCell::string(s.clone())),
             cell::Cell::Symbol(ref sym) => self.put(VCell::symbol(sym.clone())),
             cell::Cell::Continuation => panic!("unexpected continuation"),
-            cell::Cell::Closure => panic!("unexpected closure"),
             cell::Cell::Macro => panic!("unexpected macro"),
-            cell::Cell::Lambda => panic!("unexpected lambda"),
+            cell::Cell::Procedure(_) => panic!("unexpected lambda"),
             cell::Cell::Vector(ref vector) => {
                 let mut outv = Vec::with_capacity(vector.len());
                 for it in vector {
@@ -190,9 +189,8 @@ impl Heap {
             VCell::Undefined => Cell::Undefined,
             VCell::Void => Cell::Void,
             VCell::Continuation(_) => Cell::Continuation,
-            VCell::Closure(_, _) => Cell::Closure,
-            VCell::Lambda(_) => Cell::Lambda,
-            VCell::BuiltInProc(_) => Cell::Lambda,
+            VCell::Closure(_,_) | VCell::Lambda(_) => Cell::Procedure(None),
+            VCell::BuiltInProc(proc) => Cell::Procedure(Some(proc.desc().to_string())),
             VCell::Macro(_) => Cell::Macro,
             VCell::Vector(vector) => {
                 let mut outv = Vec::with_capacity(vector.len());

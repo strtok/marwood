@@ -34,6 +34,14 @@ fn eval_quote() {
         "'(1 2 3)" => "(1 2 3)"
     ];
 }
+
+#[test]
+fn procedure_display() {
+    prints![
+        "+" => "#<procedure:+>"
+    ];
+}
+
 #[test]
 fn if_expressions() {
     evals![

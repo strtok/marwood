@@ -153,7 +153,7 @@ impl Stack {
             self.sp -= 1;
             self.stack
                 .get(self.sp + 1)
-                .ok_or_else(|| InvalidStackIndex(self.sp + 1))
+                .ok_or(InvalidStackIndex(self.sp + 1))
         } else {
             Err(InvalidStackIndex(0))
         };

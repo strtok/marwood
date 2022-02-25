@@ -20,9 +20,8 @@ pub enum Cell {
     // Types that exist in VCell, but need Cell representation for
     // printing purposes. These are never created by the lexer/parser.
     Continuation,
-    Closure,
     Macro,
-    Lambda,
+    Procedure(Option<String>),
     Undefined,
     Void,
 }
@@ -436,14 +435,18 @@ impl Display for Cell {
             Cell::Continuation => {
                 write!(f, "#<continuation>")
             }
-            Cell::Closure => {
-                write!(f, "#<procedure>")
-            }
             Cell::Macro => {
                 write!(f, "#<macro>")
             }
-            Cell::Lambda => {
-                write!(f, "#<procedure>")
+            Cell::Procedure(desc) => {
+                match desc {
+                    Some(desc) => {
+                        write!(f, "#<procedure:{}>", desc)
+                    },
+                    None => {
+                        write!(f, "#<procedure>")
+                    }
+                }
             }
             Cell::Undefined => {
                 write!(f, "#<undefined>")

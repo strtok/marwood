@@ -142,13 +142,12 @@ impl Vm {
             | Cell::Continuation
             | Cell::Char(_)
             | Cell::Number(_)
-            | Cell::Closure
             | Cell::Macro
             | Cell::String(_)
             | Cell::Undefined
             | Cell::Vector(_)
             | Cell::Void
-            | Cell::Lambda => self.compile_quote(lambda, expr),
+            | Cell::Procedure(_) => self.compile_quote(lambda, expr),
         }
     }
 

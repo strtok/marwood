@@ -47,8 +47,8 @@ impl Vm {
         vector::load_builtins(self);
     }
 
-    pub fn load_builtin(&mut self, symbol: &str, func: fn(&mut Vm) -> Result<VCell, Error>) {
-        let syscall = self.heap.put(VCell::syscall(func));
+    pub fn load_builtin(&mut self, symbol: &'static str, func: fn(&mut Vm) -> Result<VCell, Error>) {
+        let syscall = self.heap.put(VCell::builtin(symbol, func));
         let symbol = self.heap.put(VCell::symbol(symbol));
         let slot = self.globenv.get_binding(symbol.as_ptr().unwrap());
         self.globenv.put_slot(slot, syscall);

@@ -12,6 +12,16 @@ macro_rules! evals {
 }
 
 #[allow(unused_macros)]
+macro_rules! prints {
+    ($($lhs:expr => $rhs:expr),+) => {{
+        let mut vm = Vm::new();
+         $(
+            assert_eq!(vm.eval(&parse!($lhs)).unwrap().to_string(), $rhs);
+         )+
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! fails {
     ($($lhs:expr => $rhs:expr),+) => {{
         let mut vm = Vm::new();

@@ -54,7 +54,7 @@ pub enum VCell {
     ArgumentCount(usize),
     BasePointer(usize),
     BasePointerOffset(i64),
-    BuiltInProc(BuiltInProc),
+    BuiltInProc(Rc<BuiltInProc>),
     EnvironmentPointer(usize),
     GlobalEnvSlot(usize),
     InstructionPointer(usize, usize),
@@ -63,17 +63,31 @@ pub enum VCell {
 }
 
 #[derive(Clone)]
-pub struct BuiltInProc(pub fn(&mut Vm) -> Result<VCell, Error>);
+pub struct BuiltInProc {
+    desc: &'static str,
+    proc: fn(&mut Vm) -> Result<VCell, Error>,
+}
+
+impl BuiltInProc {
+    pub fn eval(&self, vm: &mut Vm) -> Result<VCell, Error>{
+        (self.proc)(vm)
+    }
+
+    pub fn desc(&self) -> &'static str {
+        self.desc
+    }
+}
 
 impl Debug for BuiltInProc {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "VCell::SysCall")
+        write!(f, "#<builtin:{}>", self.desc())
     }
 }
 
 impl PartialEq<Self> for BuiltInProc {
     fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.0 as *mut fn(&mut Vm), other.0 as *mut fn(&mut Vm))
+        std::ptr::eq(self.proc as *mut fn(&mut Vm), other.proc as *mut fn(&mut Vm)) &&
+            self.desc().eq(other.desc())
     }
 }
 
@@ -149,8 +163,11 @@ impl VCell {
         VCell::Number(num.into())
     }
 
-    pub fn syscall(func: fn(&mut Vm) -> Result<VCell, Error>) -> VCell {
-        VCell::BuiltInProc(BuiltInProc(func))
+    pub fn builtin(desc: &'static str, proc: fn(&mut Vm) -> Result<VCell, Error>) -> VCell {
+        VCell::BuiltInProc(Rc::new(BuiltInProc{
+            desc,
+            proc,
+        }))
     }
 
     pub fn undefined() -> VCell {

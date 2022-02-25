@@ -3,7 +3,7 @@ use crate::vm::environment::{BindingSource, EnvironmentMap, LexicalEnvironment};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell::LexicalEnvPtr;
-use crate::vm::vcell::{BuiltInProc, VCell};
+use crate::vm::vcell::{VCell};
 use crate::vm::Error::{
     InvalidBytecode, InvalidNumArgs, InvalidProcedure, InvalidSyntax, VariableNotBound,
 };
@@ -115,8 +115,9 @@ impl Vm {
                 let lambda = match self.heap.get(&self.acc) {
                     VCell::Closure(lambda, _) => lambda,
                     VCell::Lambda(_) => self.acc.as_ptr()?,
-                    VCell::BuiltInProc(BuiltInProc(func)) => {
-                        self.acc = match func(self)? {
+                    VCell::BuiltInProc(proc) => {
+                        let proc = proc.as_ref();
+                        self.acc = match proc.eval(self)? {
                             VCell::Ptr(ptr) => VCell::Ptr(ptr),
                             vcell => self.heap.put(vcell),
                         };
@@ -146,8 +147,9 @@ impl Vm {
                 let lambda = match self.heap.get(&self.acc) {
                     VCell::Closure(lambda, _) => lambda,
                     VCell::Lambda(_) => self.acc.as_ptr()?,
-                    VCell::BuiltInProc(BuiltInProc(func)) => {
-                        self.acc = match func(self)? {
+                    VCell::BuiltInProc(proc) => {
+                        let proc = proc.as_ref();
+                        self.acc = match proc.eval(self)? {
                             VCell::Ptr(ptr) => VCell::Ptr(ptr),
                             vcell => self.heap.put(vcell),
                         };
