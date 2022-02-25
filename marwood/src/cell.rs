@@ -438,16 +438,14 @@ impl Display for Cell {
             Cell::Macro => {
                 write!(f, "#<macro>")
             }
-            Cell::Procedure(desc) => {
-                match desc {
-                    Some(desc) => {
-                        write!(f, "#<procedure:{}>", desc)
-                    },
-                    None => {
-                        write!(f, "#<procedure>")
-                    }
+            Cell::Procedure(desc) => match desc {
+                Some(desc) => {
+                    write!(f, "#<procedure:{}>", desc)
                 }
-            }
+                None => {
+                    write!(f, "#<procedure>")
+                }
+            },
             Cell::Undefined => {
                 write!(f, "#<undefined>")
             }

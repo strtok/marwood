@@ -1,3 +1,4 @@
+use crate::cell::Cell;
 use crate::vm::environment::{BindingLocation, EnvironmentMap};
 use crate::vm::vcell::VCell;
 
@@ -12,6 +13,7 @@ pub struct Lambda {
     pub envmap: EnvironmentMap,
     pub args: Vec<VCell>,
     pub bc: Vec<VCell>,
+    pub desc: Option<Cell>,
 }
 
 impl Lambda {
@@ -30,6 +32,7 @@ impl Lambda {
             envmap: EnvironmentMap::new(),
             args,
             bc: vec![],
+            desc: None,
         }
     }
 
@@ -51,15 +54,19 @@ impl Lambda {
             is_vararg,
             envmap,
             bc: vec![],
+            desc: None,
         }
     }
 
     pub fn set_top_level(&mut self) {
         self.top_level = true;
     }
-
     pub fn is_top_level(&self) -> bool {
         self.top_level
+    }
+    pub fn set_desc(&mut self, cell: Cell) {
+        let cell = Cell::from(vec![Cell::from("λ"), cell]);
+        self.desc = Some(cell);
     }
 
     /// Get
@@ -114,6 +121,7 @@ impl From<Vec<VCell>> for Lambda {
             args: vec![],
             is_vararg: false,
             bc,
+            desc: None,
         }
     }
 }

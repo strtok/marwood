@@ -69,7 +69,7 @@ pub struct BuiltInProc {
 }
 
 impl BuiltInProc {
-    pub fn eval(&self, vm: &mut Vm) -> Result<VCell, Error>{
+    pub fn eval(&self, vm: &mut Vm) -> Result<VCell, Error> {
         (self.proc)(vm)
     }
 
@@ -86,8 +86,10 @@ impl Debug for BuiltInProc {
 
 impl PartialEq<Self> for BuiltInProc {
     fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.proc as *mut fn(&mut Vm), other.proc as *mut fn(&mut Vm)) &&
-            self.desc().eq(other.desc())
+        std::ptr::eq(
+            self.proc as *mut fn(&mut Vm),
+            other.proc as *mut fn(&mut Vm),
+        ) && self.desc().eq(other.desc())
     }
 }
 
@@ -164,10 +166,7 @@ impl VCell {
     }
 
     pub fn builtin(desc: &'static str, proc: fn(&mut Vm) -> Result<VCell, Error>) -> VCell {
-        VCell::BuiltInProc(Rc::new(BuiltInProc{
-            desc,
-            proc,
-        }))
+        VCell::BuiltInProc(Rc::new(BuiltInProc { desc, proc }))
     }
 
     pub fn undefined() -> VCell {
@@ -482,7 +481,12 @@ impl fmt::Display for VCell {
             VCell::LexicalEnv(_) => write!(f, "#<lexical-environment>"),
             VCell::LexicalEnvSlot(slot) => write!(f, "env[${:02x}]", slot),
             VCell::LexicalEnvPtr(env, slot) => write!(f, "env[${:02x}][${:02x}]", env, slot),
-            VCell::Lambda(_) => write!(f, "#<lambda>"),
+            VCell::Lambda(lambda) => match &lambda.desc {
+                Some(desc) => {
+                    write!(f, "#<lambda:{}>", desc)
+                }
+                None => write!(f, "#<lambda>"),
+            },
             VCell::Nil => write!(f, "()"),
             VCell::Number(number) => write!(f, "{:?}", number),
             VCell::OpCode(val) => write!(f, "{:?}", val),
@@ -490,7 +494,7 @@ impl fmt::Display for VCell {
             VCell::Ptr(ptr) => write!(f, "${:02x}", ptr),
             VCell::String(s) => write!(f, "\"{}\"", (**s).borrow().deref()),
             VCell::Symbol(s) => write!(f, "{}", *s),
-            VCell::BuiltInProc(_) => write!(f, "#<syscall>"),
+            VCell::BuiltInProc(proc) => write!(f, "#<builtin:{}>", proc.desc()),
             VCell::Undefined => write!(f, "undefined"),
             VCell::Vector(_) => write!(f, "#<vector>"),
             VCell::Void => write!(f, "#<void>"),

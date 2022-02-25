@@ -411,13 +411,13 @@ impl Vm {
 
         // The position of formal args and body differ slightly
         // on whether this was a define special form or a lambda
-        let (formal_args, body) = match is_define_special {
+        let (formal_args_ast, body) = match is_define_special {
             true => (cdr!(car!(rest)), cdr!(rest)),
             false => (car!(rest), cdr!(rest)),
         };
 
         // Compile formal args into a list of symbols
-        let (formal_args, is_vararg) = self.compile_formal_arguments(formal_args)?;
+        let (formal_args, is_vararg) = self.compile_formal_arguments(formal_args_ast)?;
         let free_symbols = free_symbols(expr)?
             .iter()
             .inspect(|it| trace!("free: {}", it))
@@ -436,6 +436,7 @@ impl Vm {
             &free_symbols,
             is_vararg,
         );
+        lambda.set_desc(formal_args_ast.clone());
         if lambda.is_vararg {
             lambda.emit(OpCode::VarArg);
         }

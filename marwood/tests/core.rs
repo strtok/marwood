@@ -38,7 +38,8 @@ fn eval_quote() {
 #[test]
 fn procedure_display() {
     prints![
-        "+" => "#<procedure:+>"
+        "+" => "#<procedure:+>",
+        "(lambda (x y) (+ x y))" => "#<procedure:(λ (x y))>"
     ];
 }
 

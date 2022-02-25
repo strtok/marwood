@@ -38,10 +38,8 @@ fn factorial_cps(n: u64) -> Cell {
         (factorial n (λ (v) v)))
     "#
     ))
-        .unwrap();
-    let result = vm
-        .eval(&parse!(&format!("(factorial {})", n)))
-        .unwrap();
+    .unwrap();
+    let result = vm.eval(&parse!(&format!("(factorial {})", n))).unwrap();
     assert_eq!(result, cell![3628800]);
     result
 }
@@ -50,9 +48,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("sum-of-triangles 1000", |b| {
         b.iter(|| sum_of_triangles(black_box(1000)))
     });
-    c.bench_function("factorial 10", |b| {
-        b.iter(|| factorial_cps(black_box(10)))
-    });
+    c.bench_function("factorial 10", |b| b.iter(|| factorial_cps(black_box(10))));
 }
 
 criterion_group!(benches, criterion_benchmark);
