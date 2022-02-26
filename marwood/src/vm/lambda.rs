@@ -13,7 +13,7 @@ pub struct Lambda {
     pub envmap: EnvironmentMap,
     pub args: Vec<VCell>,
     pub bc: Vec<VCell>,
-    pub desc: Option<Cell>,
+    desc_args: Option<Cell>,
 }
 
 impl Lambda {
@@ -32,7 +32,7 @@ impl Lambda {
             envmap: EnvironmentMap::new(),
             args,
             bc: vec![],
-            desc: None,
+            desc_args: None,
         }
     }
 
@@ -54,7 +54,7 @@ impl Lambda {
             is_vararg,
             envmap,
             bc: vec![],
-            desc: None,
+            desc_args: None,
         }
     }
 
@@ -65,8 +65,7 @@ impl Lambda {
         self.top_level
     }
     pub fn set_desc(&mut self, cell: Cell) {
-        let cell = Cell::from(vec![Cell::from("λ"), cell]);
-        self.desc = Some(cell);
+        self.desc_args = Some(cell);
     }
 
     /// Get
@@ -111,6 +110,13 @@ impl Lambda {
     pub fn argc(&self) -> usize {
         self.args.len()
     }
+
+    pub fn desc(&self) -> Option<Cell> {
+        match &self.desc_args {
+            Some(args) => Some(Cell::from(vec![Cell::from("λ"), args.clone()])),
+            None => None,
+        }
+    }
 }
 
 impl From<Vec<VCell>> for Lambda {
@@ -121,7 +127,7 @@ impl From<Vec<VCell>> for Lambda {
             args: vec![],
             is_vararg: false,
             bc,
-            desc: None,
+            desc_args: None,
         }
     }
 }

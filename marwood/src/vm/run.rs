@@ -217,10 +217,9 @@ impl Vm {
                 if self.stack.get_offset(-2)?.as_argc()? != lambda.args.len() {
                     return Err(InvalidNumArgs(
                         lambda
-                            .desc
-                            .as_ref()
+                            .desc()
                             .map(|cell| cell.to_string())
-                            .unwrap_or_else( ||"procedure".to_string()),
+                            .unwrap_or_else(|| "procedure".to_string()),
                     ));
                 }
 

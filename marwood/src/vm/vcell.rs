@@ -481,7 +481,7 @@ impl fmt::Display for VCell {
             VCell::LexicalEnv(_) => write!(f, "#<lexical-environment>"),
             VCell::LexicalEnvSlot(slot) => write!(f, "env[${:02x}]", slot),
             VCell::LexicalEnvPtr(env, slot) => write!(f, "env[${:02x}][${:02x}]", env, slot),
-            VCell::Lambda(lambda) => match &lambda.desc {
+            VCell::Lambda(lambda) => match lambda.desc() {
                 Some(desc) => {
                     write!(f, "#<lambda:{}>", desc)
                 }
