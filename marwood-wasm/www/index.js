@@ -45,10 +45,9 @@ var term = $('#terminal').terminal((text) => {
                     setTimeout(() => { term.echo(""); });
                 }
                 if (remaining_text != null && remaining_text.length > 0) {
-                    console.log(`REMAINING: ${remaining_text}`);
                     setTimeout(() => {
                         term.history().disable();
-                        term.exec(remaining_text).then(() => {
+                        term.exec(remaining_text, { silent: true }).then(() => {
                             term.history().enable();
                         });
                     });
