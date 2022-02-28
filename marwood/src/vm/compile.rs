@@ -64,9 +64,9 @@ impl Vm {
     /// # Arguments
     /// `expr` - The expression to compile.
     pub fn compile(&mut self, lambda: &mut Lambda, tail: bool, expr: &Cell) -> Result<(), Error> {
-        trace!("transforming: {}", expr);
+        trace!("transforming {}", expr);
         let expr = self.transform(expr)?;
-        trace!("compilnig: {}", expr);
+        trace!("compiling {}", expr);
         self.compile_expression(lambda, tail, &expr)?;
         Ok(())
     }
@@ -138,16 +138,14 @@ impl Vm {
             Cell::Pair(_, _) => self.compile_procedure_application(lambda, tail, expr),
             Cell::Symbol(_) => self.compile_symbol_expression(lambda, expr),
             Cell::Nil => Err(UnquotedNil),
-            Cell::Bool(_)
-            | Cell::Continuation
-            | Cell::Char(_)
-            | Cell::Number(_)
-            | Cell::Macro
-            | Cell::String(_)
-            | Cell::Undefined
-            | Cell::Vector(_)
+            Cell::Procedure(_)
             | Cell::Void
-            | Cell::Procedure(_) => self.compile_quote(lambda, expr),
+            | Cell::Undefined
+            | Cell::Macro
+            | Cell::Continuation => Err(InvalidSyntax(expr.to_string())),
+            Cell::Bool(_) | Cell::Char(_) | Cell::Number(_) | Cell::String(_) | Cell::Vector(_) => {
+                self.compile_quote(lambda, expr)
+            }
         }
     }
 

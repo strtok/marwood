@@ -361,6 +361,10 @@ fn eval() {
     evals![
         "(eval '((lambda (x y) (+ x y)) 10 20))" => "30"
     ];
+
+    fails![
+        "(eval +)" => InvalidSyntax("#<procedure:+>".into())
+    ];
 }
 
 #[test]
