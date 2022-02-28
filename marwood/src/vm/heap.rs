@@ -190,10 +190,10 @@ impl Heap {
             VCell::Void => Cell::Void,
             VCell::Continuation(_) => Cell::Continuation,
             VCell::Closure(ptr, _) => match self.get_at_index(*ptr).as_lambda() {
-                Ok(lambda) => Cell::Procedure(lambda.desc().map(|cell| cell.to_string())),
+                Ok(lambda) => Cell::Procedure(Some(lambda.to_string())),
                 Err(_) => Cell::Procedure(None),
             },
-            VCell::Lambda(lambda) => Cell::Procedure(lambda.desc().map(|cell| cell.to_string())),
+            VCell::Lambda(lambda) => Cell::Procedure(Some(lambda.to_string())),
             VCell::BuiltInProc(proc) => Cell::Procedure(Some(proc.desc().to_string())),
             VCell::Macro(_) => Cell::Macro,
             VCell::Vector(vector) => {

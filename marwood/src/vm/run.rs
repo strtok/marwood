@@ -215,12 +215,7 @@ impl Vm {
                 let lambda = self.heap.get_at_index(lambda);
                 let lambda = lambda.as_lambda()?;
                 if self.stack.get_offset(-2)?.as_argc()? != lambda.args.len() {
-                    return Err(InvalidNumArgs(
-                        lambda
-                            .desc()
-                            .map(|cell| cell.to_string())
-                            .unwrap_or_else(|| "procedure".to_string()),
-                    ));
+                    return Err(InvalidNumArgs(lambda.to_string()));
                 }
 
                 self.stack.push(VCell::BasePointer(self.bp));

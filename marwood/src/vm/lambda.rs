@@ -1,6 +1,7 @@
 use crate::cell::Cell;
 use crate::vm::environment::{BindingLocation, EnvironmentMap};
 use crate::vm::vcell::VCell;
+use std::fmt::{Display, Formatter};
 
 /// Lambda
 ///
@@ -110,13 +111,6 @@ impl Lambda {
     pub fn argc(&self) -> usize {
         self.args.len()
     }
-
-    pub fn desc(&self) -> Option<Cell> {
-        match &self.desc_args {
-            Some(args) => Some(Cell::from(vec![Cell::from("λ"), args.clone()])),
-            None => None,
-        }
-    }
 }
 
 impl From<Vec<VCell>> for Lambda {
@@ -128,6 +122,15 @@ impl From<Vec<VCell>> for Lambda {
             is_vararg: false,
             bc,
             desc_args: None,
+        }
+    }
+}
+
+impl Display for Lambda {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.desc_args {
+            Some(args) => write!(f, "(λ {})", args),
+            None => write!(f, "(λ ())"),
         }
     }
 }
