@@ -4,46 +4,14 @@ import LocalEchoController from 'local-echo';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { Unicode11Addon } from 'xterm-addon-unicode11';
+import * as XtermWebfont from 'xterm-webfont'
 import { Marwood } from "marwood";
 import { Buffer } from "buffer";
-
-const params = new URLSearchParams(window.location.search);
-
-const term = new Terminal({
-    theme: {
-        background: '#191A19',
-        foreground: '#F5F2E7',
-    },
-    fontSize: 14,
-    cursorBlink: true,
-    cursorStyle: "block"
-});
-
-const localEcho = new LocalEchoController();
-term.loadAddon(localEcho);
-
-term.open(document.getElementById('terminal'));
-term.loadAddon(new WebLinksAddon());
-
-const unicode11Addon = new Unicode11Addon();
-term.loadAddon(unicode11Addon);
-term.unicode.activeVersion = '11';
-
-if (params.has("rows") && params.has("cols")) {
-    let rows = params.get("rows");
-    let cols = params.get("cols");
-    term.resize(cols, rows);
-} else {
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    fitAddon.fit();
-    fitAddon.activate(term);
-}
 
 const vm = Marwood.new();
 let vmDisplayed = false;
 
-localEcho.addCheckHandler((input) => vm.check(input).eof);
+const localEcho = new LocalEchoController();
 
 function read() {
     localEcho.read("> ", "  ")
@@ -107,22 +75,59 @@ globalThis.marwood_display = (text) => {
     localEcho.print(text);
 }
 
-term.focus();
-localEcho.println("λMARWOOD");
-localEcho.println("");
+const params = new URLSearchParams(window.location.search);
+const term = new Terminal({
+    theme: {
+        background: '#191A19',
+        foreground: '#F5F2E7',
+    },
+    fontFamily: "Hack",
+    fontSize: 14,
+    cursorBlink: true,
+    cursorStyle: "block"
+});
 
-if (params.has("eval")) {
-    let text = params.get("eval");
-    text = text.replace("-", "+");
-    text = text.replace("_", "/");
-    text = Buffer.from(text, "base64")
-        .toString('utf8');
-    if (text != null) {
-        localEcho.history.push(text);
-        localEcho.print("> ");
-        localEcho.println(text);
-        evalInput(text);
+term.loadAddon(new XtermWebfont())
+
+
+term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
+    term.loadAddon(localEcho);
+    term.loadAddon(new WebLinksAddon());
+
+    const unicode11Addon = new Unicode11Addon();
+    term.loadAddon(unicode11Addon);
+    term.unicode.activeVersion = '11';
+
+    if (params.has("rows") && params.has("cols")) {
+        let rows = params.get("rows");
+        let cols = params.get("cols");
+        term.resize(cols, rows);
+    } else {
+        const fitAddon = new FitAddon();
+        term.loadAddon(fitAddon);
+        fitAddon.fit();
+        fitAddon.activate(term);
     }
-} else {
-    read();
-}
+
+    localEcho.addCheckHandler((input) => vm.check(input).eof);
+
+    term.focus();
+    localEcho.println("λMARWOOD");
+    localEcho.println("");
+
+    if (params.has("eval")) {
+        let text = params.get("eval");
+        text = text.replace("-", "+");
+        text = text.replace("_", "/");
+        text = Buffer.from(text, "base64")
+            .toString('utf8');
+        if (text != null) {
+            localEcho.history.push(text);
+            localEcho.print("> ");
+            localEcho.println(text);
+            evalInput(text);
+        }
+    } else {
+        read();
+    }
+});
