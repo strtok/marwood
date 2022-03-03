@@ -14,7 +14,7 @@ const term = new Terminal({
         background: '#191A19',
         foreground: '#F5F2E7',
     },
-    fontFamily: "Hack",
+    fontSize: 14,
     cursorBlink: true,
     cursorStyle: "block"
 });
