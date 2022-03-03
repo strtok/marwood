@@ -6,8 +6,8 @@ import {
     countLines,
     getLastToken,
     hasTailingWhitespace,
-    isIncompleteInput,
     offsetToColRow,
+    offsetToColRowChars,
     getSharedFragment
 } from "./Utils";
 
@@ -414,7 +414,7 @@ export default class LocalEchoController {
      * cursor is unable to move.
      */
     handleCursorUp() {
-        const { col, row } = offsetToColRow(
+        const { col, row } = offsetToColRowChars(
             this._input,
             this._cursor,
             this._termSize.cols
@@ -443,7 +443,7 @@ export default class LocalEchoController {
      * cursor is unable to move.
      */
     handleCursorDown() {
-        const { col, row } = offsetToColRow(
+        const { col, row } = offsetToColRowChars(
             this._input,
             this._cursor,
             this._termSize.cols

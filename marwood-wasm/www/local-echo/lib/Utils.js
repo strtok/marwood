@@ -60,6 +60,31 @@ export function offsetToColRow(input, offset, maxCols) {
 }
 
 /**
+ * Convert offset at the given input to col/row location, returning 
+ * a character vs. byte count.
+ *
+ * This function is not optimized and practically emulates via brute-force
+ * the navigation on the terminal, wrapping when they reach the column width.
+ */
+export function offsetToColRowChars(input, offset, maxCols) {
+  let row = 0,
+    col = 0;
+  [...input].splice(0, offset).forEach((c) => {
+    if (c == '\n') {
+      col = 0;
+      row += 1;
+    } else {
+      col += 1;
+      if (col > maxCols) {
+        col = 0;
+        row += 1;
+      }
+    }
+  });
+
+  return { row, col };
+}
+/**
  * Counts the lines in the given input
  */
 export function countLines(input, maxCols) {
