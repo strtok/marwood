@@ -547,13 +547,7 @@ export default class LocalEchoController {
             return;
         }
 
-        // If this looks like a pasted input, expand it
-        if (data.length > 3 && data.charCodeAt(0) !== 0x1b) {
-            const normData = data.replace(/[\r\n]+/g, "\r");
-            Array.from(normData).forEach(c => this.handleData(c));
-        } else {
-            this.handleData(data);
-        }
+        this.handleData(data);
     }
 
     /**
