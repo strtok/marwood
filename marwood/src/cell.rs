@@ -406,6 +406,7 @@ impl Display for Cell {
                             '\t' => write!(f, "\\t")?,
                             '\n' => write!(f, "\\n")?,
                             '\r' => write!(f, "\\r")?,
+                            _ if it as u32 == 0x1b => write!(f, "\\e")?,
                             _ if it as u32 == 0x7 => write!(f, "\\a")?,
                             _ if it as u32 == 0x8 => write!(f, "\\b")?,
                             _ if it.is_ascii_control() => write!(f, "\\x{:x};", it as u32)?,

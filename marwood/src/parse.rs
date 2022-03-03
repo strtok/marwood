@@ -217,6 +217,7 @@ pub fn parse_string(span: &str) -> Result<Cell, Error> {
                 Some('\\') => '\\',
                 Some('a') => char::from_u32(0x7).unwrap(),
                 Some('b') => char::from_u32(0x8).unwrap(),
+                Some('e') => char::from_u32(0x1b).unwrap(),
                 Some('t') => '\t',
                 Some('n') => '\n',
                 Some('x') => {
@@ -475,6 +476,7 @@ mod tests {
             r#""\a""# => Cell::new_string(&String::from(char::from_u32(0x7).unwrap())),
             r#""\a""# => Cell::new_string(&String::from(char::from_u32(0x7).unwrap())),
             r#""\b""# => Cell::new_string(&String::from(char::from_u32(0x8).unwrap())),
+            r#""\e""# => Cell::new_string(&String::from(char::from_u32(0x1b).unwrap())),
             r#""\x41;""# => Cell::new_string("A"),
             r#""\x1f436;""# => Cell::new_string("🐶")
         };
