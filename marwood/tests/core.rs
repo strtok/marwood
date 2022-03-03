@@ -347,7 +347,7 @@ fn apply_makes_environment() {
               (if (< 1 i) (~ (- i 1)))
               (set! x (+ x i)))" => "#<void>",
         "x" => "45"
-    ]
+    ];
 }
 
 #[test]

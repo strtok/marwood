@@ -9,7 +9,7 @@ module.exports = {
   },
   mode: "development",
   plugins: [new CopyWebpackPlugin({
-    patterns: ["index.html", "vintage.html", "vintage.css"]
+    patterns: ["index.html"]
   })],
   experiments: {
     asyncWebAssembly: true,
