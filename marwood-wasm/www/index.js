@@ -118,6 +118,7 @@ if (params.has("eval")) {
     text = Buffer.from(text, "base64")
         .toString('utf8');
     if (text != null) {
+        localEcho.history.push(text);
         localEcho.print("> ");
         localEcho.println(text);
         evalInput(text);
