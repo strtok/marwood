@@ -17,7 +17,7 @@ function read() {
             })
                 .catch(error => term.println(`error: ${error}`));
         })
-        .catch(error => term.println(`error reading: ${error}`));
+        .catch(error => term.println(`error: ${error}`));
 }
 const params = new URLSearchParams(window.location.search);
 const term = new Terminal({
