@@ -32,7 +32,7 @@ function read() {
                 setTimeout(read);
             })
                 .catch(error => {
-                    term.write("\x1B[2J\x1B[H\x1B[!p");
+                    term.write("\x1B[E\x1B[!p");
                     if (error != null) {
                         localEcho.println(`error: ${error}`);
                     }
@@ -84,7 +84,7 @@ term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
             vm.eval(text).then(() => {
                 read();
             }).catch(error => {
-                term.write("\x1B[2J\x1B[H\x1B[!p");
+                term.write("\x1B[E\x1B[!p");
                 if (error != null) {
                     localEcho.println(`error: ${error}`);
                 }
