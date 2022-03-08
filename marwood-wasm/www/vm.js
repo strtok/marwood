@@ -6,6 +6,7 @@ export class Vm {
         this.displayed = false;
         this.remainingInput = null;
         this.evalIter = 0;
+        this.stopping = false;
         this.marwood = Marwood.new();
 
         globalThis.marwood_display = (text) => {
@@ -15,7 +16,6 @@ export class Vm {
     }
 
     check(input) {
-        console.log(input);
         return this.marwood.check(input);
     }
 
@@ -25,13 +25,23 @@ export class Vm {
             this.remainingInput = input;
             this.evalIter = 0;
             this.displayed = false;
+            this.stopping = false;
             setTimeout(() => this.execute());
         });
     }
 
-    execute() {
-        let result;
+    stop() {
+        this.stopping = true;
+    }
 
+    execute() {
+        if (this.stopping) {
+            let [resolve, reject] = this.evalPromise;
+            reject(null);
+            return;
+        }
+
+        let result;
         if (this.evalIter == 0) {
             result = this.marwood.eval(this.remainingInput, 10000);
             this.remainingInput = result.remaining;

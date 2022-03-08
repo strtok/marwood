@@ -15,9 +15,14 @@ function read() {
             vm.eval(input).then(() => {
                 read();
             })
-                .catch(error => term.println(`error: ${error}`));
+                .catch(error => {
+                    if (error != null) {
+                        localEcho.println(`error: ${error}`);
+                    }
+                    read();
+                });
         })
-        .catch(error => term.println(`error: ${error}`));
+        .catch(error => localEcho.println(`error: ${error}`));
 }
 const params = new URLSearchParams(window.location.search);
 const term = new Terminal({
@@ -55,6 +60,9 @@ term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
     }
 
     localEcho.addCheckHandler((input) => vm.check(input).eof);
+    localEcho.addCtrlCHandler(() => {
+        vm.stop();
+    });
 
     term.focus();
     localEcho.println("λMARWOOD");

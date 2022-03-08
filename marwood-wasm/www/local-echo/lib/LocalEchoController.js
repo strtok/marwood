@@ -33,6 +33,7 @@ export default class LocalEchoController {
 
         this._autocompleteHandlers = [];
         this._checkHandler = (data) => false;
+        this._ctrlCHandler = () => { };
         this._active = false;
         this._input = "";
         this._cursor = 0;
@@ -119,6 +120,13 @@ export default class LocalEchoController {
      */
     addCheckHandler(fn) {
         this._checkHandler = fn;
+    }
+
+    /**
+     * Register a check handler that will check for incomplete input
+     */
+    addCtrlCHandler(fn) {
+        this._ctrlCHandler = fn;
     }
 
     /**
@@ -537,6 +545,11 @@ export default class LocalEchoController {
      * Handle terminal input
      */
     handleTermData(data) {
+        if (data == "\x03") {
+            console.log("ctrl-c");
+            (this._ctrlCHandler)();
+        }
+
         if (!this._active) return;
 
         // If we have an active character prompt, satisfy it in priority
