@@ -734,6 +734,13 @@ export default class LocalEchoController {
                 case "\x05": // CTRL+E
                     this.setCursor(this._input.length);
                     break;
+                case "\x0C": // CTRL-L
+                    this.term.write("\x1b[H\x1b[2J");
+                    this.term.write(((this._activePrompt || {}).prompt || ""));
+                    this._input = "";
+                    this._cursor = 0;
+                    if (this.history) this.history.rewind();
+                    break;
                 case "\x03": // CTRL+C
                     this.setCursor(this._input.length);
                     this.term.write("^C\r\n" + ((this._activePrompt || {}).prompt || ""));
