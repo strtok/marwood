@@ -201,6 +201,13 @@ export default class LocalEchoController {
     }
 
     /**
+     * Write message directly to terminal
+     */
+    write(output) {
+        this.term.write(output);
+    }
+
+    /**
      * Prints a list of items using a wide-format
      */
     printWide(items, padding = 2) {
