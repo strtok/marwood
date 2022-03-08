@@ -189,15 +189,14 @@ export default class LocalEchoController {
      * Prints a message and changes line
      */
     println(message) {
-        this.print(message + "\n");
+        this.print(message + "\r\n");
     }
 
     /**
      * Prints a message and properly handles new-lines
      */
     print(message) {
-        const normInput = message.replace(/[\r\n]+/g, "\n");
-        this.term.write(normInput.replace(/\n/g, "\r\n"));
+        this.term.write(message.replace(/([^\r])\n/g, "$1\r\n"));
     }
 
     /**

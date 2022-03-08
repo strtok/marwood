@@ -11,7 +11,7 @@ export class Vm {
 
         globalThis.marwood_display = (text) => {
             this.displayed = true;
-            this.term.write(text);
+            this.term.print(text);
         }
     }
 
