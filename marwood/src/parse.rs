@@ -220,6 +220,9 @@ pub fn parse_string(span: &str) -> Result<Cell, Error> {
                 Some('e') => char::from_u32(0x1b).unwrap(),
                 Some('t') => '\t',
                 Some('n') => '\n',
+                Some('r') => '\r',
+                Some('v') => char::from_u32(0xb).unwrap(),
+                Some('f') => char::from_u32(0xc).unwrap(),
                 Some('x') => {
                     cur.next();
                     let mut unicode_value = 0_u32;
