@@ -11,6 +11,7 @@ import { Vm } from "./vm";
 const localEcho = new LocalEchoController();
 const params = new URLSearchParams(window.location.search);
 const term = new Terminal({
+    convertEol: true,
     theme: {
         background: '#191A19',
         foreground: '#F5F2E7',
