@@ -42,6 +42,17 @@ function read() {
         .catch(error => localEcho.println(`error: ${error}`));
 }
 
+function animate_then_read(text) {
+    localEcho.print([...text][0]);
+    text = [...text].splice(1);
+    if ([...text].length == 0) {
+        localEcho.println("");
+        read();
+    } else {
+        setTimeout(() => animate_then_read(text), 100);
+    }
+}
+
 term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
     term.loadAddon(localEcho);
     term.loadAddon(new WebLinksAddon());
@@ -67,10 +78,11 @@ term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
     });
 
     term.focus();
-    localEcho.println("λMARWOOD");
-    localEcho.println("");
 
     if (params.has("eval")) {
+        localEcho.println("λMARWOOD");
+        localEcho.println("");
+
         let text = params.get("eval");
         text = text.replace("-", "+");
         text = text.replace("_", "/");
@@ -92,6 +104,6 @@ term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
             });
         }
     } else {
-        read();
+        animate_then_read("λMARWOOD");
     }
 });
