@@ -9,21 +9,6 @@ import { Buffer } from "buffer";
 import { Vm } from "./vm";
 
 const localEcho = new LocalEchoController();
-function read() {
-    localEcho.read("> ", "  ")
-        .then(input => {
-            vm.eval(input).then(() => {
-                read();
-            })
-                .catch(error => {
-                    if (error != null) {
-                        localEcho.println(`error: ${error}`);
-                    }
-                    read();
-                });
-        })
-        .catch(error => localEcho.println(`error: ${error}`));
-}
 const params = new URLSearchParams(window.location.search);
 const term = new Terminal({
     theme: {
@@ -39,6 +24,23 @@ const term = new Terminal({
 term.loadAddon(new XtermWebfont())
 
 const vm = new Vm(localEcho);
+
+function read() {
+    localEcho.read("> ", "  ")
+        .then(input => {
+            vm.eval(input).then(() => {
+                setTimeout(read);
+            })
+                .catch(error => {
+                    term.write("\x1B[2J\x1B[H\x1B[!p");
+                    if (error != null) {
+                        localEcho.println(`error: ${error}`);
+                    }
+                    setTimeout(read);
+                });
+        })
+        .catch(error => localEcho.println(`error: ${error}`));
+}
 
 term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
     term.loadAddon(localEcho);
@@ -81,6 +83,12 @@ term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
             localEcho.println(text);
             vm.eval(text).then(() => {
                 read();
+            }).catch(error => {
+                term.write("\x1B[2J\x1B[H\x1B[!p");
+                if (error != null) {
+                    localEcho.println(`error: ${error}`);
+                }
+                setTimeout(read);
             });
         }
     } else {
