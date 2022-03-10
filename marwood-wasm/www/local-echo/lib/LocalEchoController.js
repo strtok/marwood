@@ -196,7 +196,11 @@ export default class LocalEchoController {
      * Prints a message and properly handles new-lines
      */
     print(message) {
-        this.term.write(message.replace(/([^\r])\n/g, "$1\r\n"));
+        if (message == "\n") {
+            this.term.write("\r\n");
+        } else {
+            this.term.write(message.replace(/([^\r])\n/g, "$1\r\n"));
+        }
     }
 
     /**
