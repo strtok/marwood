@@ -570,7 +570,12 @@ export default class LocalEchoController {
             return;
         }
 
-        this.handleData(data);
+        if (data.length > 3 && data.charCodeAt(0) !== 0x1b) {
+            const normData = data.replace(/[\r\n]+/g, "\r");
+            [...normData].forEach(c => this.handleData(c));
+        } else {
+            this.handleData(data);
+        }
     }
 
     /**
