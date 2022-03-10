@@ -117,6 +117,10 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
             '"' => scan_string(&mut cur)?,
             _ if is_initial_identifier(c) => scan_symbol(&mut cur)?,
             _ if is_initial_number(c) => scan_number(&mut cur)?,
+            ';' => {
+                scan_comment(&mut cur)?;
+                continue;
+            }
             _ if c.is_whitespace() => {
                 cur.next();
                 continue;
@@ -126,6 +130,19 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
     }
 
     Ok(tokens)
+}
+
+/// Scan Comment
+///
+/// Scan until a '\n' is encountered.
+
+fn scan_comment(cur: &mut Peekable<CharIndices>) -> Result<(), Error> {
+    while let Some((_, c)) = cur.next() {
+        if c == '\n' {
+            break;
+        }
+    }
+    Ok(())
 }
 
 /// Scan Dot

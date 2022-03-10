@@ -11,6 +11,14 @@ use marwood::vm::Error::{
 use marwood::vm::Vm;
 
 #[test]
+fn comments() {
+    evals![
+       "1 ;number one" => "1",
+       "(+ 10 ;adding 10\n 5;to the number 5\n)" => "15"
+    ];
+}
+
+#[test]
 fn eval_literal() {
     evals![
        "1" => "1",
