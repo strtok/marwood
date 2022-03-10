@@ -36,6 +36,7 @@ export default class LocalEchoController {
         this._ctrlCHandler = () => { };
         this._active = false;
         this._input = "";
+        this._paste = false;
         this._cursor = 0;
         this._activePrompt = null;
         this._activeCharPrompt = null;
@@ -571,8 +572,11 @@ export default class LocalEchoController {
         }
 
         if (data.length > 3 && data.charCodeAt(0) !== 0x1b) {
-            const normData = data.replace(/[\r\n]+/g, "\r");
-            [...normData].forEach(c => this.handleData(c));
+            this._paste = true;
+            [...data].slice(0, -1).forEach(c => this.handleData(c));
+            this._paste = false;
+            console.log('done with psate');
+            [...data].slice(-1).forEach(c => this.handleData(c));
         } else {
             this.handleData(data);
         }
@@ -661,7 +665,7 @@ export default class LocalEchoController {
         } else if (ord < 32 || ord === 0x7f) {
             switch (data) {
                 case "\r": // ENTER
-                    if (this._checkHandler(this._input)) {
+                    if (this._checkHandler(this._input) || this._paste) {
                         this.handleCursorInsert("\n");
                     } else {
                         this.handleReadComplete();
