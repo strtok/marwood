@@ -1,5 +1,5 @@
 use crate::number::Number;
-use crate::vm::builtin::{pop_argc, pop_char, pop_index, pop_string, pop_usize};
+use crate::vm::builtin::{pop_argc, pop_char, pop_index, pop_string, pop_usize, pop_vector};
 use crate::vm::vcell::VCell;
 use crate::vm::Error::{InvalidStringIndex, InvalidSyntax};
 use crate::vm::{Error, Vm};
@@ -27,6 +27,8 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("string-set!", string_set);
     vm.load_builtin("string-upcase", string_upcase);
     vm.load_builtin("string->list", string_list);
+    vm.load_builtin("string->vector", string_vector);
+    vm.load_builtin("vector->string", vector_string);
     vm.load_builtin("list->string", list_string);
     vm.load_builtin("string-copy", string_copy);
 }
@@ -156,6 +158,31 @@ pub fn string_list(vm: &mut Vm) -> Result<VCell, Error> {
     }
 
     Ok(list)
+}
+
+pub fn string_vector(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "string->vector")?;
+
+    let s = pop_string(vm, "string->vector")?;
+    let s = s.borrow();
+    let s = s.as_str();
+    let v = s
+        .chars()
+        .map(|c| vm.heap.put(VCell::Char(c)))
+        .collect::<Vec<_>>();
+    Ok(VCell::vector(v))
+}
+
+pub fn vector_string(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "vector->string")?;
+
+    let v = pop_vector(vm)?;
+    let mut s = String::with_capacity(v.len());
+    for it in 0..v.len() {
+        let vcell = vm.heap.get(&v.get(it).unwrap());
+        s.push(vcell.as_char()?);
+    }
+    Ok(VCell::string(s))
 }
 
 pub fn list_string(vm: &mut Vm) -> Result<VCell, Error> {

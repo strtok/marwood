@@ -228,3 +228,8 @@ fn symbol_procedures() {
            "(symbol=? 'foo 'foo 'bar 'foo)" => "#f"
     ];
 }
+
+#[test]
+fn vector_conversion() {
+    evals!["(vector->string (string->vector \"foo\"))" => "\"foo\""];
+}

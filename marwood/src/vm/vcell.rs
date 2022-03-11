@@ -324,6 +324,13 @@ impl VCell {
         }
     }
 
+    pub fn as_char(&self) -> Result<char, Error> {
+        match self {
+            VCell::Char(c) => Ok(*c),
+            _ => Err(ExpectedType(CHAR_TYPE_TEXT, self.type_text())),
+        }
+    }
+
     pub fn as_lambda(&self) -> Result<&Lambda, Error> {
         match self {
             VCell::Lambda(lambda) => Ok(&*lambda),
