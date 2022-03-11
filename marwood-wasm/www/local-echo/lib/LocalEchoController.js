@@ -575,7 +575,6 @@ export default class LocalEchoController {
             this._paste = true;
             [...data].slice(0, -1).forEach(c => this.handleData(c));
             this._paste = false;
-            console.log('done with psate');
             [...data].slice(-1).forEach(c => this.handleData(c));
         } else {
             this.handleData(data);
