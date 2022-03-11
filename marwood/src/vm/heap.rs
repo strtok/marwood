@@ -200,10 +200,24 @@ impl Heap {
             VCell::Char(val) => Cell::Char(*val),
             VCell::Number(val) => Cell::Number(val.clone()),
             VCell::Nil => Cell::Nil,
-            VCell::Pair(ref car, cdr) => Cell::new_pair(
-                self.get_as_cell(&VCell::Ptr(*car)),
-                self.get_as_cell(&VCell::Ptr(*cdr)),
-            ),
+            VCell::Pair(_, _) => {
+                let mut v = vec![];
+                let mut rest = vcell.clone();
+                loop {
+                    v.push(self.get_as_cell(&rest.as_car().unwrap()));
+                    match self.get_at_index(rest.as_cdr().unwrap().as_ptr().unwrap()) {
+                        pair if pair.is_pair() => {
+                            rest = pair.clone();
+                        }
+                        VCell::Nil => {
+                            return Cell::new_list(v);
+                        }
+                        cell => {
+                            return Cell::new_improper_list(v, self.get_as_cell(cell));
+                        }
+                    }
+                }
+            }
             VCell::Ptr(ptr) => self.get_as_cell(self.get_at_index(*ptr)),
             VCell::String(s) => Cell::String(s.borrow().deref().into()),
             VCell::Symbol(s) => Cell::Symbol(s.deref().into()),
