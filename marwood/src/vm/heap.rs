@@ -1,7 +1,6 @@
 use crate::cell;
 use crate::cell::Cell;
 use crate::vm::continuation::Continuation;
-use crate::vm::environment::free_symbols;
 use crate::vm::gc;
 use crate::vm::gc::State;
 use crate::vm::lambda::Lambda;
