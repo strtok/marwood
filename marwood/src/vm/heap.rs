@@ -1,6 +1,7 @@
 use crate::cell;
 use crate::cell::Cell;
 use crate::vm::continuation::Continuation;
+use crate::vm::environment::free_symbols;
 use crate::vm::gc;
 use crate::vm::gc::State;
 use crate::vm::lambda::Lambda;
@@ -11,6 +12,7 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct Heap {
+    chunk_size: usize,
     free_list: Vec<usize>,
     heap: Vec<VCell>,
     heap_map: gc::Map,
@@ -24,6 +26,7 @@ impl Heap {
     /// chunk of free vcells.
     pub fn new(chunk_size: usize) -> Heap {
         Heap {
+            chunk_size,
             heap: vec![VCell::undefined(); chunk_size],
             free_list: (0..chunk_size).rev().into_iter().collect(),
             heap_map: gc::Map::new(chunk_size),
@@ -31,13 +34,32 @@ impl Heap {
         }
     }
 
+    /// Grow
+    ///
+    /// Grow the heap by one chunk, adding the newly created nodes
+    /// too the free list.
+    pub fn grow(&mut self) {
+        let current_size = self.heap.len();
+        let new_size = current_size + self.chunk_size;
+        self.heap.resize(new_size, VCell::undefined());
+        self.heap_map.resize(new_size);
+        (current_size..new_size).for_each(|it| self.free_list.push(it));
+    }
+
     /// Alloc
     ///
     /// Return the next free slot from the free list.
     pub fn alloc(&mut self) -> usize {
-        let ptr = self.free_list.pop().unwrap();
-        self.heap_map.set(ptr, State::Allocated);
-        ptr
+        match self.free_list.pop() {
+            None => {
+                self.grow();
+                self.alloc()
+            }
+            Some(ptr) => {
+                self.heap_map.set(ptr, State::Allocated);
+                ptr
+            }
+        }
     }
 
     /// Free
@@ -426,6 +448,13 @@ impl Heap {
     pub fn used_size(&self) -> usize {
         self.capacity() - self.free_size()
     }
+
+    /// Chunk Size
+    ///
+    /// The chunk allocation size of this heap.
+    pub fn chunk_size(&self) -> usize {
+        self.chunk_size
+    }
 }
 
 #[cfg(test)]
@@ -533,5 +562,19 @@ mod tests {
         heap.mark(pair.as_ptr().unwrap());
         heap.sweep();
         assert_eq!(heap.free_list.len(), CHUNK_SIZE - 2);
+    }
+
+    #[test]
+    fn heap_auto_grows() {
+        let mut heap = Heap::new(8);
+        assert_eq!(heap.chunk_size(), 8);
+        assert_eq!(heap.capacity(), 8);
+        assert_eq!(heap.free_size(), 8);
+        for _ in 0..9 {
+            heap.put_cell(&cell![0]);
+        }
+        assert_eq!(heap.chunk_size(), 8);
+        assert_eq!(heap.capacity(), 16);
+        assert_eq!(heap.free_size(), 7);
     }
 }

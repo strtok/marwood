@@ -24,7 +24,7 @@ pub mod transform;
 pub mod vcell;
 pub mod vector;
 
-const HEAP_SIZE: usize = 16 * 1024;
+const HEAP_CHUNK_SIZE: usize = 8192;
 
 struct Display(Box<dyn Fn(&Cell)>);
 struct Write(Box<dyn Fn(&Cell)>);
@@ -55,7 +55,7 @@ impl Vm {
     /// Return a new Vm
     pub fn new() -> Vm {
         let mut vm = Vm {
-            heap: Heap::new(HEAP_SIZE),
+            heap: Heap::new(HEAP_CHUNK_SIZE),
             ip: (usize::MAX, 0),
             stack: Stack::new(),
             globenv: GlobalEnvironment::new(),

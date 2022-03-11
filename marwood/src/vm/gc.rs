@@ -65,10 +65,20 @@ impl Map {
     /// Construct a new GcMap of len elements, initializing every element
     /// to the value 0 (free).
     pub fn new(size: usize) -> Map {
+        assert_eq!(size % 4, 0);
         Map {
             size,
-            map: vec![0; size],
+            map: vec![0; size / 4],
         }
+    }
+
+    /// Resize
+    ///
+    /// Resize the GcMap by size, initializing new elements to the value 0 (free)
+    pub fn resize(&mut self, size: usize) {
+        assert_eq!(size % 4, 0);
+        self.size = size;
+        self.map.resize(size / 4, 0);
     }
 
     /// Get
@@ -124,8 +134,8 @@ mod tests {
     use super::*;
     #[test]
     fn initial_state_is_free() {
-        let gcmap = Map::new(8);
-        assert_eq!(gcmap.size, 8);
+        let gcmap = Map::new(32);
+        assert_eq!(gcmap.size, 32);
         for it in 0..32 {
             assert_eq!(gcmap.get(it), Some(State::Free));
         }
@@ -134,7 +144,7 @@ mod tests {
 
     #[test]
     fn mutation() {
-        let mut gcmap = Map::new(8);
+        let mut gcmap = Map::new(32);
         gcmap.set(0, State::Used);
         gcmap.set(1, State::Allocated);
         gcmap.set(15, State::Used);
