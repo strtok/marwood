@@ -41,6 +41,11 @@ export class Vm {
             return;
         }
 
+        if (this.term.highWater()) {
+            setTimeout(() => this.execute(), 1);
+            return;
+        }
+
         let result;
         if (this.evalIter == 0) {
             result = this.marwood.eval(this.remainingInput, 10000);

@@ -25,6 +25,10 @@ import {
 export default class LocalEchoController {
     constructor(term = null, options = {}) {
         this.term = term;
+        this._watermark = 0;
+        this._highWatermark = 10000;
+        this._lowWatermark = 1000;
+        this._highWater = false;
         this._handleTermData = this.handleTermData.bind(this);
         this._handleTermResize = this.handleTermResize.bind(this)
 
@@ -94,6 +98,10 @@ export default class LocalEchoController {
             cols: this.term.cols,
             rows: this.term.rows,
         };
+    }
+
+    highWater() {
+        return this._highWater;
     }
 
     /**
@@ -198,9 +206,9 @@ export default class LocalEchoController {
      */
     print(message) {
         if (message == "\n") {
-            this.term.write("\r\n");
+            this.write("\r\n");
         } else {
-            this.term.write(message.replace(/([^\r])\n/g, "$1\r\n"));
+            this.write(message.replace(/([^\r])\n/g, "$1\r\n"));
         }
     }
 
@@ -208,7 +216,17 @@ export default class LocalEchoController {
      * Write message directly to terminal
      */
     write(output) {
-        this.term.write(output);
+        const outputLength = output.length;
+        this._watermark += outputLength;
+        if (this._watermark > this._highWatermark) {
+            this._highWater = true;
+        }
+        this.term.write(output, () => {
+            this._watermark = Math.max(this._watermark - outputLength, 0);
+            if (this._highWater && this._watermark < this._lowWatermark) {
+                this._highWater = false;
+            }
+        });
     }
 
     /**
