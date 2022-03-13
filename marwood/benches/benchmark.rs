@@ -67,8 +67,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| sum_of_triangles(black_box(1000)))
     });
     c.bench_function("factorial 10", |b| b.iter(|| factorial_cps(black_box(10))));
-    c.bench_function("heap-alloc 4000", |b| {
-        b.iter(|| heap_alloc(black_box(4000)))
+    c.bench_function("heap-alloc 25000", |b| {
+        b.iter(|| heap_alloc(black_box(25000)))
     });
 }
 

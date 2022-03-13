@@ -24,7 +24,7 @@ impl Vm {
         let mut cycles = 0;
         loop {
             cycles += 1;
-            if cycles % 256 == 0 {
+            if cycles % 8192 == 0 {
                 self.run_gc();
             }
             if cycles == count {
