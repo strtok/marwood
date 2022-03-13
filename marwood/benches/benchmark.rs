@@ -44,11 +44,32 @@ fn factorial_cps(n: u64) -> Cell {
     result
 }
 
+fn heap_alloc(n: u64) -> Cell {
+    let mut vm = Vm::new();
+    vm.eval(&parse!(
+        r#"
+        (define (make-big-vec len)
+          (define v (make-vector len))
+          (let ~ ((i 0))
+            (cond ((< i len)
+            (vector-set! v i (vector 1 2 3 4))
+            (~ (+ i 1))))))
+    "#
+    ))
+    .unwrap();
+    let result = vm.eval(&parse!(&format!("(make-big-vec {})", n))).unwrap();
+    assert_eq!(result, Cell::Void);
+    result
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("sum-of-triangles 1000", |b| {
         b.iter(|| sum_of_triangles(black_box(1000)))
     });
     c.bench_function("factorial 10", |b| b.iter(|| factorial_cps(black_box(10))));
+    c.bench_function("heap-alloc 4000", |b| {
+        b.iter(|| heap_alloc(black_box(4000)))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);

@@ -6,6 +6,7 @@ use crate::vm::gc::State;
 use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
 use log::trace;
+use num::ToPrimitive;
 use std::collections::HashMap;
 use std::ops::Deref;
 
@@ -39,7 +40,11 @@ impl Heap {
     /// too the free list.
     pub fn grow(&mut self) {
         let current_size = self.heap.len();
-        let new_size = current_size + self.chunk_size;
+        let new_size = ((current_size / self.chunk_size) as f64 * 1.5)
+            .ceil()
+            .to_usize()
+            .unwrap()
+            * self.chunk_size;
         self.heap.resize(new_size, VCell::undefined());
         self.heap_map.resize(new_size);
         (current_size..new_size).for_each(|it| self.free_list.push(it));

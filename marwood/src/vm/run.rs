@@ -466,6 +466,11 @@ impl Vm {
         self.heap.mark(self.ip.0);
         self.heap.mark(self.ep);
         self.heap.sweep();
+
+        // If after GC the heap utilization is still high, grow the heap.
+        if (self.heap.used_size() as f64 / self.heap.capacity() as f64) > 0.75_f64 {
+            self.heap.grow();
+        }
     }
 
     /// Build Closure Environment
