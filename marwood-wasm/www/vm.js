@@ -64,6 +64,7 @@ export class Vm {
                 this.term.println(result.error);
             } else if (this.displayed) {
                 this.term.println("");
+                this.displayed = false;
             }
 
             if (this.remainingInput != null) {
