@@ -5,3 +5,21 @@ export function display(text) {
         globalThis.marwood_display(text);
     }
 }
+
+export function termCols() {
+    if (globalThis.marwood_termCols == null) {
+        console.log("marwood_termCols is not set");
+        return 0;
+    } else {
+        return globalThis.marwood_termCols();
+    }
+}
+
+export function termRows() {
+    if (globalThis.marwood_termRows == null) {
+        console.log("marwood_termCols is not set");
+        return 0;
+    } else {
+        return globalThis.marwood_termRows();
+    }
+}

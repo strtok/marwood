@@ -8,6 +8,8 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen(module = "/display.js")]
 extern "C" {
     fn display(text: &str);
+    fn termRows() -> JsValue;
+    fn termCols() -> JsValue;
 }
 
 #[wasm_bindgen]
@@ -24,6 +26,8 @@ impl Marwood {
         let mut vm = Vm::new();
         vm.set_display_fn(Box::new(|cell| display(&format!("{}", cell))));
         vm.set_write_fn(Box::new(|cell| display(&format!("{:#}", cell))));
+        vm.set_rows_fn(Box::new(|| termRows().as_f64().unwrap_or(0_f64) as usize));
+        vm.set_cols_fn(Box::new(|| termCols().as_f64().unwrap_or(0_f64) as usize));
         Marwood { vm }
     }
 

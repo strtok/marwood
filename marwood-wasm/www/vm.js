@@ -13,6 +13,14 @@ export class Vm {
             this.displayed = true;
             this.term.print(text);
         }
+
+        globalThis.marwood_termCols = () => {
+            return this.term.term.cols;
+        }
+
+        globalThis.marwood_termRows = () => {
+            return this.term.term.rows;
+        }
     }
 
     check(input) {

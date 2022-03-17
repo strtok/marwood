@@ -5,6 +5,8 @@ use crate::vm::{Error, Vm};
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("display", display);
     vm.load_builtin("write", write);
+    vm.load_builtin("term-rows", term_rows);
+    vm.load_builtin("term-cols", term_cols);
 }
 
 pub fn display(vm: &mut Vm) -> Result<VCell, Error> {
@@ -19,4 +21,14 @@ pub fn write(vm: &mut Vm) -> Result<VCell, Error> {
     let obj = vm.heap.get_as_cell(vm.stack.pop()?);
     vm.write(&obj);
     Ok(VCell::Void)
+}
+
+pub fn term_rows(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 0, Some(0), "term-rows")?;
+    Ok(VCell::Number(vm.term_rows().into()))
+}
+
+pub fn term_cols(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 0, Some(0), "term-cols")?;
+    Ok(VCell::Number(vm.term_cols().into()))
 }

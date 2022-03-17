@@ -996,6 +996,16 @@ impl From<u64> for Number {
     }
 }
 
+impl From<usize> for Number {
+    fn from(num: usize) -> Self {
+        if num > i64::MAX as usize {
+            Number::new_bigint(BigInt::from(num))
+        } else {
+            Number::Fixnum(num as i64)
+        }
+    }
+}
+
 impl From<i64> for Number {
     fn from(num: i64) -> Self {
         Number::Fixnum(num)
