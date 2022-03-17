@@ -1,5 +1,5 @@
 use num::bigint::BigInt;
-use num::{BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimitive, Signed};
+use num::{BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimitive, Rational64, Signed};
 use num::{Num, Rational32, ToPrimitive};
 use std::cmp::Ordering;
 use std::fmt;
@@ -158,6 +158,15 @@ impl Number {
             }
             Number::Rational(num) if num.is_integer() => num.to_u32(),
             _ => None,
+        }
+    }
+
+    pub fn to_f64(&self) -> Option<f64> {
+        match self {
+            Number::Fixnum(num) => num.to_f64(),
+            Number::BigInt(num) => num.to_f64(),
+            Number::Rational(num) => num.to_f64(),
+            Number::Float(num) => Some(*num),
         }
     }
 
@@ -839,13 +848,15 @@ impl Rem for &Number {
             Number::Fixnum(lhs) => match rhs {
                 Number::Fixnum(rhs) => Some((lhs % rhs).into()),
                 Number::BigInt(rhs) => Some((BigInt::from(*lhs) % &**rhs).into()),
-                Number::Float(_) => None,
+                Number::Float(rhs) => {
+                    Some((*lhs as f64 % rhs).into())
+                },
                 Number::Rational(rhs) => {
-                    if rhs.is_integer() {
-                        Some((*lhs % rhs.to_i64().unwrap()).into())
-                    } else {
-                        None
-                    }
+                    let result = Rational64::from_integer(*lhs)
+                        % Rational64::from((*rhs.numer() as i64, *rhs.denom() as i64));
+                    // lhs % rhs is guaranteed to be less than rhs. Since lhs is a whole integer,
+                    // both numerator and denominator still fit in an i32.
+                    Some(Rational32::from((*result.numer() as i32, *result.denom() as i32)).into())
                 }
             },
             Number::BigInt(lhs) => match rhs {
@@ -854,31 +865,32 @@ impl Rem for &Number {
                 Number::Float(_) => None,
                 Number::Rational(rhs) => {
                     if rhs.is_integer() {
+                        // fast path if rhs is an integer
                         Some((&**lhs % BigInt::from(rhs.to_i32().unwrap())).into())
                     } else {
-                        None
+                        // if rhs is a rational, we can mod the bigint by the numerator
+                        // and then divide the result by the denominator.
+                        // Exercise to the reader: Prove that X % N/M == (X % N) / M
+                        let denom = rhs.denom();
+                        let numer_mod = (&**lhs * BigInt::from(*denom)) % BigInt::from(*rhs.numer());
+                        Some(Rational32::new(numer_mod.to_i32().unwrap(), *denom).into())
                     }
                 }
             },
-            Number::Float(_) => match rhs {
-                Number::Fixnum(_) => None,
-                Number::Float(_) => None,
-                Number::BigInt(_) => None,
-                Number::Rational(_) => None,
+            Number::Float(lhs) => match rhs {
+                Number::Fixnum(rhs) => Some((lhs % *rhs as f64).into()),
+                Number::Float(rhs) => Some((lhs % rhs).into()),
+                // BigInt::to_f64 converts to infinity if it is too large
+                // which yields the correct result since a % b = a if a < b
+                Number::BigInt(rhs) => rhs.to_f64().map(|rhs| (lhs % rhs).into()),
+                Number::Rational(rhs) => rhs.to_f64().map(|rhs| (lhs % rhs).into()),
             },
-            Number::Rational(lhs) if lhs.is_integer() => match rhs {
+            Number::Rational(lhs) => match rhs {
                 Number::Fixnum(rhs) => Some((lhs.to_i64().unwrap() % *rhs).into()),
-                Number::Float(_) => None,
+                Number::Float(rhs) => lhs.to_f64().map(|lhs| (lhs % rhs).into()),
                 Number::BigInt(rhs) => Some((BigInt::from(lhs.to_i64().unwrap()) % &**rhs).into()),
-                Number::Rational(rhs) => {
-                    if rhs.is_integer() {
-                        Some((lhs % rhs).into())
-                    } else {
-                        None
-                    }
-                }
+                Number::Rational(rhs) => Some((lhs % rhs).into()),
             },
-            Number::Rational(_) => None,
         }
     }
 }
@@ -1298,7 +1310,7 @@ mod tests {
     }
 
     #[test]
-    fn rem() {
+        fn rem() {
         // FIXNUM % RHS
         assert_eq!(Number::from(100) % Number::from(70), Some(Number::from(30)));
         assert_eq!(
@@ -1309,14 +1321,22 @@ mod tests {
             Number::from(100) % Number::from(BigInt::from(i64::MAX) + BigInt::from(i64::MAX)),
             Some(Number::from(BigInt::from(100)))
         );
-        assert_eq!(Number::from(100) % Number::from(1.0), None);
+        assert_eq!(Number::from(100) % Number::from(1.0), Some(Number::Float(0.0)));
         assert_eq!(
             Number::from(100) % Number::from(Rational32::from_integer(70)),
             Some(Number::from(30))
         );
         assert_eq!(
             Number::from(100) % Number::from(Rational32::new(1, 2)),
-            None
+            Some(Number::from(0))
+        );
+        assert_eq!(
+            Number::from(1) % Number::from(Rational32::new(2, 5)),
+            Some(Number::from(Rational32::new(1, 5)))
+        );
+        assert_eq!(
+            Number::from(1) % Number::from(Rational32::new(3, 5)),
+            Some(Number::from(Rational32::new(2, 5)))
         );
 
         // BIGINT % RHS
@@ -1328,14 +1348,15 @@ mod tests {
             Number::from(BigInt::from(100)) % Number::from(BigInt::from(70)),
             Some(Number::from(BigInt::from(30)))
         );
+        // cannot support bigint % float (yet?)
         assert_eq!(Number::from(BigInt::from(100)) % Number::from(1.0), None);
         assert_eq!(
             Number::from(BigInt::from(100)) % Number::from(Rational32::from_integer(70)),
             Some(Number::from(BigInt::from(30)))
         );
         assert_eq!(
-            Number::from(BigInt::from(100)) % Number::from(Rational32::new(1, 2)),
-            None
+            Number::from(BigInt::from(1)) % Number::from(Rational32::new(2, 3)),
+            Some(Number::from(Rational32::new(1, 3)))
         );
 
         // RATIONAL % RHS
@@ -1352,8 +1373,37 @@ mod tests {
                 % Number::from(Rational32::from_integer(70)),
             Some(Number::from(Rational32::from_integer(30)))
         );
+        assert_eq!(
+            Number::from(Rational32::from_integer(1))
+                % Number::from(Rational32::new(2, 3)),
+            Some(Number::from(Rational32::new(1, 3)))
+        );
 
-        assert_eq!(Number::from(Rational32::new(1, 2)) % Number::from(70), None);
+        // FLOAT % RHS
+        assert_eq!(Number::from(0.5) % Number::from(70), Some(Number::from(0.5)));
+        assert_eq!(Number::from(100.0) % Number::from(70), Some(Number::from(30.0)));
+        assert!((Number::from(f64::INFINITY) % Number::from(70)).unwrap().to_f64().unwrap().is_nan());
+        assert_eq!(
+            Number::from(100.0) % Number::from(BigInt::from(70)),
+            Some(Number::from(30.0))
+        );
+        assert_eq!(
+            Number::from(100.0) % Number::from(BigInt::from(i64::MAX) + BigInt::from(i64::MAX)),
+            Some(Number::from(100.0))
+        );
+        assert_eq!(Number::from(101.0) % Number::from(2.0), Some(Number::from(1.0)));
+        assert_eq!(
+            Number::from(100.0) % Number::from(Rational32::from_integer(70)),
+            Some(Number::from(30.0))
+        );
+        assert_eq!(
+            Number::from(100.0) % Number::from(Rational32::new(1, 2)),
+            Some(Number::from(0.0))
+        );
+        assert_eq!(
+            Number::from(0.75) % Number::from(Rational32::new(1, 2)),
+            Some(Number::from(0.25))
+        );
     }
 
     #[test]
