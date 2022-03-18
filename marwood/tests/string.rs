@@ -40,7 +40,7 @@ fn char_procedures() {
         "(integer->char (char->integer #\\tab))" => "#\\tab"
     ];
     fails![
-        "(integer->char #xffffffffff)" => InvalidSyntax("4294967295 is not valid unicode".into())
+        "(integer->char #xffffffffff)" => InvalidSyntax("1099511627775 is not valid unicode".into())
     ];
     evals![
         "(char-alphabetic? #\\a)" => "#t",

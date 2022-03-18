@@ -120,7 +120,7 @@ impl Number {
 
     pub fn to_usize(&self) -> Option<usize> {
         match self {
-            Number::Fixnum(num) if *num >= 0 => Some(*num as usize),
+            Number::Fixnum(num) if *num >= 0 => num.to_usize(),
             Number::BigInt(num)
                 if **num >= BigInt::from(0) && **num <= BigInt::from(usize::MAX) =>
             {
@@ -132,7 +132,7 @@ impl Number {
 
     pub fn to_i64(&self) -> Option<i64> {
         match self {
-            Number::Fixnum(num) => Some(*num as i64),
+            Number::Fixnum(num) => Some(*num),
             Number::BigInt(num) => num.to_i64(),
             Number::Rational(num) if num.is_integer() => num.to_i64(),
             Number::Float(num) if self.is_integer() => num.to_i64(),
@@ -154,7 +154,7 @@ impl Number {
 
     pub fn to_u32(&self) -> Option<u32> {
         match self {
-            Number::Fixnum(num) if *num >= 0 => Some(*num as u32),
+            Number::Fixnum(num) => num.to_u32(),
             Number::BigInt(num) if **num >= BigInt::from(0) && **num <= BigInt::from(u32::MAX) => {
                 Some(num.to_u32().unwrap())
             }
@@ -214,9 +214,18 @@ impl Number {
 
     pub fn to_exact(&self) -> Option<Number> {
         match self {
-            Number::Float(num) => match Rational32::from_f64(*num) {
-                Some(num) => Some(num.into()),
-                None => Some((*num).into()),
+            Number::Float(num) => {
+                if self.is_integer() {
+                    match num.to_i64() {
+                        Some(integer) => Some(Number::Fixnum(integer)),
+                        None => num.to_i128().map(|num| BigInt::from(num).into()),
+                    }
+                } else {
+                    match Rational32::from_f64(*num) {
+                        Some(num) => Some(num.into()),
+                        None => Some((*num).into()),
+                    }
+                }
             },
             Number::BigInt(_) | Number::Rational(_) | Number::Fixnum(_) => Some(self.clone()),
         }
