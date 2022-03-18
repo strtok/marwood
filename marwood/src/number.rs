@@ -135,6 +135,7 @@ impl Number {
             Number::Fixnum(num) => Some(*num as i64),
             Number::BigInt(num) => num.to_i64(),
             Number::Rational(num) if num.is_integer() => num.to_i64(),
+            Number::Float(num) if self.is_integer() => num.to_i64(),
             _ => None,
         }
     }
@@ -146,6 +147,7 @@ impl Number {
                 Some(num.to_u64().unwrap())
             }
             Number::Rational(num) if num.is_integer() => num.to_u64(),
+            Number::Float(num) if self.is_integer() => num.to_u64(),
             _ => None,
         }
     }
@@ -157,7 +159,8 @@ impl Number {
                 Some(num.to_u32().unwrap())
             }
             Number::Rational(num) if num.is_integer() => num.to_u32(),
-            _ => None,
+            Number::Float(num) if self.is_integer() => num.to_u32(),
+            _ => None
         }
     }
 
@@ -173,7 +176,7 @@ impl Number {
     pub fn is_integer(&self) -> bool {
         match self {
             Number::Fixnum(_) => true,
-            Number::Float(_) => false,
+            Number::Float(num) => num.floor() == *num,
             Number::BigInt(_) => true,
             Number::Rational(num) => num.is_integer(),
         }
@@ -784,12 +787,17 @@ impl Div for &Number {
 }
 
 impl Number {
+    /// Quotient with truncation (rounding towards zero).
+    ///
+    /// The spec only defines this function for integer inputs. Since that includes integral floats,
+    /// we define quotient over all floats with the expectation that the caller can check the
+    /// inputs for strict conformance.
     pub fn quotient(&self, rhs: &Self) -> Option<Number> {
         match self {
             Number::Fixnum(lhs) => match rhs {
                 Number::Fixnum(rhs) => Some((lhs / rhs).into()),
                 Number::BigInt(rhs) => Some((BigInt::from(*lhs) / &**rhs).into()),
-                Number::Float(_) => None,
+                Number::Float(rhs) => lhs.to_f64().map(|lhs| (lhs as f64 / rhs).trunc().into()),
                 Number::Rational(rhs) => {
                     if rhs.is_integer() {
                         Some((*lhs / rhs.to_i64().unwrap()).into())
@@ -801,7 +809,7 @@ impl Number {
             Number::BigInt(lhs) => match rhs {
                 Number::Fixnum(rhs) => Some((&**lhs / rhs).into()),
                 Number::BigInt(rhs) => Some((&**lhs / &**rhs).into()),
-                Number::Float(_) => None,
+                Number::Float(rhs) => lhs.to_f64().map(|lhs| (lhs / rhs).trunc().into()),
                 Number::Rational(rhs) => {
                     if rhs.is_integer() {
                         Some((&**lhs / BigInt::from(rhs.to_i32().unwrap())).into())
@@ -810,15 +818,15 @@ impl Number {
                     }
                 }
             },
-            Number::Float(_) => match rhs {
-                Number::Fixnum(_) => None,
-                Number::Float(_) => None,
+            Number::Float(lhs) => match rhs {
+                Number::Fixnum(rhs) => Some((lhs / *rhs as f64).into()),
+                Number::Float(rhs) => Some((lhs / rhs).trunc().into()),
                 Number::BigInt(_) => None,
-                Number::Rational(_) => None,
+                Number::Rational(rhs) => rhs.to_f64().map(|rhs| (lhs / rhs).into()),
             },
             Number::Rational(lhs) if lhs.is_integer() => match rhs {
                 Number::Fixnum(rhs) => Some((lhs.to_i64().unwrap() / *rhs).into()),
-                Number::Float(_) => None,
+                Number::Float(rhs) => lhs.to_f64().map(|lhs| (lhs / rhs).trunc().into()),
                 Number::BigInt(rhs) => Some((BigInt::from(lhs.to_i64().unwrap()) / &**rhs).into()),
                 Number::Rational(rhs) => {
                     if rhs.is_integer() {
@@ -843,6 +851,10 @@ impl Rem for Number {
 impl Rem for &Number {
     type Output = Option<Number>;
 
+    /// Remainder
+    ///
+    /// The spec only defines remainder for integers but this operation is also used by other
+    /// functions that deal with numbers of all types internally.
     fn rem(self, rhs: Self) -> Self::Output {
         match self {
             Number::Fixnum(lhs) => match rhs {
@@ -1270,8 +1282,10 @@ mod tests {
             i32_oflow, BigInt::from(i32_oflow) => 1.0,
             i32_oflow, BigInt::from(2) => i32_oflow as f64 / 2_f64,
             100, Rational32::from_integer(50) => Rational32::from_integer(2),
+            100, Rational32::new(1, 2) => Rational32::from_integer(200),
             i32_oflow, Rational32::from_integer(2) => i32_oflow as f64 / 2_f64,
-            i32::MAX as i64, Rational32::new(1, 2) => i32::MAX as f64 * 2.0
+            i32::MAX as i64, Rational32::new(1, 2) => i32::MAX as f64 * 2.0,
+            -100, 1.0 => -100.0
         ];
 
         // BIGINT / RHS
@@ -1310,7 +1324,7 @@ mod tests {
     }
 
     #[test]
-        fn rem() {
+    fn rem() {
         // FIXNUM % RHS
         assert_eq!(Number::from(100) % Number::from(70), Some(Number::from(30)));
         assert_eq!(
