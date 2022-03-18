@@ -16,13 +16,19 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin(">=", gteq);
     vm.load_builtin("%", remainder);
     vm.load_builtin("abs", abs);
+    vm.load_builtin("acos", acos);
+    vm.load_builtin("asin", asin);
+    vm.load_builtin("atan", atan);
     vm.load_builtin("ceiling", ceiling);
+    vm.load_builtin("cos", cos);
     vm.load_builtin("denominator", denominator);
     vm.load_builtin("even?", even);
     vm.load_builtin("exact->inexact", exact_inexact);
+    vm.load_builtin("exp", exp);
     vm.load_builtin("expt", expt);
     vm.load_builtin("floor", floor);
     vm.load_builtin("inexact->exact", inexact_exact);
+    vm.load_builtin("log", log);
     vm.load_builtin("min", min);
     vm.load_builtin("max", max);
     vm.load_builtin("modulo", modulo);
@@ -35,7 +41,10 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("quotient", quotient);
     vm.load_builtin("remainder", remainder);
     vm.load_builtin("round", round);
+    vm.load_builtin("sin", sin);
+    vm.load_builtin("sqrt", sqrt);
     vm.load_builtin("string->number", string_number);
+    vm.load_builtin("tan", tan);
     vm.load_builtin("truncate", truncate);
     vm.load_builtin("zero?", zero);
 }
@@ -270,6 +279,86 @@ pub fn quotient(vm: &mut Vm) -> Result<VCell, Error> {
         }
     };
     Ok(result.into())
+}
+
+macro_rules! unary_trig {
+    ($vm:ident, $name:ident) => {{
+    pop_argc($vm, 1, Some(1), stringify!($name))?;
+    let x = pop_number($vm)?;
+
+    if let Some(result) = x.$name() {
+        Ok(result.into())
+    } else {
+        return Err(InvalidSyntax(format!(
+            "{} is undefined for {}",
+            stringify!($name),
+            x
+        )))
+    }
+    }};
+}
+
+pub fn exp(vm: &mut Vm) -> Result<VCell, Error> {
+    unary_trig!(vm, exp)
+}
+
+pub fn log(vm: &mut Vm) -> Result<VCell, Error> {
+    unary_trig!(vm, log)
+}
+
+pub fn sin(vm: &mut Vm) -> Result<VCell, Error> {
+  unary_trig!(vm, sin)
+}
+
+pub fn cos(vm: &mut Vm) -> Result<VCell, Error> {
+    unary_trig!(vm, cos)
+}
+
+pub fn tan(vm: &mut Vm) -> Result<VCell, Error> {
+    unary_trig!(vm, tan)
+}
+
+pub fn asin(vm: &mut Vm) -> Result<VCell, Error> {
+    unary_trig!(vm, asin)
+}
+
+pub fn acos(vm: &mut Vm) -> Result<VCell, Error> {
+    unary_trig!(vm, acos)
+}
+
+pub fn atan(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, Some(2), "atan2")?;
+    match argc {
+        2 => {
+            let y = pop_number(vm)?;
+            let x = pop_number(vm)?;
+
+            if let Some(result) = y.atan2(x.clone()) {
+                Ok(result.into())
+            } else {
+                return Err(InvalidSyntax(format!(
+                    "atan is undefined for {} {}",
+                    y, x
+                )))
+            }
+        }
+        _ => {
+            let y = pop_number(vm)?;
+
+            if let Some(result) = y.atan() {
+                Ok(result.into())
+            } else {
+                return Err(InvalidSyntax(format!(
+                    "atan is undefined for {}",
+                    y
+                )))
+            }
+        },
+    }
+}
+
+pub fn sqrt(vm: &mut Vm) -> Result<VCell, Error> {
+    unary_trig!(vm, sqrt)
 }
 
 pub fn expt(vm: &mut Vm) -> Result<VCell, Error> {

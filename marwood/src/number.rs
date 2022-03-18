@@ -7,6 +7,7 @@ use std::fmt::{Binary, Formatter, LowerHex, Octal};
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, Sub};
 use std::rc::Rc;
+use num::traits::FloatConst;
 
 /// Exactness
 ///
@@ -40,7 +41,7 @@ pub enum Exactness {
 /// * Exactness if preferred
 /// * Inexactness is infectious
 ///
-/// Rationsls are provided by the Rational32 type, allowing
+/// Rationals are provided by the Rational32 type, allowing
 /// for a rational composed of a 32 bit numerator and denominator.
 /// If a rational exceeds these limits, the resulting operation
 /// falls back to "inexact" (float).
@@ -1063,13 +1064,124 @@ impl From<Rational32> for Number {
     }
 }
 
+/// Trigonometric functions
+impl Number {
+    pub fn exp(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.exp().into()),
+            Number::Float(num) => Some(num.exp().into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.exp().into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.exp().into())
+        }
+    }
+
+    pub fn log(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.log(f64::E()).into()),
+            Number::Float(num) => Some(num.log(f64::E()).into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.log(f64::E()).into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.log(f64::E()).into())
+        }
+    }
+    
+    pub fn sin(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.sin().into()),
+            Number::Float(num) => Some(num.sin().into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.sin().into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.sin().into())
+        }
+    }
+
+    pub fn cos(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.cos().into()),
+            Number::Float(num) => Some(num.cos().into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.cos().into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.cos().into())
+        }
+    }
+
+    pub fn tan(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.tan().into()),
+            Number::Float(num) => Some(num.tan().into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.tan().into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.tan().into())
+        }
+    }
+
+    pub fn asin(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.asin().into()),
+            Number::Float(num) => Some(num.asin().into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.asin().into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.asin().into())
+        }
+    }
+
+    pub fn acos(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.acos().into()),
+            Number::Float(num) => Some(num.acos().into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.acos().into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.acos().into())
+        }
+    }
+
+    pub fn atan(&self) -> Option<Number> {
+        match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.atan().into()),
+            Number::Float(num) => Some(num.atan().into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.atan().into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.atan().into())
+        }
+    }
+
+    pub fn atan2(&self, x: Number) -> Option<Number> {
+        if let Some(x) = x.to_f64() {
+            match self {
+                Number::Fixnum(num) => num.to_f64().map(|num| num.atan2(x).into()),
+                Number::Float(num) => Some(num.atan2(x).into()),
+                Number::BigInt(num) => num.to_f64().map(|num| num.atan2(x).into()),
+                Number::Rational(num) => num.to_f64().map(|num| num.atan2(x).into())
+            }
+        } else {
+            None
+        }
+    }
+
+    /// sqrt is undefined for complex results
+    pub fn sqrt(&self) -> Option<Number> {
+        let result : Option<Number> = match self {
+            Number::Fixnum(num) => num.to_f64().map(|num| num.sqrt().into()),
+            Number::Float(num) => Some(num.sqrt().into()),
+            Number::BigInt(num) => num.to_f64().map(|num| num.sqrt().into()),
+            Number::Rational(num) => num.to_f64().map(|num| num.sqrt().into())
+        };
+
+        // convert NaN and infinity to None
+        if let Some(r) = &result {
+            if r.to_f64().unwrap().is_finite() {
+                result
+            } else {
+                None
+            }
+        } else {
+            result
+        }
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use crate::number::Number;
     use num::bigint::BigInt;
-    use num::Rational32;
+    use num::{FromPrimitive, Rational32};
     use std::mem;
     use std::str::FromStr;
+    use num::traits::FloatConst;
 
     macro_rules! verify {
         ($func:expr, $($lhs:expr, $rhs:expr => $result:expr),+) => {{
@@ -1450,5 +1562,14 @@ mod tests {
         assert_eq!(Number::from(3.5).round(), Number::from(4));
 
         assert_eq!(Number::from(Rational32::new(7, 2)).round(), Number::from(4));
+    }
+
+    #[test]
+    fn sin() {
+        assert_eq!(Number::from(0).sin(), Some(Number::from(0)));
+        assert_eq!(Number::from(f64::FRAC_PI_2()).sin(), Some(Number::from(1.0)));
+        assert_eq!(Number::from(Rational32::from_integer(0)).sin(), Some(Number::from(0.0)));
+        assert_eq!(Number::from(BigInt::from(0)).sin(), Some(Number::from(0.0)));
+        assert!(Number::from(BigInt::from_f64(f64::MAX).unwrap() * 2).sin().unwrap().to_f64().unwrap().is_nan());
     }
 }

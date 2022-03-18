@@ -5,6 +5,8 @@ macro_rules! evals {
          $(
             assert_eq!(vm.eval(&parse!($lhs)), Ok(match $rhs {
                 "#<void>" => Cell::Void,
+                "inf" => Cell::Number(marwood::number::Number::Float(f64::INFINITY)),
+                "NaN" => Cell::Number(marwood::number::Number::Float(f64::NAN)),
                 _ => parse!($rhs)
             }));
          )+
