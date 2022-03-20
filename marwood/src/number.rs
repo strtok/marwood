@@ -127,6 +127,7 @@ impl Number {
             {
                 Some(num.to_usize().unwrap())
             }
+            Number::Rational(num) if num.is_integer() => num.to_usize(),
             _ => None,
         }
     }
@@ -1202,6 +1203,7 @@ mod tests {
         assert!(Number::from(1.0).to_usize().is_none());
         let overflow_num = Number::from(BigInt::from(usize::MAX)) + Number::from(1);
         assert!(overflow_num.to_usize().is_none());
+        assert_eq!(Number::from(Rational32::new(10, 1)).to_usize(), Some(10));
     }
 
     #[test]
