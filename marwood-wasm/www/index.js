@@ -1,6 +1,6 @@
 import { Terminal } from 'xterm';
 import "xterm/css/xterm.css"
-import LocalEchoController from 'local-echo';
+import { Readline } from 'readline';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import { Unicode11Addon } from 'xterm-addon-unicode11';
@@ -8,7 +8,6 @@ import * as XtermWebfont from 'xterm-webfont'
 import { Buffer } from "buffer";
 import { Vm } from "./vm";
 
-const localEcho = new LocalEchoController();
 const params = new URLSearchParams(window.location.search);
 const term = new Terminal({
     theme: {
@@ -22,11 +21,12 @@ const term = new Terminal({
 });
 
 term.loadAddon(new XtermWebfont())
-
-const vm = new Vm(localEcho);
+const rl = new Readline();
+term.loadAddon(rl);
+const vm = new Vm(rl);
 
 function read() {
-    localEcho.read("> ", "  ")
+    rl.read("> ", "  ")
         .then(input => {
             vm.eval(input).then(() => {
                 setTimeout(read);
@@ -34,19 +34,19 @@ function read() {
                 .catch(error => {
                     term.write("\n\x1B[E\x1B[!p");
                     if (error != null) {
-                        localEcho.println(`error: ${error}`);
+                        rl.println(`error: ${error}`);
                     }
                     setTimeout(read);
                 });
         })
-        .catch(error => localEcho.println(`error: ${error}`));
+        .catch(error => rl.println(`error: ${error}`));
 }
 
 function animate_then_read(text) {
-    localEcho.print([...text][0]);
+    rl.print([...text][0]);
     text = [...text].splice(1);
     if ([...text].length == 0) {
-        localEcho.println("");
+        rl.println("");
         read();
     } else {
         setTimeout(() => animate_then_read(text), 100);
@@ -54,7 +54,6 @@ function animate_then_read(text) {
 }
 
 term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
-    term.loadAddon(localEcho);
     term.loadAddon(new WebLinksAddon());
 
     const unicode11Addon = new Unicode11Addon();
@@ -72,16 +71,11 @@ term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
         fitAddon.activate(term);
     }
 
-    localEcho.addCheckHandler((input) => vm.check(input).eof);
-    localEcho.addCtrlCHandler(() => {
-        vm.stop();
-    });
-
     term.focus();
 
     if (params.has("eval")) {
-        localEcho.println("λMARWOOD");
-        localEcho.println("");
+        rl.println("λMARWOOD");
+        rl.println("");
 
         let text = params.get("eval");
         text = text.replace("-", "+");
@@ -90,15 +84,15 @@ term.loadWebfontAndOpen(document.getElementById('terminal')).then(() => {
             .toString('utf8');
 
         if (text != null) {
-            localEcho.history.push(text);
-            localEcho.print("> ");
-            localEcho.println(text);
+            rl.appendHistory(text);
+            rl.print("> ");
+            rl.println(text);
             vm.eval(text).then(() => {
                 read();
             }).catch(error => {
-                term.write("\n\x1B[E\x1B[!p");
+                rl.write("\n\x1B[E\x1B[!p");
                 if (error != null) {
-                    localEcho.println(`error: ${error}`);
+                    rl.println(`error: ${error}`);
                 }
                 setTimeout(read);
             });

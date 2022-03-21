@@ -1,8 +1,8 @@
 import { Marwood } from "marwood";
 
 export class Vm {
-    constructor(term) {
-        this.term = term;
+    constructor(rl) {
+        this.rl = rl;
         this.displayed = false;
         this.remainingInput = null;
         this.evalIter = 0;
@@ -11,20 +11,23 @@ export class Vm {
 
         globalThis.marwood_display = (text) => {
             this.displayed = true;
-            this.term.print(text);
+            this.rl.print(text);
         }
 
         globalThis.marwood_termCols = () => {
-            return this.term.term.cols;
+            return this.rl.term.cols;
         }
 
         globalThis.marwood_termRows = () => {
-            return this.term.term.rows;
+            return this.rl.term.rows;
         }
+
+        rl.setCheckHandler(this.check.bind(this));
+        rl.setCtrlCHandler(this.stop.bind(this));
     }
 
     check(input) {
-        return this.marwood.check(input);
+        return !this.marwood.check(input).eof;
     }
 
     eval(input) {
@@ -49,7 +52,7 @@ export class Vm {
             return;
         }
 
-        if (this.term.highWater()) {
+        if (!this.rl.writeReady()) {
             setTimeout(() => this.execute(), 1);
             return;
         }
@@ -67,11 +70,11 @@ export class Vm {
 
         if (result.completed) {
             if (result.ok != null && result.ok.length > 0) {
-                this.term.println(result.ok);
+                this.rl.println(result.ok);
             } else if (result.error != null && result.error.length > 0) {
-                this.term.println(result.error);
+                this.rl.println(result.error);
             } else if (this.displayed) {
-                this.term.println("");
+                this.rl.println("");
                 this.displayed = false;
             }
 
