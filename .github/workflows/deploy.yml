@@ -33,6 +33,12 @@ jobs:
           npm install
         working-directory: ./marwood-wasm
 
+      - name: Compile Readline
+        run: |
+          npm install
+          npm run build
+        working-directory: ./marwood-wasm/www/readline
+
       - name: Compile website
         run: |
           npm install
