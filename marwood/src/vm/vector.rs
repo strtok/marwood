@@ -1,7 +1,7 @@
 use crate::vm::vcell::VCell;
 use std::cell::RefCell;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Vector {
     vector: RefCell<Vec<VCell>>,
 }
@@ -30,5 +30,20 @@ impl Vector {
         if index < vector.len() {
             *vector.get_mut(index).unwrap() = value;
         }
+    }
+
+    pub fn clone_vector(&self, start: Option<usize>, end: Option<usize>) -> Vec<VCell> {
+        let v = self.vector.borrow();
+        let mut start = start.unwrap_or(0);
+        if start > v.len() {
+            start = v.len();
+        }
+
+        let mut end = end.unwrap_or(v.len() - 1);
+        if end >= v.len() {
+            end = v.len() - 1;
+        }
+
+        Vec::from(&v[start..=end])
     }
 }

@@ -13,6 +13,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("vector-ref", vector_ref);
     vm.load_builtin("vector-set!", vector_set);
     vm.load_builtin("vector-fill!", vector_fill);
+    vm.load_builtin("vector-copy", vector_copy);
 }
 
 pub fn vector(vm: &mut Vm) -> Result<VCell, Error> {
@@ -106,4 +107,35 @@ pub fn list_to_vector(vm: &mut Vm) -> Result<VCell, Error> {
         list = vm.heap.get(&list.as_cdr()?);
     }
     Ok(VCell::vector(outv))
+}
+
+pub fn vector_copy(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 1, Some(3), "vector-copy")?;
+
+    let mut end = None;
+    if argc == 3 {
+        end = Some(pop_index(vm)?);
+    }
+
+    let mut start = None;
+    if argc > 1 {
+        start = Some(pop_index(vm)?);
+    }
+
+    let vector = pop_vector(vm)?;
+    let vector = vector.as_ref();
+
+    if end.is_some() && end.unwrap() > vector.len() - 1 {
+        return Err(InvalidVectorIndex(end.unwrap(), vector.len()));
+    }
+
+    if start.is_some() && start.unwrap() > vector.len() - 1 {
+        return Err(InvalidVectorIndex(start.unwrap(), vector.len()));
+    }
+
+    if start.is_some() && end.is_some() && start.unwrap() > end.unwrap() {
+        return Err(InvalidSyntax("vector-copy requires start <= end".into()));
+    }
+
+    Ok(VCell::vector(vector.clone_vector(start, end)))
 }

@@ -72,3 +72,12 @@ fn list_vector_conversions() {
     fails!["(list->vector #(1 2 3))" =>
             ExpectedPairButFound("#(1 2 3)".into())];
 }
+
+#[test]
+fn vector_copy() {
+    evals![
+        "(vector-copy #(1 2 3))" => "#(1 2 3)",
+        "(vector-copy #(1 2 3) 1)" => "#(2 3)",
+        "(vector-copy #(1 2 3) 1 1)" => "#(2)"
+    ];
+}
