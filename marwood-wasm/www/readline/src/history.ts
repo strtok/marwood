@@ -11,6 +11,9 @@ export class History {
         this.resetCursor();
         if (!this.entries.includes(text)) {
             this.entries.unshift(text);
+        } else {
+            this.entries.splice(this.entries.indexOf(text), 1);
+            this.entries.unshift(text);
         }
         if (this.entries.length > this.maxEntries) {
             this.entries.pop();
