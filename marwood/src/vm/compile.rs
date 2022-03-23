@@ -287,7 +287,7 @@ impl Vm {
         }
 
         lambda.emit(OpCode::MovImmediate);
-        lambda.emit(VCell::void());
+        lambda.emit(self.heap.put(VCell::Void));
         lambda.emit(VCell::Acc);
         Ok(())
     }
