@@ -58,4 +58,21 @@ test('ansi escape', () => {
             data: ["\x1b", "[", "Z"]
         }
     ]);
+
+    expect(parseInput("\x1b[3~")).toEqual([
+        {
+            inputType: InputType.Delete,
+            data: ["\x1b", "[", "3", "~"]
+        }
+    ]);
+
+    expect(parseInput("\x1b[1~")).toEqual([
+        {
+            inputType: InputType.UnsupportedEscape,
+            data: ["\x1b", "[", "1", "~"]
+        }
+    ]);
+
+    expect(parseInput("\x1b[1d")).toEqual([
+    ]);
 });

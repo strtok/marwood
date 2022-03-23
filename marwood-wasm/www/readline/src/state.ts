@@ -88,6 +88,12 @@ export class State {
         }
     }
 
+    public editDelete(n: number) {
+        if (this.line.delete(n)) {
+            this.refresh();
+        }
+    }
+
     public refresh() {
         const newLayout = this.tty.computeLayout(this.promptSize, this.line);
         this.tty.refreshLine(this.prompt, this.line, this.layout, newLayout);

@@ -196,6 +196,10 @@ export class Readline implements ITerminalAddon {
             case InputType.Backspace:
                 this.state.editBackspace(1);
                 break;
+            case InputType.Delete:
+            case InputType.CtrlD:
+                this.state.editDelete(1);
+                break;
             case InputType.ArrowLeft:
                 this.state.moveCursorBack(1);
                 break;

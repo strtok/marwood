@@ -223,5 +223,15 @@ export class LineBuffer {
         this.pos = newPos;
         return true;
     }
+
+    public delete(n: RepeatCount): boolean {
+        let nextChar = this.nextPos(1);
+        if (nextChar != undefined) {
+            this.buf = this.buf.slice(0, this.pos) + this.buf.slice(nextChar);
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
 

@@ -5,9 +5,11 @@ export enum InputType {
     ArrowDown,
     ArrowLeft,
     ArrowRight,
+    Delete,
     Backspace,
     CtrlA,
     CtrlC,
+    CtrlD,
     CtrlE,
     CtrlL,
     End,
@@ -76,6 +78,31 @@ function* splitInput(data: string) {
                 continue;
             }
             let inputType = InputType.UnsupportedEscape;
+
+            // vt sequence
+            if (seq3.value >= "0" && seq3.value <= "9") {
+                let digit = seq3.value;
+                const nextDigit = it.next();
+                if (nextDigit.done) {
+                    return;
+                }
+                if (nextDigit.value >= "0" && nextDigit.value <= "9") {
+                    digit += nextDigit.value;
+                } else if (nextDigit.value != "~") {
+                    continue;
+                }
+                switch (digit) {
+                    case "3":
+                        inputType = InputType.Delete;
+                        break;
+                }
+                yield {
+                    inputType,
+                    data: ["\x1b", "[", digit, "~"]
+                };
+                continue;
+            }
+
             switch (seq3.value) {
                 case "A":
                     inputType = InputType.ArrowUp;
@@ -114,6 +141,9 @@ function* splitInput(data: string) {
                     break;
                 case 0x3:
                     inputType = InputType.CtrlC;
+                    break;
+                case 0x4:
+                    inputType = InputType.CtrlD;
                     break;
                 case 0x5:
                     inputType = InputType.CtrlE;
