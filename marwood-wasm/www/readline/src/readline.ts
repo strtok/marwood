@@ -185,6 +185,14 @@ export class Readline implements ITerminalAddon {
                     this.write("\x1b[H\x1b[2J");
                 }
                 break;
+            case InputType.Home:
+            case InputType.CtrlA:
+                this.state.moveCursorHome();
+                break;
+            case InputType.End:
+            case InputType.CtrlE:
+                this.state.moveCursorEnd();
+                break;
             case InputType.Backspace:
                 this.state.editBackspace(1);
                 break;

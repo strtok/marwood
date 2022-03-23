@@ -122,6 +122,18 @@ export class State {
         }
     }
 
+    public moveCursorHome() {
+        if (this.line.moveHome()) {
+            this.moveCursor();
+        }
+    }
+
+    public moveCursorEnd() {
+        if (this.line.moveEnd()) {
+            this.moveCursor();
+        }
+    }
+
     public moveCursorToEnd() {
         if (this.layout.cursor === this.layout.end) {
             return;

@@ -1,14 +1,18 @@
 export enum InputType {
     Text,
+    AltEnter,
     ArrowUp,
     ArrowDown,
     ArrowLeft,
     ArrowRight,
-    CtrlC,
-    CtrlL,
     Backspace,
-    AltEnter,
+    CtrlA,
+    CtrlC,
+    CtrlE,
+    CtrlL,
+    End,
     Enter,
+    Home,
     ShiftEnter,
     UnsupportedControlChar,
     UnsupportedEscape
@@ -85,6 +89,12 @@ function* splitInput(data: string) {
                 case "D":
                     inputType = InputType.ArrowLeft;
                     break;
+                case "F":
+                    inputType = InputType.End;
+                    break;
+                case "H":
+                    inputType = InputType.Home;
+                    break;
                 case "\r":
                     inputType = InputType.AltEnter;
                     break;
@@ -99,8 +109,14 @@ function* splitInput(data: string) {
         if (val < 0x20 || val == 0x7f) {
             let inputType = InputType.UnsupportedControlChar;
             switch (val) {
+                case 0x1:
+                    inputType = InputType.CtrlA;
+                    break;
                 case 0x3:
                     inputType = InputType.CtrlC;
+                    break;
+                case 0x5:
+                    inputType = InputType.CtrlE;
                     break;
                 case 0xd:
                     inputType = InputType.Enter;

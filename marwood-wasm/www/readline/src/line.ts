@@ -60,6 +60,42 @@ export class LineBuffer {
         }
     }
 
+    public moveHome(): boolean {
+        let start = this.startOfLine();
+        if (this.pos > start) {
+            this.pos = start;
+            return true;
+        }
+        return false;
+    }
+
+    public moveEnd(): boolean {
+        let end = this.endOfLine();
+        if (this.pos == end) {
+            return false;
+        }
+        this.pos = end;
+        return true;
+    }
+
+    public startOfLine(): number {
+        let start = this.buf.slice(0, this.pos).lastIndexOf("\n");
+        if (start != -1) {
+            return start + 1;
+        } else {
+            return 0;
+        }
+    }
+
+    public endOfLine(): number {
+        let end = this.buf.slice(this.pos).indexOf("\n");
+        if (end != -1) {
+            return this.pos + end;
+        } else {
+            return this.buf.length;
+        }
+    }
+
     public moveLineUp(n: number): boolean {
         const off = this.buf.slice(0, this.pos).lastIndexOf("\n");
         if (off == -1) {
