@@ -123,6 +123,9 @@ export class State {
     }
 
     public nextHistory() {
+        if (this.history.cursor == -1) {
+            return;
+        }
         const next = this.history.next();
         if (next != undefined) {
             this.update(next);
