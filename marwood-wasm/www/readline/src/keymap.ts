@@ -5,6 +5,7 @@ export enum InputType {
     ArrowLeft,
     ArrowRight,
     CtrlC,
+    CtrlL,
     Backspace,
     AltEnter,
     Enter,
@@ -106,6 +107,9 @@ function* splitInput(data: string) {
                     break;
                 case 0x7f:
                     inputType = InputType.Backspace;
+                    break;
+                case 0xc:
+                    inputType = InputType.CtrlL;
                     break;
             }
             yield {

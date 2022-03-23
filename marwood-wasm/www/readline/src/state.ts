@@ -53,6 +53,13 @@ export class State {
         return this.line.buffer();
     }
 
+    public clearScreen() {
+        this.tty.clearScreen();
+        this.layout.cursor = new Position();
+        this.layout.end = new Position();
+        this.refresh();
+    }
+
     public editInsert(text: string) {
         const push = this.line.insert(text);
         const multiline = text.includes("\n");

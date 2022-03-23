@@ -163,6 +163,8 @@ export class Readline implements ITerminalAddon {
                     this.state.editInsert("\n");
                     this.history.append(this.state.buffer());
                     this.activeRead?.resolve(this.state.buffer());
+                    this.activeRead = undefined;
+                    this.state = undefined;
                 } else {
                     this.state.editInsert("\n");
                 }
@@ -173,8 +175,16 @@ export class Readline implements ITerminalAddon {
                     this.term.write("^C\r\n");
                     this.state = new State(this.activeRead.prompt, this.tty(), this.history);
                     this.state.refresh();
+                    return;
                 }
                 this.ctrlCHandler();
+                break;
+            case InputType.CtrlL:
+                if (this.activeRead != undefined) {
+                    this.state.clearScreen();
+                } else {
+                    this.write("\x1b[H\x1b[2J");
+                }
                 break;
             case InputType.Backspace:
                 this.state.editBackspace(1);

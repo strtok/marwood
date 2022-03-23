@@ -33,6 +33,10 @@ export class Tty {
         return this.out.println(text);
     }
 
+    public clearScreen() {
+        this.out.write("\x1b[H\x1b[2J");
+    }
+
     // Calculate the number of colums and rows required to print 
     // text on a this.cols wide terminal starting at orig
     public calculatePosition(text: string, orig: Position): Position {
