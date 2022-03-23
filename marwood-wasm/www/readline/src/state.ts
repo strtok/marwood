@@ -115,7 +115,18 @@ export class State {
         }
     }
 
+    public moveCursorToEnd() {
+        if (this.layout.cursor === this.layout.end) {
+            return;
+        }
+        this.tty.moveCursor(this.layout.cursor, this.layout.end);
+        this.layout.cursor = { ... this.layout.end };
+    }
+
     public previousHistory() {
+        if (this.history.cursor == -1 && this.line.length() > 0) {
+            return;
+        }
         const prev = this.history.prev();
         if (prev != undefined) {
             this.update(prev);

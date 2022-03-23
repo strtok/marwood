@@ -160,7 +160,7 @@ export class Readline implements ITerminalAddon {
                 break;
             case InputType.Enter:
                 if (this.checkHandler(this.state.buffer())) {
-                    this.println("");
+                    this.state.editInsert("\n");
                     this.history.append(this.state.buffer());
                     this.activeRead?.resolve(this.state.buffer());
                 } else {
@@ -168,6 +168,12 @@ export class Readline implements ITerminalAddon {
                 }
                 break;
             case InputType.CtrlC:
+                if (this.activeRead != undefined) {
+                    this.state.moveCursorToEnd();
+                    this.term.write("^C\r\n");
+                    this.state = new State(this.activeRead.prompt, this.tty(), this.history);
+                    this.state.refresh();
+                }
                 this.ctrlCHandler();
                 break;
             case InputType.Backspace:
