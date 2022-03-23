@@ -20,6 +20,10 @@ fn eval_string_char_literals() {
     ];
 
     evals![
+        "#\\x9b" => "#\\x9b"
+    ];
+
+    evals![
         r#""foo \"bar\" baz""# => r#""foo \"bar\" baz""#
     ]
 }

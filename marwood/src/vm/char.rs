@@ -27,6 +27,7 @@ pub fn write_escaped_char(c: char, f: &mut Formatter<'_>) -> std::fmt::Result {
     match c {
         ' ' => write!(f, "#\\space"),
         '\n' => write!(f, "#\\newline"),
+        c if c.is_control() => write!(f, "#\\x{:x}", c as u32),
         c => match c as u32 {
             ALARM => write!(f, "#\\alarm"),
             BACKSPACE => write!(f, "#\\backspace"),
