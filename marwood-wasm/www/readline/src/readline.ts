@@ -203,6 +203,11 @@ export class Readline implements ITerminalAddon {
       case InputType.CtrlS:
         this.pauseHandler(false);
         break;
+      case InputType.CtrlU:
+        if (this.activeRead != undefined) {
+          this.state.update("");
+        }
+        break;
       case InputType.CtrlQ:
         this.pauseHandler(true);
         break;

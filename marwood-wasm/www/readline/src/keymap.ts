@@ -14,6 +14,7 @@ export enum InputType {
   CtrlL,
   CtrlQ,
   CtrlS,
+  CtrlU,
   End,
   Enter,
   Home,
@@ -159,6 +160,9 @@ function* splitInput(data: string) {
           break;
         case 0x13:
           inputType = InputType.CtrlS;
+          break;
+        case 0x15:
+          inputType = InputType.CtrlU;
           break;
         case 0xd:
           inputType = InputType.Enter;
