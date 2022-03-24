@@ -32,6 +32,10 @@ export class Readline implements ITerminalAddon {
     return;
   };
 
+  constructor() {
+    this.history.restoreFromLocalStorage();
+  }
+
   public activate(term: Terminal): void {
     this.term = term;
     this.term.onData(this.readData.bind(this));

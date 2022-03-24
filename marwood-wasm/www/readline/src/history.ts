@@ -7,6 +7,38 @@ export class History {
     this.maxEntries = maxEntries;
   }
 
+  public saveToLocalStorage() {
+    const localStorage = window.localStorage;
+    if (localStorage != undefined) {
+      localStorage.setItem("history", JSON.stringify(this.entries));
+    }
+  }
+
+  public restoreFromLocalStorage() {
+    let localStorage = window.localStorage;
+    if (localStorage != undefined) {
+      const historyJson = localStorage.getItem("history");
+      if (historyJson == undefined) {
+        return;
+      }
+      try {
+        const historyEntries: string[] = JSON.parse(historyJson);
+        if (
+          !Array.isArray(historyEntries) ||
+          historyEntries.find((it) => typeof it != "string") != undefined
+        ) {
+          this.entries = [];
+          localStorage.setItem("history", "[]");
+        } else {
+          this.entries = historyEntries;
+        }
+      } catch (e) {
+        this.entries = [];
+        localStorage.setItem("history", "[]");
+      }
+    }
+  }
+
   public append(text: string) {
     this.resetCursor();
     if (!this.entries.includes(text)) {
@@ -18,6 +50,7 @@ export class History {
     if (this.entries.length > this.maxEntries) {
       this.entries.pop();
     }
+    this.saveToLocalStorage();
   }
 
   public resetCursor() {
