@@ -36,11 +36,7 @@ function* splitInput(data: string) {
   let text = [];
 
   const it = data[Symbol.iterator]();
-  for (
-    let next = it.next();
-    next != undefined && !next.done;
-    next = it.next()
-  ) {
+  for (let next = it.next(); !next.done; next = it.next()) {
     const c = next.value;
 
     if (c.length > 1) {
