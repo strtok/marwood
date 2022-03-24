@@ -1,5 +1,5 @@
 const CopyWebpackPlugin = require("copy-webpack-plugin");
-const path = require('path');
+const path = require("path");
 
 module.exports = {
   entry: "./index.js",
@@ -8,9 +8,11 @@ module.exports = {
     filename: "index.js",
   },
   mode: "production",
-  plugins: [new CopyWebpackPlugin({
-    patterns: ["index.html"]
-  })],
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: ["index.html"],
+    }),
+  ],
   experiments: {
     asyncWebAssembly: true,
   },
@@ -18,7 +20,7 @@ module.exports = {
     rules: [
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
+        use: ["style-loader", "css-loader"],
       },
     ],
   },
