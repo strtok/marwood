@@ -39,6 +39,7 @@ export class Vm {
     }
 
     eval(input) {
+        this.paused = false;
         return new Promise((resolve, reject) => {
             this.evalPromise = [resolve, reject];
             this.remainingInput = input;
