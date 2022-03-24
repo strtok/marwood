@@ -12,6 +12,7 @@ interface ActiveRead {
 
 type CheckHandler = (text: string) => boolean;
 type CtrlCHandler = () => void;
+type PauseHandler = (resume: boolean) => void;
 
 export class Readline implements ITerminalAddon {
     private term: Terminal | undefined;
@@ -25,6 +26,7 @@ export class Readline implements ITerminalAddon {
     private state: State = new State(">", this.tty(), this.history);
     private checkHandler: CheckHandler = () => true;
     private ctrlCHandler: CtrlCHandler = () => { return; };
+    private pauseHandler: PauseHandler = (resume: boolean) => { return; };
 
     public activate(term: Terminal): void {
         this.term = term;
@@ -50,6 +52,10 @@ export class Readline implements ITerminalAddon {
 
     public setCtrlCHandler(fn: CtrlCHandler) {
         this.ctrlCHandler = fn;
+    }
+
+    public setPauseHandler(fn: PauseHandler) {
+        this.pauseHandler = fn;
     }
 
     public writeReady(): boolean {
@@ -177,6 +183,12 @@ export class Readline implements ITerminalAddon {
                     return;
                 }
                 this.ctrlCHandler();
+                break;
+            case InputType.CtrlS:
+                this.pauseHandler(false);
+                break;
+            case InputType.CtrlQ:
+                this.pauseHandler(true);
                 break;
             case InputType.CtrlL:
                 if (this.activeRead != undefined) {

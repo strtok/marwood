@@ -7,6 +7,7 @@ export class Vm {
         this.remainingInput = null;
         this.evalIter = 0;
         this.stopping = false;
+        this.paused = false;
         this.marwood = Marwood.new();
 
         globalThis.marwood_display = (text) => {
@@ -24,6 +25,13 @@ export class Vm {
 
         rl.setCheckHandler(this.check.bind(this));
         rl.setCtrlCHandler(this.stop.bind(this));
+        rl.setPauseHandler((resume) => {
+            if (resume) {
+                this.resume();
+            } else {
+                this.pause();
+            }
+        });
     }
 
     check(input) {
@@ -45,6 +53,14 @@ export class Vm {
         this.stopping = true;
     }
 
+    pause() {
+        this.paused = true;
+    }
+
+    resume() {
+        this.paused = false;
+    }
+
     execute() {
         if (this.stopping) {
             let [resolve, reject] = this.evalPromise;
@@ -52,7 +68,7 @@ export class Vm {
             return;
         }
 
-        if (!this.rl.writeReady()) {
+        if (!this.rl.writeReady() || this.paused) {
             setTimeout(() => this.execute(), 1);
             return;
         }
