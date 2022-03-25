@@ -1,8 +1,8 @@
-use crate::syntax::ReplHighlighter;
 use log::trace;
 use marwood::cell::Cell;
 use marwood::lex::{scan, Token};
 use marwood::parse::parse;
+use marwood::syntax::ReplHighlighter;
 use marwood::vm::Vm;
 use marwood::{lex, parse};
 use rustyline::error::ReadlineError;
@@ -11,8 +11,6 @@ use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Editor, Result};
 use rustyline_derive::{Completer, Helper, Hinter};
 use std::borrow::Cow::Owned;
-
-mod syntax;
 
 #[derive(Completer, Helper, Hinter)]
 struct InputValidator {

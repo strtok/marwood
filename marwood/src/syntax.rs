@@ -1,5 +1,5 @@
-use marwood::lex;
-use marwood::lex::{Token, TokenType};
+use crate::lex;
+use crate::lex::{Token, TokenType};
 use std::borrow::Cow::{Borrowed, Owned};
 
 pub struct ReplHighlighter {}

@@ -3,6 +3,7 @@ import { Input, InputType, parseInput } from "./keymap";
 import { State } from "./state";
 import { History } from "./history";
 import { Output, Tty } from "./tty";
+import { Highlighter, IdentityHighlighter } from "./highlight";
 
 interface ActiveRead {
   prompt: string;
@@ -16,6 +17,7 @@ type PauseHandler = (resume: boolean) => void;
 
 export class Readline implements ITerminalAddon {
   private term: Terminal | undefined;
+  private highlighter: Highlighter = new IdentityHighlighter();
   private history: History = new History(50);
   private activeRead: ActiveRead | undefined;
   private disposables: IDisposable[] = [];
@@ -23,7 +25,12 @@ export class Readline implements ITerminalAddon {
   private highWatermark = 10000;
   private lowWatermark = 1000;
   private highWater = false;
-  private state: State = new State(">", this.tty(), this.history);
+  private state: State = new State(
+    ">",
+    this.tty(),
+    this.highlighter,
+    this.history
+  );
   private checkHandler: CheckHandler = () => true;
   private ctrlCHandler: CtrlCHandler = () => {
     return;
@@ -52,6 +59,10 @@ export class Readline implements ITerminalAddon {
 
   public appendHistory(text: string) {
     this.history.append(text);
+  }
+
+  public setHighlighter(highlighter: Highlighter) {
+    this.highlighter = highlighter;
   }
 
   public setCheckHandler(fn: CheckHandler) {
@@ -123,7 +134,12 @@ export class Readline implements ITerminalAddon {
         reject("addon is not active");
         return;
       }
-      this.state = new State(prompt, this.tty(), this.history);
+      this.state = new State(
+        prompt,
+        this.tty(),
+        this.highlighter,
+        this.history
+      );
       this.state.refresh();
       this.activeRead = { prompt, resolve, reject };
     });
@@ -197,6 +213,7 @@ export class Readline implements ITerminalAddon {
           this.state = new State(
             this.activeRead.prompt,
             this.tty(),
+            this.highlighter,
             this.history
           );
           this.state.refresh();

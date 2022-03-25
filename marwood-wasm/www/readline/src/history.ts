@@ -8,14 +8,14 @@ export class History {
   }
 
   public saveToLocalStorage() {
-    const localStorage = window.localStorage;
+    const localStorage = window?.localStorage;
     if (localStorage != undefined) {
       localStorage.setItem("history", JSON.stringify(this.entries));
     }
   }
 
   public restoreFromLocalStorage() {
-    let localStorage = window.localStorage;
+    let localStorage = window?.localStorage;
     if (localStorage != undefined) {
       const historyJson = localStorage.getItem("history");
       if (historyJson == undefined) {

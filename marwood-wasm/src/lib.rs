@@ -1,8 +1,11 @@
 #![allow(clippy::unused_unit)]
+
 use marwood::cell::Cell;
 use marwood::lex;
 use marwood::parse;
+use marwood::syntax::ReplHighlighter;
 use marwood::vm::Vm;
+use std::borrow::Cow;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(module = "/display.js")]
@@ -16,6 +19,7 @@ extern "C" {
 #[derive(Default)]
 pub struct Marwood {
     vm: Vm,
+    hl: ReplHighlighter,
 }
 
 #[wasm_bindgen]
@@ -28,7 +32,10 @@ impl Marwood {
         vm.set_write_fn(Box::new(|cell| display(&format!("{:#}", cell))));
         vm.set_rows_fn(Box::new(|| termRows().as_f64().unwrap_or(0_f64) as usize));
         vm.set_cols_fn(Box::new(|| termCols().as_f64().unwrap_or(0_f64) as usize));
-        Marwood { vm }
+        Marwood {
+            vm,
+            hl: ReplHighlighter::new(),
+        }
     }
 
     pub fn eval(&mut self, text: &str, count: usize) -> EvalResult {
@@ -87,6 +94,18 @@ impl Marwood {
             parse::parse(text, &mut cur),
             Err(parse::Error::Eof)
         ))
+    }
+
+    pub fn highlight_check(&self, text: &str, index: usize) -> JsValue {
+        JsValue::from(self.hl.highlight_check(text, index))
+    }
+
+    pub fn highlight(&self, text: &str, index: usize) -> HighlightResult {
+        let result = self.hl.highlight(text, index);
+        match result {
+            Cow::Borrowed(text) => HighlightResult::new(text.to_owned(), false),
+            Cow::Owned(text) => HighlightResult::new(text.to_owned(), true),
+        }
     }
 
     pub fn last_token(&self, text: &str) -> JsValue {
@@ -246,6 +265,29 @@ impl CheckResult {
     #[wasm_bindgen(getter)]
     pub fn eof(&self) -> JsValue {
         JsValue::from(self.eof)
+    }
+}
+
+#[wasm_bindgen]
+pub struct HighlightResult {
+    text: String,
+    highlighted: bool,
+}
+
+#[wasm_bindgen]
+impl HighlightResult {
+    fn new(text: String, highlighted: bool) -> HighlightResult {
+        HighlightResult { text, highlighted }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn highlighted(&self) -> JsValue {
+        JsValue::from(self.highlighted)
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn text(&self) -> JsValue {
+        JsValue::from(self.text.clone())
     }
 }
 

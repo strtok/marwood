@@ -1,5 +1,28 @@
 import { Marwood } from "marwood";
 
+class Highlighter {
+  constructor(vm) {
+    this.vm = vm;
+  }
+
+  highlight(line, pos) {
+    let result = this.vm.marwood.highlight(line, pos);
+    if (result.highlighted) {
+      return result.text;
+    } else {
+      return line;
+    }
+  }
+
+  highlightPrompt(prompt) {
+    return prompt;
+  }
+
+  highlightChar(line, pos) {
+    return this.vm.marwood.highlight_check(line, pos);
+  }
+}
+
 export class Vm {
   constructor(rl) {
     this.rl = rl;
@@ -23,6 +46,7 @@ export class Vm {
       return this.rl.term.rows;
     };
 
+    rl.setHighlighter(new Highlighter(this));
     rl.setCheckHandler(this.check.bind(this));
     rl.setCtrlCHandler(this.stop.bind(this));
     rl.setPauseHandler((resume) => {

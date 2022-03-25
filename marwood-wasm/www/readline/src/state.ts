@@ -2,6 +2,7 @@ import { LineBuffer } from "./line";
 import { Tty } from "./tty";
 import { History } from "./history";
 import stringWidth from "string-width";
+import { Highlighter } from "./highlight";
 
 export class Position {
   public col: number;
@@ -39,11 +40,19 @@ export class State {
   private line: LineBuffer = new LineBuffer();
   private tty: Tty;
   private layout: Layout;
+  private highlighter: Highlighter;
+  private highlighting = false;
   private history: History;
 
-  constructor(prompt: string, tty: Tty, history: History) {
+  constructor(
+    prompt: string,
+    tty: Tty,
+    highlighter: Highlighter,
+    history: History
+  ) {
     this.prompt = prompt;
     this.tty = tty;
+    this.highlighter = highlighter;
     this.history = history;
     this.promptSize = tty.calculatePosition(prompt, new Position());
     this.layout = new Layout(this.promptSize);
@@ -51,6 +60,22 @@ export class State {
 
   public buffer(): string {
     return this.line.buffer();
+  }
+
+  public shouldHighlight(): boolean {
+    let highlighting = this.highlighter.highlightChar(
+      this.line.buf,
+      this.line.pos
+    );
+    if (highlighting) {
+      this.highlighting = true;
+      return true;
+    } else if (this.highlighting) {
+      this.highlighting = false;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   public clearScreen() {
@@ -65,7 +90,11 @@ export class State {
     const multiline = text.includes("\n");
     if (push && !multiline) {
       const width = stringWidth(text);
-      if (width > 0 && this.layout.cursor.col + width < this.tty.col) {
+      if (
+        width > 0 &&
+        this.layout.cursor.col + width < this.tty.col &&
+        !this.shouldHighlight()
+      ) {
         this.layout.cursor.col += width;
         this.layout.end.col += width;
         this.tty.write(text);
@@ -96,7 +125,13 @@ export class State {
 
   public refresh() {
     const newLayout = this.tty.computeLayout(this.promptSize, this.line);
-    this.tty.refreshLine(this.prompt, this.line, this.layout, newLayout);
+    this.tty.refreshLine(
+      this.prompt,
+      this.line,
+      this.layout,
+      newLayout,
+      this.highlighter
+    );
     this.layout = newLayout;
   }
 
@@ -178,8 +213,12 @@ export class State {
     if (cursor == this.layout.cursor) {
       return;
     }
-    this.tty.moveCursor(this.layout.cursor, cursor);
-    this.layout.promptSize = { ...this.promptSize };
-    this.layout.cursor = { ...cursor };
+    if (this.shouldHighlight()) {
+      this.refresh();
+    } else {
+      this.tty.moveCursor(this.layout.cursor, cursor);
+      this.layout.promptSize = { ...this.promptSize };
+      this.layout.cursor = { ...cursor };
+    }
   }
 }

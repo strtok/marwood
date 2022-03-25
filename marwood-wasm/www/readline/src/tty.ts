@@ -1,6 +1,7 @@
 import { Position, Layout } from "./state";
 import { LineBuffer } from "./line";
 import stringWidth from "string-width";
+import { Highlighter } from "./highlight";
 
 export interface Output {
   write(text: string): void;
@@ -95,14 +96,15 @@ export class Tty {
     prompt: string,
     line: LineBuffer,
     oldLayout: Layout,
-    newLayout: Layout
+    newLayout: Layout,
+    highlighter: Highlighter
   ) {
     const cursor = newLayout.cursor;
     const end_pos = newLayout.end;
     this.clearOldRows(oldLayout);
 
-    this.write(prompt);
-    this.write(line.buf);
+    this.write(highlighter.highlightPrompt(prompt));
+    this.write(highlighter.highlight(line.buf, line.pos));
 
     if (
       end_pos.col == 0 &&

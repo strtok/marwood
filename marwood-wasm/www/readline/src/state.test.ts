@@ -1,3 +1,4 @@
+import { IdentityHighlighter } from "./highlight";
 import { History } from "./history";
 import { State } from "./state";
 import { Tty } from "./tty";
@@ -14,7 +15,12 @@ class Output {
 test("edit insert push", () => {
   const out = new Output();
   const tty = new Tty(80, 24, 8, out);
-  const state = new State(PROMPT, tty, new History(50));
+  const state = new State(
+    PROMPT,
+    tty,
+    new IdentityHighlighter(),
+    new History(50)
+  );
   state.editInsert("a");
   state.editInsert("b");
   state.editInsert("c");
@@ -27,7 +33,12 @@ test("edit insert push", () => {
 test("edit insert", () => {
   const out = new Output();
   const tty = new Tty(80, 24, 8, out);
-  const state = new State(PROMPT, tty, new History(50));
+  const state = new State(
+    PROMPT,
+    tty,
+    new IdentityHighlighter(),
+    new History(50)
+  );
   state.editInsert("a");
   state.editInsert("b");
   state.editInsert("c");
@@ -39,7 +50,12 @@ test("edit insert", () => {
 test("edit insert wrap", () => {
   const out = new Output();
   const tty = new Tty(5, 24, 8, out);
-  const state = new State(PROMPT, tty, new History(50));
+  const state = new State(
+    PROMPT,
+    tty,
+    new IdentityHighlighter(),
+    new History(50)
+  );
   state.editInsert("a");
   state.editInsert("b");
   state.editInsert("c");
@@ -62,7 +78,12 @@ test("edit insert wrap", () => {
 test("edit multiline backcursor", () => {
   const out = new Output();
   const tty = new Tty(5, 24, 8, out);
-  const state = new State(PROMPT, tty, new History(50));
+  const state = new State(
+    PROMPT,
+    tty,
+    new IdentityHighlighter(),
+    new History(50)
+  );
   state.editInsert("a");
   state.editInsert("\n");
   state.editInsert("b");
@@ -78,7 +99,12 @@ test("edit multiline backcursor", () => {
 test("cursor arrow movement", () => {
   const out = new Output();
   const tty = new Tty(5, 24, 8, out);
-  const state = new State(PROMPT, tty, new History(50));
+  const state = new State(
+    PROMPT,
+    tty,
+    new IdentityHighlighter(),
+    new History(50)
+  );
   state.editInsert("abc\ndef\nghi");
   state.moveCursorBack(1);
   state.moveCursorUp(1);
