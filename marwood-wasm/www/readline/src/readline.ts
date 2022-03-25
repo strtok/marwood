@@ -188,6 +188,18 @@ export class Readline implements ITerminalAddon {
   }
 
   private readKey(input: Input) {
+    if (this.activeRead == undefined) {
+      switch (input.inputType) {
+        case InputType.CtrlC:
+          this.ctrlCHandler();
+          break;
+        case InputType.CtrlL:
+          this.write("\x1b[H\x1b[2J");
+          break;
+      }
+      return;
+    }
+
     switch (input.inputType) {
       case InputType.Text:
         this.state.editInsert(input.data.join(""));
@@ -207,37 +219,27 @@ export class Readline implements ITerminalAddon {
         }
         break;
       case InputType.CtrlC:
-        if (this.activeRead != undefined) {
-          this.state.moveCursorToEnd();
-          this.term?.write("^C\r\n");
-          this.state = new State(
-            this.activeRead.prompt,
-            this.tty(),
-            this.highlighter,
-            this.history
-          );
-          this.state.refresh();
-          return;
-        }
-        this.ctrlCHandler();
+        this.state.moveCursorToEnd();
+        this.term?.write("^C\r\n");
+        this.state = new State(
+          this.activeRead.prompt,
+          this.tty(),
+          this.highlighter,
+          this.history
+        );
+        this.state.refresh();
         break;
       case InputType.CtrlS:
         this.pauseHandler(false);
         break;
       case InputType.CtrlU:
-        if (this.activeRead != undefined) {
-          this.state.update("");
-        }
+        this.state.update("");
         break;
       case InputType.CtrlQ:
         this.pauseHandler(true);
         break;
       case InputType.CtrlL:
-        if (this.activeRead != undefined) {
-          this.state.clearScreen();
-        } else {
-          this.write("\x1b[H\x1b[2J");
-        }
+        this.state.clearScreen();
         break;
       case InputType.Home:
       case InputType.CtrlA:
