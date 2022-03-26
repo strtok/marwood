@@ -1,5 +1,6 @@
 #![allow(clippy::unused_unit)]
 
+use js_sys::Date;
 use marwood::cell::Cell;
 use marwood::lex;
 use marwood::parse;
@@ -38,6 +39,9 @@ impl SystemInterface for WasmSystemInterface {
             termCols().as_f64().unwrap_or(0_f64) as usize,
             termRows().as_f64().unwrap_or(0_f64) as usize,
         )
+    }
+    fn time_utc(&self) -> u64 {
+        Date::now() as u64
     }
 }
 

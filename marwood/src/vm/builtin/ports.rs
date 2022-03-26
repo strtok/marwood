@@ -7,6 +7,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("write", write);
     vm.load_builtin("term-rows", term_rows);
     vm.load_builtin("term-cols", term_cols);
+    vm.load_builtin("time-utc", time_utc);
 }
 
 pub fn display(vm: &mut Vm) -> Result<VCell, Error> {
@@ -31,4 +32,9 @@ pub fn term_rows(vm: &mut Vm) -> Result<VCell, Error> {
 pub fn term_cols(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 0, Some(0), "term-cols")?;
     Ok(VCell::Number(vm.term_cols().into()))
+}
+
+pub fn time_utc(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 0, Some(0), "time-utc")?;
+    Ok(VCell::Number(vm.time_utc().into()))
 }

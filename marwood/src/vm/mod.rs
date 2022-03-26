@@ -119,6 +119,10 @@ impl Vm {
         self.sys.terminal_dimensions().0
     }
 
+    pub fn time_utc(&self) -> u64 {
+        self.sys.time_utc()
+    }
+
     pub fn global_symbols(&self) -> Vec<&str> {
         self.globenv
             .iter_bindings()
@@ -139,6 +143,7 @@ pub trait SystemInterface: Debug {
     fn display(&self, cell: &Cell);
     fn write(&self, cell: &Cell);
     fn terminal_dimensions(&self) -> (usize, usize);
+    fn time_utc(&self) -> u64;
 }
 
 #[derive(Debug)]
@@ -148,6 +153,9 @@ impl SystemInterface for StubInterface {
     fn write(&self, _: &Cell) {}
     fn terminal_dimensions(&self) -> (usize, usize) {
         (0, 0)
+    }
+    fn time_utc(&self) -> u64 {
+        0
     }
 }
 

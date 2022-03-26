@@ -11,6 +11,7 @@ use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Editor, Result};
 use rustyline_derive::{Completer, Helper, Hinter};
 use std::borrow::Cow::Owned;
+use std::time::UNIX_EPOCH;
 
 #[derive(Completer, Helper, Hinter)]
 struct InputValidator {
@@ -58,6 +59,13 @@ impl SystemInterface for ReplSystemInterface {
 
     fn terminal_dimensions(&self) -> (usize, usize) {
         (0, 0)
+    }
+
+    fn time_utc(&self) -> u64 {
+        match std::time::SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(n) => n.as_millis() as u64,
+            Err(_) => 0,
+        }
     }
 }
 
