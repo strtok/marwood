@@ -6,7 +6,7 @@ use crate::vm::heap::Heap;
 use crate::vm::stack::Stack;
 use crate::vm::vcell::VCell;
 use log::trace;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 pub mod builtin;
 pub mod char;
@@ -26,10 +26,6 @@ pub mod vector;
 
 const HEAP_CHUNK_SIZE: usize = 8192;
 
-struct Display(Box<dyn Fn(&Cell)>);
-struct Write(Box<dyn Fn(&Cell)>);
-struct TerminalDimension(Box<dyn Fn() -> usize>);
-
 #[derive(Debug)]
 pub struct Vm {
     /// The heap and global environment
@@ -45,11 +41,8 @@ pub struct Vm {
     ip: (usize, usize),
     bp: usize,
 
-    /// Display Callback
-    display: Display,
-    write: Write,
-    rows: TerminalDimension,
-    cols: TerminalDimension,
+    /// System Interface (display, write, etc).
+    sys: Box<dyn SystemInterface>,
 }
 
 impl Vm {
@@ -65,10 +58,7 @@ impl Vm {
             ep: usize::MAX,
             acc: VCell::undefined(),
             bp: 0,
-            display: Display(Box::new(|cell| print!("{}", cell))),
-            write: Write(Box::new(|cell| print!("{:#}", cell))),
-            rows: TerminalDimension(Box::new(|| 0)),
-            cols: TerminalDimension(Box::new(|| 0)),
+            sys: Box::new(StubInterface {}),
         };
         vm.load_builtins();
         vm.load_prelude();
@@ -109,36 +99,24 @@ impl Vm {
         Ok(())
     }
 
-    pub fn set_display_fn(&mut self, func: Box<dyn Fn(&Cell)>) {
-        self.display = Display(func);
-    }
-
-    pub fn set_write_fn(&mut self, func: Box<dyn Fn(&Cell)>) {
-        self.write = Write(func);
-    }
-
-    pub fn set_rows_fn(&mut self, func: Box<dyn Fn() -> usize>) {
-        self.rows = TerminalDimension(func);
-    }
-
-    pub fn set_cols_fn(&mut self, func: Box<dyn Fn() -> usize>) {
-        self.cols = TerminalDimension(func);
+    pub fn set_system_interface(&mut self, sys: Box<dyn SystemInterface>) {
+        self.sys = sys;
     }
 
     pub fn display(&self, cell: &Cell) {
-        self.display.display(cell)
+        self.sys.display(cell)
     }
 
     pub fn write(&self, cell: &Cell) {
-        self.write.write(cell)
+        self.sys.write(cell)
     }
 
     pub fn term_rows(&self) -> usize {
-        self.rows.get()
+        self.sys.terminal_dimensions().1
     }
 
     pub fn term_cols(&self) -> usize {
-        self.cols.get()
+        self.sys.terminal_dimensions().0
     }
 
     pub fn global_symbols(&self) -> Vec<&str> {
@@ -155,39 +133,21 @@ impl Default for Vm {
     }
 }
 
-impl Display {
-    fn display(&self, cell: &Cell) {
-        self.0(cell)
-    }
+/// SystemInterface is the interface between marwood and the operating
+/// environment (e.g. display, write, etc).
+pub trait SystemInterface: Debug {
+    fn display(&self, cell: &Cell);
+    fn write(&self, cell: &Cell);
+    fn terminal_dimensions(&self) -> (usize, usize);
 }
 
-impl Write {
-    fn write(&self, cell: &Cell) {
-        self.0(cell)
-    }
-}
-
-impl TerminalDimension {
-    fn get(&self) -> usize {
-        self.0()
-    }
-}
-
-impl Debug for Display {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Display{{}}")
-    }
-}
-
-impl Debug for Write {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Write{{}}")
-    }
-}
-
-impl Debug for TerminalDimension {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TerminalDimension{{}}")
+#[derive(Debug)]
+struct StubInterface {}
+impl SystemInterface for StubInterface {
+    fn display(&self, _: &Cell) {}
+    fn write(&self, _: &Cell) {}
+    fn terminal_dimensions(&self) -> (usize, usize) {
+        (0, 0)
     }
 }
 

@@ -4,7 +4,7 @@ use marwood::cell::Cell;
 use marwood::lex;
 use marwood::parse;
 use marwood::syntax::ReplHighlighter;
-use marwood::vm::Vm;
+use marwood::vm::{SystemInterface, Vm};
 use std::borrow::Cow;
 use wasm_bindgen::prelude::*;
 
@@ -22,16 +22,32 @@ pub struct Marwood {
     hl: ReplHighlighter,
 }
 
+#[derive(Debug)]
+struct WasmSystemInterface {}
+impl SystemInterface for WasmSystemInterface {
+    fn display(&self, cell: &Cell) {
+        display(&format!("{}", cell))
+    }
+
+    fn write(&self, cell: &Cell) {
+        display(&format!("{:#}", cell))
+    }
+
+    fn terminal_dimensions(&self) -> (usize, usize) {
+        (
+            termCols().as_f64().unwrap_or(0_f64) as usize,
+            termRows().as_f64().unwrap_or(0_f64) as usize,
+        )
+    }
+}
+
 #[wasm_bindgen]
 impl Marwood {
     pub fn new() -> Self {
         #[cfg(feature = "console_error_panic_hook")]
         console_error_panic_hook::set_once();
         let mut vm = Vm::new();
-        vm.set_display_fn(Box::new(|cell| display(&format!("{}", cell))));
-        vm.set_write_fn(Box::new(|cell| display(&format!("{:#}", cell))));
-        vm.set_rows_fn(Box::new(|| termRows().as_f64().unwrap_or(0_f64) as usize));
-        vm.set_cols_fn(Box::new(|| termCols().as_f64().unwrap_or(0_f64) as usize));
+        vm.set_system_interface(Box::new(WasmSystemInterface {}));
         Marwood {
             vm,
             hl: ReplHighlighter::new(),

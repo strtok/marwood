@@ -3,7 +3,7 @@ use marwood::cell::Cell;
 use marwood::lex::{scan, Token};
 use marwood::parse::parse;
 use marwood::syntax::ReplHighlighter;
-use marwood::vm::Vm;
+use marwood::vm::{SystemInterface, Vm};
 use marwood::{lex, parse};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
@@ -45,6 +45,22 @@ impl Highlighter for InputValidator {
     }
 }
 
+#[derive(Debug)]
+struct ReplSystemInterface {}
+impl SystemInterface for ReplSystemInterface {
+    fn display(&self, cell: &Cell) {
+        print!("{}", cell);
+    }
+
+    fn write(&self, cell: &Cell) {
+        print!("{:#}", cell);
+    }
+
+    fn terminal_dimensions(&self) -> (usize, usize) {
+        (0, 0)
+    }
+}
+
 fn main() {
     pretty_env_logger::init();
     let validator = InputValidator {
@@ -55,6 +71,7 @@ fn main() {
     let mut remaining = "".to_string();
 
     let mut vm = Vm::new();
+    vm.set_system_interface(Box::new(ReplSystemInterface {}));
     loop {
         let readline = rl.readline_with_initial("> ", (&remaining, ""));
         match readline {
