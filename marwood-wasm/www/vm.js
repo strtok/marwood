@@ -106,7 +106,7 @@ export class Vm {
         this.remainingInput = null;
       }
     } else {
-      result = this.marwood.eval_continue(10000);
+      result = this.marwood.eval_continue(25000);
     }
 
     if (result.completed) {
