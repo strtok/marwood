@@ -331,14 +331,16 @@ impl Vm {
     /// Read an argument vcell from program[ip], increment ip and
     /// return the value.
     fn read_operand(&mut self) -> Result<VCell, Error> {
-        let operand = self
-            .lambda()
-            .get(self.ip.1)
-            .cloned()
-            .filter(|it| !it.is_opcode())
-            .ok_or(InvalidBytecode);
-        self.ip.1 += 1;
-        operand
+        let proc = self.lambda();
+        match proc.get(self.ip.1) {
+            Some(opand) if opand.is_opcode() => Err(InvalidBytecode),
+            Some(opand) => {
+                let opand = opand.clone();
+                self.ip.1 += 1;
+                Ok(opand)
+            }
+            None => Err(InvalidBytecode),
+        }
     }
 
     /// Deref Arg
