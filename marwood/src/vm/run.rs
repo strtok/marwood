@@ -575,6 +575,10 @@ impl Vm {
         trace!("--- END LEXICAL ENVIRONMENT ---");
     }
 
+    #[cfg(not(debug_assertions))]
+    fn trace_instruction(&self) {}
+
+    #[cfg(debug_assertions)]
     fn trace_instruction(&self) {
         trace!(
             "{:<60} {:>30}",

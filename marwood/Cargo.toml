@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 readme = "../README.md"
 
 [dependencies]
-log = "0.4"
+log = { version = "0.4", features = ["release_max_level_info"] }
 num = "0.4.0"
 thiserror = "1.0.30"
 lazy_static = "1.4.0"
