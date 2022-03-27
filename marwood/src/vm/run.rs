@@ -412,15 +412,16 @@ impl Vm {
     /// Read an op code from program[ip], increment ip and
     /// return the opcode.
     fn read_opcode(&mut self) -> Result<OpCode, Error> {
-        let op = self
-            .lambda()
-            .get(self.ip.1)
-            .cloned()
-            .filter(|it| it.is_opcode())
-            .map(|it| it.as_opcode())
-            .ok_or(InvalidBytecode)?;
-        self.ip.1 += 1;
-        op
+        let proc = self.lambda();
+        let op = proc.get(self.ip.1);
+        match op {
+            Some(op) => {
+                let op = op.as_opcode()?;
+                self.ip.1 += 1;
+                Ok(op)
+            }
+            None => Err(InvalidBytecode),
+        }
     }
 
     /// Load Arg
