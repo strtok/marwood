@@ -14,12 +14,10 @@ Marwood is an embeddable [Scheme R5RS](https://schemers.org/Documents/Standards/
 
 And these scheme language features:
 
-* most R5RS language and library features
-* R7Small unicode support
+* most R7RS (small) language and library features
 * Tail call optimization
 * First class continuations (call/cc)
 * Support for scheme's numerical tower, including rationals
-  * No complex number support
 * Partial support for syntax-rules
 
 # Example
