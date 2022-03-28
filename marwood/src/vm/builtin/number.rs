@@ -283,18 +283,18 @@ pub fn quotient(vm: &mut Vm) -> Result<VCell, Error> {
 
 macro_rules! unary_trig {
     ($vm:ident, $name:ident) => {{
-    pop_argc($vm, 1, Some(1), stringify!($name))?;
-    let x = pop_number($vm)?;
+        pop_argc($vm, 1, Some(1), stringify!($name))?;
+        let x = pop_number($vm)?;
 
-    if let Some(result) = x.$name() {
-        Ok(result.into())
-    } else {
-        return Err(InvalidSyntax(format!(
-            "{} is undefined for {}",
-            stringify!($name),
-            x
-        )))
-    }
+        if let Some(result) = x.$name() {
+            Ok(result.into())
+        } else {
+            return Err(InvalidSyntax(format!(
+                "{} is undefined for {}",
+                stringify!($name),
+                x
+            )));
+        }
     }};
 }
 
@@ -307,7 +307,7 @@ pub fn log(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn sin(vm: &mut Vm) -> Result<VCell, Error> {
-  unary_trig!(vm, sin)
+    unary_trig!(vm, sin)
 }
 
 pub fn cos(vm: &mut Vm) -> Result<VCell, Error> {
@@ -336,10 +336,7 @@ pub fn atan(vm: &mut Vm) -> Result<VCell, Error> {
             if let Some(result) = y.atan2(x.clone()) {
                 Ok(result.into())
             } else {
-                return Err(InvalidSyntax(format!(
-                    "atan is undefined for {} {}",
-                    y, x
-                )))
+                return Err(InvalidSyntax(format!("atan is undefined for {} {}", y, x)));
             }
         }
         _ => {
@@ -348,12 +345,9 @@ pub fn atan(vm: &mut Vm) -> Result<VCell, Error> {
             if let Some(result) = y.atan() {
                 Ok(result.into())
             } else {
-                return Err(InvalidSyntax(format!(
-                    "atan is undefined for {}",
-                    y
-                )))
+                return Err(InvalidSyntax(format!("atan is undefined for {}", y)));
             }
-        },
+        }
     }
 }
 

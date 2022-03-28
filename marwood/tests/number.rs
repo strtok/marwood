@@ -174,7 +174,14 @@ fn arithmetic() {
     ];
 
     let mut vm = Vm::new();
-    assert!(vm.eval(&parse!("(sin (expt 10.0 309))")).unwrap().as_number().unwrap().to_f64().unwrap().is_nan());
+    assert!(vm
+        .eval(&parse!("(sin (expt 10.0 309))"))
+        .unwrap()
+        .as_number()
+        .unwrap()
+        .to_f64()
+        .unwrap()
+        .is_nan());
 
     evals![
         "(expt 2 2)" => "4",
