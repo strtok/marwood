@@ -1,5 +1,8 @@
 use num::bigint::BigInt;
-use num::{BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimitive, Rational64, Signed};
+use num::traits::FloatConst;
+use num::{
+    BigRational, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, FromPrimitive, Rational64, Signed,
+};
 use num::{Num, Rational32, ToPrimitive};
 use std::cmp::Ordering;
 use std::fmt;
@@ -7,7 +10,6 @@ use std::fmt::{Binary, Formatter, LowerHex, Octal};
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, Sub};
 use std::rc::Rc;
-use num::traits::FloatConst;
 
 /// Exactness
 ///
@@ -162,7 +164,7 @@ impl Number {
             }
             Number::Rational(num) if num.is_integer() => num.to_u32(),
             Number::Float(num) if self.is_integer() => num.to_u32(),
-            _ => None
+            _ => None,
         }
     }
 
@@ -228,7 +230,7 @@ impl Number {
                         None => Some((*num).into()),
                     }
                 }
-            },
+            }
             Number::BigInt(_) | Number::Rational(_) | Number::Fixnum(_) => Some(self.clone()),
         }
     }
@@ -871,9 +873,7 @@ impl Rem for &Number {
             Number::Fixnum(lhs) => match rhs {
                 Number::Fixnum(rhs) => Some((lhs % rhs).into()),
                 Number::BigInt(rhs) => Some((BigInt::from(*lhs) % &**rhs).into()),
-                Number::Float(rhs) => {
-                    Some((*lhs as f64 % rhs).into())
-                },
+                Number::Float(rhs) => Some((*lhs as f64 % rhs).into()),
                 Number::Rational(rhs) => {
                     let result = Rational64::from_integer(*lhs)
                         % Rational64::from((*rhs.numer() as i64, *rhs.denom() as i64));
@@ -895,7 +895,8 @@ impl Rem for &Number {
                         // and then divide the result by the denominator.
                         // Exercise to the reader: Prove that X % N/M == (X % N) / M
                         let denom = rhs.denom();
-                        let numer_mod = (&**lhs * BigInt::from(*denom)) % BigInt::from(*rhs.numer());
+                        let numer_mod =
+                            (&**lhs * BigInt::from(*denom)) % BigInt::from(*rhs.numer());
                         Some(Rational32::new(numer_mod.to_i32().unwrap(), *denom).into())
                     }
                 }
@@ -935,6 +936,7 @@ impl fmt::Display for Number {
             Number::Fixnum(num) => write!(f, "{}", num),
             Number::BigInt(num) => write!(f, "{}", num),
             Number::Float(num) if *num > 1E10 => write!(f, "{:e}", num),
+            Number::Float(num) if self.is_integer() => write!(f, "{:.1}", num),
             Number::Float(num) => write!(f, "{}", num),
             Number::Rational(num) => write!(f, "{}", num),
         }
@@ -1072,7 +1074,7 @@ impl Number {
             Number::Fixnum(num) => num.to_f64().map(|num| num.exp().into()),
             Number::Float(num) => Some(num.exp().into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.exp().into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.exp().into())
+            Number::Rational(num) => num.to_f64().map(|num| num.exp().into()),
         }
     }
 
@@ -1081,16 +1083,16 @@ impl Number {
             Number::Fixnum(num) => num.to_f64().map(|num| num.log(f64::E()).into()),
             Number::Float(num) => Some(num.log(f64::E()).into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.log(f64::E()).into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.log(f64::E()).into())
+            Number::Rational(num) => num.to_f64().map(|num| num.log(f64::E()).into()),
         }
     }
-    
+
     pub fn sin(&self) -> Option<Number> {
         match self {
             Number::Fixnum(num) => num.to_f64().map(|num| num.sin().into()),
             Number::Float(num) => Some(num.sin().into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.sin().into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.sin().into())
+            Number::Rational(num) => num.to_f64().map(|num| num.sin().into()),
         }
     }
 
@@ -1099,7 +1101,7 @@ impl Number {
             Number::Fixnum(num) => num.to_f64().map(|num| num.cos().into()),
             Number::Float(num) => Some(num.cos().into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.cos().into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.cos().into())
+            Number::Rational(num) => num.to_f64().map(|num| num.cos().into()),
         }
     }
 
@@ -1108,7 +1110,7 @@ impl Number {
             Number::Fixnum(num) => num.to_f64().map(|num| num.tan().into()),
             Number::Float(num) => Some(num.tan().into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.tan().into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.tan().into())
+            Number::Rational(num) => num.to_f64().map(|num| num.tan().into()),
         }
     }
 
@@ -1117,7 +1119,7 @@ impl Number {
             Number::Fixnum(num) => num.to_f64().map(|num| num.asin().into()),
             Number::Float(num) => Some(num.asin().into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.asin().into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.asin().into())
+            Number::Rational(num) => num.to_f64().map(|num| num.asin().into()),
         }
     }
 
@@ -1126,7 +1128,7 @@ impl Number {
             Number::Fixnum(num) => num.to_f64().map(|num| num.acos().into()),
             Number::Float(num) => Some(num.acos().into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.acos().into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.acos().into())
+            Number::Rational(num) => num.to_f64().map(|num| num.acos().into()),
         }
     }
 
@@ -1135,7 +1137,7 @@ impl Number {
             Number::Fixnum(num) => num.to_f64().map(|num| num.atan().into()),
             Number::Float(num) => Some(num.atan().into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.atan().into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.atan().into())
+            Number::Rational(num) => num.to_f64().map(|num| num.atan().into()),
         }
     }
 
@@ -1145,7 +1147,7 @@ impl Number {
                 Number::Fixnum(num) => num.to_f64().map(|num| num.atan2(x).into()),
                 Number::Float(num) => Some(num.atan2(x).into()),
                 Number::BigInt(num) => num.to_f64().map(|num| num.atan2(x).into()),
-                Number::Rational(num) => num.to_f64().map(|num| num.atan2(x).into())
+                Number::Rational(num) => num.to_f64().map(|num| num.atan2(x).into()),
             }
         } else {
             None
@@ -1154,11 +1156,11 @@ impl Number {
 
     /// sqrt is undefined for complex results
     pub fn sqrt(&self) -> Option<Number> {
-        let result : Option<Number> = match self {
+        let result: Option<Number> = match self {
             Number::Fixnum(num) => num.to_f64().map(|num| num.sqrt().into()),
             Number::Float(num) => Some(num.sqrt().into()),
             Number::BigInt(num) => num.to_f64().map(|num| num.sqrt().into()),
-            Number::Rational(num) => num.to_f64().map(|num| num.sqrt().into())
+            Number::Rational(num) => num.to_f64().map(|num| num.sqrt().into()),
         };
 
         // convert NaN and infinity to None
@@ -1174,15 +1176,14 @@ impl Number {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::number::Number;
     use num::bigint::BigInt;
+    use num::traits::FloatConst;
     use num::{FromPrimitive, Rational32};
     use std::mem;
     use std::str::FromStr;
-    use num::traits::FloatConst;
 
     macro_rules! verify {
         ($func:expr, $($lhs:expr, $rhs:expr => $result:expr),+) => {{
@@ -1458,7 +1459,10 @@ mod tests {
             Number::from(100) % Number::from(BigInt::from(i64::MAX) + BigInt::from(i64::MAX)),
             Some(Number::from(BigInt::from(100)))
         );
-        assert_eq!(Number::from(100) % Number::from(1.0), Some(Number::Float(0.0)));
+        assert_eq!(
+            Number::from(100) % Number::from(1.0),
+            Some(Number::Float(0.0))
+        );
         assert_eq!(
             Number::from(100) % Number::from(Rational32::from_integer(70)),
             Some(Number::from(30))
@@ -1511,15 +1515,24 @@ mod tests {
             Some(Number::from(Rational32::from_integer(30)))
         );
         assert_eq!(
-            Number::from(Rational32::from_integer(1))
-                % Number::from(Rational32::new(2, 3)),
+            Number::from(Rational32::from_integer(1)) % Number::from(Rational32::new(2, 3)),
             Some(Number::from(Rational32::new(1, 3)))
         );
 
         // FLOAT % RHS
-        assert_eq!(Number::from(0.5) % Number::from(70), Some(Number::from(0.5)));
-        assert_eq!(Number::from(100.0) % Number::from(70), Some(Number::from(30.0)));
-        assert!((Number::from(f64::INFINITY) % Number::from(70)).unwrap().to_f64().unwrap().is_nan());
+        assert_eq!(
+            Number::from(0.5) % Number::from(70),
+            Some(Number::from(0.5))
+        );
+        assert_eq!(
+            Number::from(100.0) % Number::from(70),
+            Some(Number::from(30.0))
+        );
+        assert!((Number::from(f64::INFINITY) % Number::from(70))
+            .unwrap()
+            .to_f64()
+            .unwrap()
+            .is_nan());
         assert_eq!(
             Number::from(100.0) % Number::from(BigInt::from(70)),
             Some(Number::from(30.0))
@@ -1528,7 +1541,10 @@ mod tests {
             Number::from(100.0) % Number::from(BigInt::from(i64::MAX) + BigInt::from(i64::MAX)),
             Some(Number::from(100.0))
         );
-        assert_eq!(Number::from(101.0) % Number::from(2.0), Some(Number::from(1.0)));
+        assert_eq!(
+            Number::from(101.0) % Number::from(2.0),
+            Some(Number::from(1.0))
+        );
         assert_eq!(
             Number::from(100.0) % Number::from(Rational32::from_integer(70)),
             Some(Number::from(30.0))
@@ -1569,9 +1585,20 @@ mod tests {
     #[test]
     fn sin() {
         assert_eq!(Number::from(0).sin(), Some(Number::from(0)));
-        assert_eq!(Number::from(f64::FRAC_PI_2()).sin(), Some(Number::from(1.0)));
-        assert_eq!(Number::from(Rational32::from_integer(0)).sin(), Some(Number::from(0.0)));
+        assert_eq!(
+            Number::from(f64::FRAC_PI_2()).sin(),
+            Some(Number::from(1.0))
+        );
+        assert_eq!(
+            Number::from(Rational32::from_integer(0)).sin(),
+            Some(Number::from(0.0))
+        );
         assert_eq!(Number::from(BigInt::from(0)).sin(), Some(Number::from(0.0)));
-        assert!(Number::from(BigInt::from_f64(f64::MAX).unwrap() * 2).sin().unwrap().to_f64().unwrap().is_nan());
+        assert!(Number::from(BigInt::from_f64(f64::MAX).unwrap() * 2)
+            .sin()
+            .unwrap()
+            .to_f64()
+            .unwrap()
+            .is_nan());
     }
 }
