@@ -210,6 +210,7 @@ export class Readline implements ITerminalAddon {
         break;
       case InputType.Enter:
         if (this.checkHandler(this.state.buffer())) {
+          this.state.moveCursorToEnd();
           this.term?.write("\r\n");
           this.history.append(this.state.buffer());
           this.activeRead?.resolve(this.state.buffer());
