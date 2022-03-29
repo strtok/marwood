@@ -240,3 +240,10 @@
         '()
         (cons (apply proc (map1 car lists))
               (apply map proc (map1 cdr lists))))))
+
+(define (for-each proc l1 . rest)
+  (let ((lists (cons l1 rest)))
+    (if (some? null? lists)
+        #t
+        (begin (apply proc (map car lists))
+              (apply for-each proc (map cdr lists)) #t))))
