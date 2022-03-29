@@ -404,3 +404,9 @@ fn void_is_value() {
            "void" => "#<void>"
     ];
 }
+
+#[test]
+fn map() {
+    evals!["(map + '(1 2 3))" => "(1 2 3)"];
+    evals!["(map + '(1 2 3) '(4 5 6))" => "(5 7 9)"];
+}
