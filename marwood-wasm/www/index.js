@@ -7,6 +7,7 @@ import { Unicode11Addon } from "xterm-addon-unicode11";
 import * as XtermWebfont from "xterm-webfont";
 import { Buffer } from "buffer";
 import { Vm } from "./vm";
+import { inflate } from "pako";
 
 const params = new URLSearchParams(window.location.search);
 const term = new Terminal({
@@ -74,14 +75,28 @@ term.loadWebfontAndOpen(document.getElementById("terminal")).then(() => {
 
   term.focus();
 
-  if (params.has("eval")) {
+  if (params.has("eval") || params.has("zeval")) {
     rl.println("λMARWOOD");
     rl.println("");
 
-    let text = params.get("eval");
+    let compressed;
+    let text;
+    if (params.has("zeval")) {
+      compressed = true;
+      text = params.get("zeval");
+    } else {
+      compressed = false;
+      text = params.get("eval");
+    }
+
     text = text.replace("-", "+");
     text = text.replace("_", "/");
-    text = Buffer.from(text, "base64").toString("utf8");
+
+    if (compressed) {
+      text = inflate(Buffer.from(text, "base64"), {to: "string"});
+    } else {
+      text = Buffer.from(text, "base64").toString("utf8");
+    }
 
     if (text != null) {
       rl.appendHistory(text);
