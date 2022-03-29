@@ -1,3 +1,4 @@
+(define void (set! void 0))
 (define-syntax let
     (syntax-rules ()
     [(let ((name val) ...) body1 body2 ...)
@@ -224,26 +225,34 @@
 (define (sub1 x) (- x 1))
 (define (newline) (display #\newline))
 
-(define (some? proc list)
+(define (any? proc list)
     (and (pair? list)
         (or (proc (car list))
-             (some? proc (cdr list)))))
+             (any? proc (cdr list)))))
 
-(define (map proc l1 . rest)
-  (define (map1 proc list)
-    (if (null? list)
-        '()
-        (cons (proc (car list))
-              (map1 proc (cdr list)))))
-  (let ((lists (cons l1 rest)))
-    (if (some? null? lists)
-        '()
-        (cons (apply proc (map1 car lists))
-              (apply map proc (map1 cdr lists))))))
+(define (map1 f xs)
+  (if (null? xs)
+      '()
+      (cons (f (car xs)) (map1 f (cdr xs)))))
 
-(define (for-each proc l1 . rest)
-  (let ((lists (cons l1 rest)))
-    (if (some? null? lists)
-        #t
-        (begin (apply proc (map car lists))
-              (apply for-each proc (map cdr lists)) #t))))
+(define (map f . xss)
+  (letrec
+   ((map-all
+     (lambda (xss)
+       (if (any? null? xss)
+           '()
+           (cons (apply f (map1 car xss))
+                 (map-all (map1 cdr xss)))))))
+
+    (map-all xss)))
+
+(define (for-each f . xss)
+  (letrec
+   ((for-each-all
+     (lambda (xss)
+       (if (any? null? xss)
+           void
+           (begin (apply f (map1 car xss))
+                  (for-each-all (map1 cdr xss)) void)))))
+
+    (for-each-all xss)))
