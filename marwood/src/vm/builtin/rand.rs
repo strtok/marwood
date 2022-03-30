@@ -13,7 +13,13 @@ pub fn random_integer(vm: &mut Vm) -> Result<VCell, Error> {
     let n = pop_integer(vm)?;
     let n = n
         .to_i64()
-        .ok_or_else(|| InvalidSyntax(format!("random-integer: {} is too large", n)))?;
+        .ok_or_else(|| InvalidSyntax(format!("random-integer: {} is out of range", n)))?;
+    if n <= 0 {
+        return Err(InvalidSyntax(format!(
+            "random-integer: {} is out of range",
+            n
+        )));
+    }
     let mut rng = ::rand::thread_rng();
     let result: i64 = rng.gen_range(0..n);
     Ok(VCell::Number(result.into()))
