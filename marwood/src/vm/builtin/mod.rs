@@ -12,6 +12,7 @@ mod number;
 mod ports;
 mod predicate;
 mod procedure;
+mod rand;
 mod string;
 mod symbol;
 mod vector;
@@ -42,6 +43,7 @@ impl Vm {
         ports::load_builtins(self);
         predicate::load_builtins(self);
         procedure::load_builtins(self);
+        rand::load_builtins(self);
         string::load_builtins(self);
         symbol::load_builtins(self);
         vector::load_builtins(self);
