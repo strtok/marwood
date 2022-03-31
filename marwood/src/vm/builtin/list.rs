@@ -177,10 +177,6 @@ pub fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
 /// Return the list tail at the given index, or an error if the
 /// index is invalid.
 fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> {
-    if !list.is_pair() && !list.is_nil() {
-        return Err(ExpectedPairButFound(vm.heap.get_as_cell(list).to_string()));
-    }
-
     let mut rest = list.clone();
     let mut rest_idx = idx;
     loop {
@@ -188,26 +184,28 @@ fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> 
             return Ok(rest);
         }
         rest_idx -= 1;
-        rest = vm.heap.get(&rest.as_cdr()?);
-        if !rest.is_pair() && rest_idx != 0 {
+        let node = vm.heap.get(&rest).clone();
+        if (!node.is_pair() && rest_idx != 0) || node.is_nil() {
             return Err(InvalidSyntax(format!(
                 "{} is out of range for {}",
                 idx,
                 vm.heap.get_as_cell(list)
             )));
         }
+        rest = node.as_cdr()?.clone();
     }
 }
 
 pub fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
-    let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
+    let _ = pop_argc(vm, 2, Some(2), "list-ref")?;
     let idx = pop_index(vm)?;
-    let list = vm.heap.get(vm.stack.pop()?);
+    let list_ptr = vm.stack.pop()?.clone();
+    let list = vm.heap.get(&list_ptr);
     if !list.is_pair() && !list.is_nil() {
         return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
     }
-    let tail = get_list_tail(vm, &list, idx)?;
-    match tail {
+    let tail = get_list_tail(vm, &list_ptr, idx)?;
+    match vm.heap.get(&tail) {
         VCell::Pair(car, _) => Ok(VCell::Ptr(car)),
         _ => Err(InvalidSyntax(format!(
             "{} is out of range for {}",
@@ -220,9 +218,10 @@ pub fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
 pub fn list_tail(vm: &mut Vm) -> Result<VCell, Error> {
     let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
     let idx = pop_index(vm)?;
-    let list = vm.heap.get(vm.stack.pop()?);
+    let list_ptr = vm.stack.pop()?.clone();
+    let list = vm.heap.get(&list_ptr);
     if !list.is_pair() && !list.is_nil() {
         return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
     }
-    get_list_tail(vm, &list, idx)
+    get_list_tail(vm, &list_ptr, idx)
 }

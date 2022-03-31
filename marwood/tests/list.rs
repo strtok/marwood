@@ -60,6 +60,11 @@ fn list_tail() {
             "(list-tail '(1 2 3) 3)" => "()",
             "(list-tail '(1 2 . 3) 2)" => "3"
     ];
+    evals![
+        "(define l '(1 2 3))" => "#<void>",
+        "(set-cdr! (list-tail l 1) '(4))" => "#<void>",
+        "l" => "(1 2 4)"
+    ];
     fails![
         "(list-tail '(1 2 3) 4) " => InvalidSyntax("4 is out of range for (1 2 3)".into())
     ];
