@@ -261,7 +261,7 @@ impl Number {
 
     pub fn abs(&self) -> Number {
         match self {
-            Number::Fixnum(num) => num.abs().into(),
+            Number::Fixnum(num) => num.unsigned_abs().into(),
             Number::Float(num) => num.abs().into(),
             Number::BigInt(num) => num.abs().into(),
             Number::Rational(num) => num.abs().into(),
@@ -1580,6 +1580,15 @@ mod tests {
         assert_eq!(Number::from(3.5).round(), Number::from(4));
 
         assert_eq!(Number::from(Rational32::new(7, 2)).round(), Number::from(4));
+    }
+
+    #[test]
+    fn abs() {
+        assert_eq!(Number::from(-10).abs(), Number::from(10));
+        assert_eq!(
+            Number::from(i64::MIN).abs(),
+            Number::from(BigInt::from(9223372036854775808_u64))
+        );
     }
 
     #[test]
