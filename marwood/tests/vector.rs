@@ -78,7 +78,8 @@ fn vector_copy() {
     evals![
         "(vector-copy #(1 2 3))" => "#(1 2 3)",
         "(vector-copy #(1 2 3) 1)" => "#(2 3)",
-        "(vector-copy #(1 2 3) 1 1)" => "#(2)"
+        "(vector-copy #(1 2 3) 1 1)" => "#(2)",
+        "(vector-copy #(1 2 3) 0 3)" => "#(1 2 3)"
     ];
 }
 
@@ -89,5 +90,11 @@ fn vector_copy_mut() {
         "(define b (vector 10 20 30 40 50))" => "#<void>",
         "(vector-copy! b 1 a 0 2)" => "#<void>",
         "b" => "#(10 1 2 40 50)"
+    ];
+    evals![
+        "(define a #(1 2 3))" => "#<void>",
+        "(define b #(4 5 6))" => "#<void>",
+        "(vector-copy! a 0 b 0 3)" => "#<void>",
+        "a" => "#(4 5 6)"
     ];
 }

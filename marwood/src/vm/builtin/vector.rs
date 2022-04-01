@@ -126,7 +126,7 @@ pub fn vector_copy(vm: &mut Vm) -> Result<VCell, Error> {
     let vector = pop_vector(vm)?;
     let vector = vector.as_ref();
 
-    if end.is_some() && end.unwrap() > vector.len() - 1 {
+    if end.is_some() && end.unwrap() > vector.len() {
         return Err(InvalidVectorIndex(end.unwrap(), vector.len()));
     }
 
@@ -167,7 +167,7 @@ pub fn vector_mut_copy(vm: &mut Vm) -> Result<VCell, Error> {
         return Err(InvalidVectorIndex(at, to_vector.len()));
     }
 
-    if end.is_some() && end.unwrap() > from_vector.len() - 1 {
+    if end.is_some() && end.unwrap() > from_vector.len() {
         return Err(InvalidVectorIndex(end.unwrap(), from_vector.len()));
     }
 
