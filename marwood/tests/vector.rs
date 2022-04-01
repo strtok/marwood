@@ -81,3 +81,13 @@ fn vector_copy() {
         "(vector-copy #(1 2 3) 1 1)" => "#(2)"
     ];
 }
+
+#[test]
+fn vector_copy_mut() {
+    evals![
+        "(define a (vector 1 2 3 4 5))" => "#<void>",
+        "(define b (vector 10 20 30 40 50))" => "#<void>",
+        "(vector-copy! b 1 a 0 2)" => "#<void>",
+        "b" => "#(10 1 2 40 50)"
+    ];
+}

@@ -14,6 +14,7 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("vector-set!", vector_set);
     vm.load_builtin("vector-fill!", vector_fill);
     vm.load_builtin("vector-copy", vector_copy);
+    vm.load_builtin("vector-copy!", vector_mut_copy);
 }
 
 pub fn vector(vm: &mut Vm) -> Result<VCell, Error> {
@@ -138,4 +139,57 @@ pub fn vector_copy(vm: &mut Vm) -> Result<VCell, Error> {
     }
 
     Ok(VCell::vector(vector.clone_vector(start, end)))
+}
+
+// (vector-copy! to at from start end)
+pub fn vector_mut_copy(vm: &mut Vm) -> Result<VCell, Error> {
+    let argc = pop_argc(vm, 3, Some(5), "vector-copy")?;
+
+    let mut end = None;
+    if argc == 5 {
+        end = Some(pop_index(vm)?);
+    }
+
+    let mut start = None;
+    if argc >= 4 {
+        start = Some(pop_index(vm)?);
+    }
+
+    let from_vector = pop_vector(vm)?;
+    let from_vector = from_vector.as_ref();
+
+    let at = pop_index(vm)?;
+
+    let to_vector = pop_vector(vm)?;
+    let to_vector = to_vector.as_ref();
+
+    if at > to_vector.len() - 1 {
+        return Err(InvalidVectorIndex(at, to_vector.len()));
+    }
+
+    if end.is_some() && end.unwrap() > from_vector.len() - 1 {
+        return Err(InvalidVectorIndex(end.unwrap(), from_vector.len()));
+    }
+
+    if start.is_some() && start.unwrap() > from_vector.len() - 1 {
+        return Err(InvalidVectorIndex(start.unwrap(), from_vector.len()));
+    }
+
+    if start.is_some() && end.is_some() && start.unwrap() > end.unwrap() {
+        return Err(InvalidSyntax("vector-copy! requires start <= end".into()));
+    }
+
+    let start = start.unwrap_or(0);
+    let end = end.unwrap_or(from_vector.len());
+
+    if ((end - start) > to_vector.len()) || (at + end) > to_vector.len() {
+        return Err(InvalidSyntax("vector-copy!: to vector is too small".into()));
+    }
+
+    for i in start..end {
+        let val = from_vector.get(i).unwrap();
+        to_vector.put(i + at, val);
+    }
+
+    Ok(VCell::Void)
 }
