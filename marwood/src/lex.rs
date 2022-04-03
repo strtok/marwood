@@ -175,7 +175,11 @@ fn scan_dot(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
             _ => false,
         };
         if !check && start != end {
-            break;
+            if token_type == TokenType::Number {
+                token_type = TokenType::Symbol;
+            } else {
+                break;
+            }
         }
         end = offset + c.len_utf8();
         cur.next();
@@ -463,7 +467,9 @@ mod tests {
             "..." => TokenType::Symbol
         };
         lexes! {
-            ".100" => TokenType::Number
+            ".100" => TokenType::Number,
+            ".1a" => TokenType::Number,
+            ".1z" => TokenType::Symbol
         };
     }
 
