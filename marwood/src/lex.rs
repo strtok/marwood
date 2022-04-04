@@ -137,7 +137,7 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
 /// Scan until a '\n' is encountered.
 
 fn scan_comment(cur: &mut Peekable<CharIndices>) -> Result<(), Error> {
-    while let Some((_, c)) = cur.next() {
+    for (_, c) in cur {
         if c == '\n' {
             break;
         }

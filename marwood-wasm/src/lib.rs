@@ -124,7 +124,7 @@ impl Marwood {
         let result = self.hl.highlight(text, index);
         match result {
             Cow::Borrowed(text) => HighlightResult::new(text.to_owned(), false),
-            Cow::Owned(text) => HighlightResult::new(text.to_owned(), true),
+            Cow::Owned(text) => HighlightResult::new(text, true),
         }
     }
 

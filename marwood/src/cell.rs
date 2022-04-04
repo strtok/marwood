@@ -445,12 +445,10 @@ impl Display for Cell {
                         } else {
                             write!(f, "{}", cell)?;
                         }
+                    } else if f.alternate() {
+                        write!(f, "{:#} ", cell)?;
                     } else {
-                        if f.alternate() {
-                            write!(f, "{:#} ", cell)?;
-                        } else {
-                            write!(f, "{} ", cell)?;
-                        }
+                        write!(f, "{} ", cell)?;
                     }
                 }
                 write!(f, ")")

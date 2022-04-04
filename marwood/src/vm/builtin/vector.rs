@@ -126,16 +126,17 @@ pub fn vector_copy(vm: &mut Vm) -> Result<VCell, Error> {
     let vector = pop_vector(vm)?;
     let vector = vector.as_ref();
 
-    if end.is_some() && end.unwrap() > vector.len() {
-        return Err(InvalidVectorIndex(end.unwrap(), vector.len()));
-    }
-
-    if start.is_some() && start.unwrap() > vector.len() - 1 {
-        return Err(InvalidVectorIndex(start.unwrap(), vector.len()));
-    }
-
-    if start.is_some() && end.is_some() && start.unwrap() > end.unwrap() {
-        return Err(InvalidSyntax("vector-copy requires start <= end".into()));
+    match (start, end) {
+        (Some(start), _) if start > vector.len() - 1 => {
+            return Err(InvalidVectorIndex(start, vector.len()));
+        }
+        (_, Some(end)) if end > vector.len() => {
+            return Err(InvalidVectorIndex(end, vector.len()));
+        }
+        (Some(start), Some(end)) if start > end => {
+            return Err(InvalidSyntax("vector-copy requires start <= end".into()));
+        }
+        _ => {}
     }
 
     Ok(VCell::vector(vector.clone_vector(start, end)))
@@ -167,20 +168,21 @@ pub fn vector_mut_copy(vm: &mut Vm) -> Result<VCell, Error> {
         return Err(InvalidVectorIndex(at, to_vector.len()));
     }
 
-    if end.is_some() && end.unwrap() > from_vector.len() {
-        return Err(InvalidVectorIndex(end.unwrap(), from_vector.len()));
-    }
-
-    if start.is_some() && start.unwrap() > from_vector.len() - 1 {
-        return Err(InvalidVectorIndex(start.unwrap(), from_vector.len()));
-    }
-
-    if start.is_some() && end.is_some() && start.unwrap() > end.unwrap() {
-        return Err(InvalidSyntax("vector-copy! requires start <= end".into()));
+    match (start, end) {
+        (Some(start), _) if start > from_vector.len() - 1 => {
+            return Err(InvalidVectorIndex(start, from_vector.len()));
+        }
+        (_, Some(end)) if end > from_vector.len() => {
+            return Err(InvalidVectorIndex(end, from_vector.len()));
+        }
+        (Some(start), Some(end)) if start > end => {
+            return Err(InvalidSyntax("vector-copy! requires start <= end".into()));
+        }
+        _ => {}
     }
 
     let start = start.unwrap_or(0);
-    let end = end.unwrap_or(from_vector.len());
+    let end = end.unwrap_or_else(|| from_vector.len());
 
     if ((end - start) > to_vector.len()) || (at + end) > to_vector.len() {
         return Err(InvalidSyntax("vector-copy!: to vector is too small".into()));

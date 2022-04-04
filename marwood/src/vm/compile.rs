@@ -86,12 +86,10 @@ impl Vm {
         let proc = expr.car().unwrap();
         let mut rest = expr.cdr().unwrap();
 
-        match proc.deref() {
-            Cell::Symbol(proc) => match proc.as_str() {
-                "quote" | "define-syntax" => return Ok(expr.clone()),
-                _ => {}
-            },
-            _ => {}
+        if let Cell::Symbol(proc) = proc.deref() {
+            if let "quote" | "define-syntax" = proc.as_str() {
+                return Ok(expr.clone());
+            }
         }
 
         if let Some(sym) = self.heap.get_sym_ref(proc) {
