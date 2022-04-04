@@ -51,7 +51,7 @@ pub fn vector_length(vm: &mut Vm) -> Result<VCell, Error> {
 
 pub fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "vector-ref")?;
-    let idx = pop_index(vm)?;
+    let idx = pop_index(vm, "vector-ref")?;
     let vector = pop_vector(vm)?;
     match vector.get(idx) {
         Some(value) => Ok(value),
@@ -62,7 +62,7 @@ pub fn vector_ref(vm: &mut Vm) -> Result<VCell, Error> {
 pub fn vector_set(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 3, Some(3), "vector-set!")?;
     let value = vm.stack.pop()?.clone();
-    let idx = pop_index(vm)?;
+    let idx = pop_index(vm, "vector-set!")?;
     let vector = pop_vector(vm)?;
     if idx > vector.len() - 1 {
         return Err(InvalidVectorIndex(idx, vector.len()));
@@ -115,12 +115,12 @@ pub fn vector_copy(vm: &mut Vm) -> Result<VCell, Error> {
 
     let mut end = None;
     if argc == 3 {
-        end = Some(pop_index(vm)?);
+        end = Some(pop_index(vm, "vector-copy")?);
     }
 
     let mut start = None;
     if argc > 1 {
-        start = Some(pop_index(vm)?);
+        start = Some(pop_index(vm, "vector-copy")?);
     }
 
     let vector = pop_vector(vm)?;
@@ -144,22 +144,22 @@ pub fn vector_copy(vm: &mut Vm) -> Result<VCell, Error> {
 
 // (vector-copy! to at from start end)
 pub fn vector_mut_copy(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = pop_argc(vm, 3, Some(5), "vector-copy")?;
+    let argc = pop_argc(vm, 3, Some(5), "vector-copy!")?;
 
     let mut end = None;
     if argc == 5 {
-        end = Some(pop_index(vm)?);
+        end = Some(pop_index(vm, "vector-copy!")?);
     }
 
     let mut start = None;
     if argc >= 4 {
-        start = Some(pop_index(vm)?);
+        start = Some(pop_index(vm, "vector-copy!")?);
     }
 
     let from_vector = pop_vector(vm)?;
     let from_vector = from_vector.as_ref();
 
-    let at = pop_index(vm)?;
+    let at = pop_index(vm, "vector-copy!")?;
 
     let to_vector = pop_vector(vm)?;
     let to_vector = to_vector.as_ref();

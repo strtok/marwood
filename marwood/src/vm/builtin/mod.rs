@@ -147,11 +147,14 @@ fn pop_symbol(vm: &mut Vm, proc: &str) -> Result<Rc<String>, Error> {
     }
 }
 
-fn pop_index(vm: &mut Vm) -> Result<usize, Error> {
+fn pop_index(vm: &mut Vm, proc: &str) -> Result<usize, Error> {
     match vm.heap.get(vm.stack.pop()?) {
-        VCell::Number(num) => num
-            .to_usize()
-            .ok_or_else(|| InvalidSyntax(format!("{} is not a valid index", num))),
+        VCell::Number(num) => num.to_usize().ok_or_else(|| {
+            InvalidSyntax(format!(
+                "bad argument to {}: {} is not a valid index",
+                proc, num
+            ))
+        }),
         vcell => {
             return Err(InvalidSyntax(format!(
                 "{} is not a valid index",

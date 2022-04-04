@@ -73,7 +73,7 @@ pub fn string_foldcase(vm: &mut Vm) -> Result<VCell, Error> {
 
 pub fn string_ref(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "string-ref")?;
-    let idx = pop_index(vm)?;
+    let idx = pop_index(vm, "string-ref")?;
     let s = pop_string(vm, "string-ref")?;
     let s = s.borrow();
     match s.chars().nth(idx) {
@@ -135,12 +135,12 @@ pub fn string_list(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 1, Some(3), "string->list")?;
 
     let end = match argc {
-        3 => Some(pop_index(vm)?),
+        3 => Some(pop_index(vm, "string->list")?),
         _ => None,
     };
 
     let start = match argc {
-        2 | 3 => Some(pop_index(vm)?),
+        2 | 3 => Some(pop_index(vm, "string->list")?),
         _ => None,
     };
 
@@ -210,19 +210,19 @@ pub fn list_string(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn string_copy(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = pop_argc(vm, 1, Some(3), "string->copy")?;
+    let argc = pop_argc(vm, 1, Some(3), "string-copy")?;
 
     let end = match argc {
-        3 => Some(pop_index(vm)?),
+        3 => Some(pop_index(vm, "string-copy")?),
         _ => None,
     };
 
     let start = match argc {
-        2 | 3 => Some(pop_index(vm)?),
+        2 | 3 => Some(pop_index(vm, "string-copy")?),
         _ => None,
     };
 
-    let s = pop_string(vm, "string->copy")?;
+    let s = pop_string(vm, "string-copy")?;
     let s = s.borrow();
     let s = s.as_str();
 
@@ -232,21 +232,21 @@ pub fn string_copy(vm: &mut Vm) -> Result<VCell, Error> {
 }
 
 pub fn string_fill(vm: &mut Vm) -> Result<VCell, Error> {
-    let argc = pop_argc(vm, 2, Some(4), "string->copy")?;
+    let argc = pop_argc(vm, 2, Some(4), "string-fill")?;
 
     let end = match argc {
-        4 => Some(pop_index(vm)?),
+        4 => Some(pop_index(vm, "string-fill")?),
         _ => None,
     };
 
     let start = match argc {
-        3 | 4 => Some(pop_index(vm)?),
+        3 | 4 => Some(pop_index(vm, "string-fill")?),
         _ => None,
     };
 
     let c = pop_char(vm)?;
 
-    let s = pop_string(vm, "string->copy")?;
+    let s = pop_string(vm, "string-fill")?;
     let mut s = s.borrow_mut();
     let s = s.deref_mut();
 
@@ -266,7 +266,7 @@ pub fn string_fill(vm: &mut Vm) -> Result<VCell, Error> {
 pub fn string_set(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 3, Some(3), "string-set!")?;
     let c = pop_char(vm)?;
-    let idx = pop_index(vm)?;
+    let idx = pop_index(vm, "string-set!")?;
     let s = pop_string(vm, "string-set!")?;
     let mut s = s.borrow_mut();
     let range = s

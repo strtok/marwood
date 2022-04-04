@@ -401,9 +401,22 @@ fn find_free_symbols_in_proc<'a>(
 
     let mut rest = match car {
         Cell::Symbol(sym) => match sym.as_str() {
-            "define" => cdr
-                .cdr()
-                .ok_or_else(|| Error::InvalidNumArgs("define".into()))?,
+            "define" => {
+                let sym_or_args = cdr
+                    .car()
+                    .ok_or_else(|| Error::InvalidNumArgs("define".into()))?;
+
+                if sym_or_args.is_pair() {
+                    for sym in sym_or_args.cdr().unwrap() {
+                        if sym.is_symbol() {
+                            env.insert(sym);
+                        }
+                    }
+                }
+
+                cdr.cdr()
+                    .ok_or_else(|| Error::InvalidNumArgs("define".into()))?
+            }
             "lambda" => {
                 let mut args = cdr
                     .car()
@@ -557,6 +570,30 @@ mod tests {
         assert_eq!(
             free_symbols(&parse!["(define a b)"]),
             Ok(HashSet::from([&cell!["b"]]))
+        );
+        assert_eq!(
+            free_symbols(&parse!["(define (a x) (+ x y))"]),
+            Ok(HashSet::from([&cell!["+"], &cell!["y"]]))
+        );
+
+        // inner define procedure
+        assert_eq!(
+            free_symbols(&parse![
+                r#"
+                (define (factorial n)
+                    (define (factorial n acc)
+                       (if (= n 0) 
+                          acc
+                          (factorial (- n 1) (* n acc))))
+                    (factorial n 1))                    
+            "#
+            ]),
+            Ok(HashSet::from([
+                &cell!["="],
+                &cell!["-"],
+                &cell!["*"],
+                &cell!["factorial"]
+            ]))
         );
 
         // lambdas

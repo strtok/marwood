@@ -198,7 +198,7 @@ fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> 
 
 pub fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
     let _ = pop_argc(vm, 2, Some(2), "list-ref")?;
-    let idx = pop_index(vm)?;
+    let idx = pop_index(vm, "list-ref")?;
     let list_ptr = vm.stack.pop()?.clone();
     let list = vm.heap.get(&list_ptr);
     if !list.is_pair() && !list.is_nil() {
@@ -217,7 +217,7 @@ pub fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
 
 pub fn list_tail(vm: &mut Vm) -> Result<VCell, Error> {
     let _ = pop_argc(vm, 2, Some(2), "list-tail")?;
-    let idx = pop_index(vm)?;
+    let idx = pop_index(vm, "list-tail")?;
     let list_ptr = vm.stack.pop()?.clone();
     let list = vm.heap.get(&list_ptr);
     if !list.is_pair() && !list.is_nil() {
