@@ -1,6 +1,6 @@
 import { Terminal } from "xterm";
 import "xterm/css/xterm.css";
-import { Readline } from "readline";
+import { Readline } from "xterm-readline";
 import { FitAddon } from "xterm-addon-fit";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { Unicode11Addon } from "xterm-addon-unicode11";
