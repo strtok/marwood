@@ -114,6 +114,48 @@ term.loadWebfontAndOpen(document.getElementById("terminal")).then(() => {
           setTimeout(read);
         });
     }
+  } else if (params.has("fetchEval")) {
+    rl.println("λMARWOOD");
+    rl.println("");
+
+    let url64 = params.get("fetchEval");
+
+    url64 = url64.replace("-", "+");
+    url64 = url64.replace("_", "/");
+
+    const url = Buffer.from(url64, "base64").toString("utf8");
+
+    if (url == null) {
+      return;
+    }
+
+    if (url != null) {
+      fetch(url)
+        .then((response) => {
+          response.text().then((text) => {
+            rl.appendHistory(text);
+            rl.print("> ");
+            rl.println(text);
+            vm.eval(text)
+              .then(() => {
+                read();
+              })
+              .catch((error) => {
+                rl.write("\n\x1B[E\x1B[!p");
+                if (error != null) {
+                  rl.println(`error: ${error}`);
+                }
+                setTimeout(read);
+              });
+            }).catch((error) => {
+              rl.println(`error: ${error}`);
+              setTimeout(read);
+            });
+        }).catch((error) => {
+          rl.println(`error: ${error}`);
+          setTimeout(read);
+        });
+    }
   } else {
     animate_then_read("λMARWOOD");
   }
