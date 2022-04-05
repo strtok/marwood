@@ -156,7 +156,46 @@ term.loadWebfontAndOpen(document.getElementById("terminal")).then(() => {
           setTimeout(read);
         });
     }
+  } else if (params.has("gist")) {
+    setTimeout(async () => { 
+      try {
+        await evalGist(params.get("gist"));
+      } catch (error) {
+        if (error != null) {
+          rl.println(`error: ${error}`);
+        }
+      }
+      setTimeout(read);
+    });
   } else {
     animate_then_read("λMARWOOD");
   }
 });
+
+async function evalGist(gistId) {
+  const gistUrl = "https://api.github.com/gists/" + gistId;
+  const gistDesc = await fetch(gistUrl);
+  if (gistDesc.status != 200) {
+    rl.println(`could not fetch gist ${gistId}: ${gistDesc.status} ${gistDesc.statusText}`);
+    return;
+  }
+  const gistDescBody = await gistDesc.text();
+  const gistDescJson = JSON.parse(gistDescBody);
+  
+  let code = "";
+  for (const fileName of Object.keys(gistDescJson.files).sort()) {
+    let fileDesc = gistDescJson.files[fileName];
+    let rawUrl = fileDesc.raw_url;
+    let response = await fetch(rawUrl);
+    if (response.status != 200) {
+      rl.println("could not fetch ${fileName}: ${response.status} ${response.statusText}");
+      return;
+    }
+    code += await response.text();
+  }
+
+  rl.appendHistory(code);
+  rl.print("> ");
+  rl.println(code);
+  await vm.eval(code);
+}
