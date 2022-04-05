@@ -151,7 +151,12 @@ async function evalGist(gistId) {
       rl.println("could not fetch ${fileName}: ${response.status} ${response.statusText}");
       return;
     }
-    code += await response.text();
+    try {
+      code += await response.text() + "\n";
+    } catch (error) {
+      rl.println("could not fully fetch ${fileName}");
+      return;
+    }
   }
 
   rl.appendHistory(code);
