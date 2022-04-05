@@ -26,6 +26,50 @@ const rl = new Readline();
 term.loadAddon(rl);
 const vm = new Vm(rl);
 
+term.loadWebfontAndOpen(document.getElementById("terminal")).then(() => {
+  term.loadAddon(new WebLinksAddon());
+
+  const unicode11Addon = new Unicode11Addon();
+  term.loadAddon(unicode11Addon);
+  term.unicode.activeVersion = "11";
+
+  if (params.has("rows") && params.has("cols")) {
+    let rows = params.get("rows");
+    let cols = params.get("cols");
+    term.resize(cols, rows);
+  } else {
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
+    fitAddon.fit();
+    fitAddon.activate(term);
+  }
+
+  term.focus();
+
+  if (params.has("eval")) {
+    setTimeout(async() => { 
+      await evalUrl(params.get("eval"), false); 
+    });
+  } else if (params.has("zeval")) {
+    setTimeout(async() => { 
+      await evalUrl(params.get("zeval"), true); 
+    });
+  } else if (params.has("gist")) {
+    setTimeout(async () => { 
+      try {
+        await evalGist(params.get("gist"));
+      } catch (error) {
+        if (error != null) {
+          rl.println(`error: ${error}`);
+        }
+      }
+    });
+  } else {
+    animate_then_read("λMARWOOD");
+  }
+});
+
+
 function read() {
   rl.read("> ", "  ")
     .then((input) => {
@@ -55,124 +99,40 @@ function animate_then_read(text) {
   }
 }
 
-term.loadWebfontAndOpen(document.getElementById("terminal")).then(() => {
-  term.loadAddon(new WebLinksAddon());
+async function evalUrl(text, compressed) {
+  rl.println("λMARWOOD");
+  rl.println("");
 
-  const unicode11Addon = new Unicode11Addon();
-  term.loadAddon(unicode11Addon);
-  term.unicode.activeVersion = "11";
+  text = text.replace("-", "+");
+  text = text.replace("_", "/");
 
-  if (params.has("rows") && params.has("cols")) {
-    let rows = params.get("rows");
-    let cols = params.get("cols");
-    term.resize(cols, rows);
+  if (compressed) {
+    text = inflate(Buffer.from(text, "base64"), {to: "string"});
   } else {
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    fitAddon.fit();
-    fitAddon.activate(term);
+    text = Buffer.from(text, "base64").toString("utf8");
   }
 
-  term.focus();
-
-  if (params.has("eval") || params.has("zeval")) {
-    rl.println("λMARWOOD");
-    rl.println("");
-
-    let compressed;
-    let text;
-    if (params.has("zeval")) {
-      compressed = true;
-      text = params.get("zeval");
-    } else {
-      compressed = false;
-      text = params.get("eval");
-    }
-
-    text = text.replace("-", "+");
-    text = text.replace("_", "/");
-
-    if (compressed) {
-      text = inflate(Buffer.from(text, "base64"), {to: "string"});
-    } else {
-      text = Buffer.from(text, "base64").toString("utf8");
-    }
-
-    if (text != null) {
-      rl.appendHistory(text);
-      rl.print("> ");
-      rl.println(text);
-      vm.eval(text)
-        .then(() => {
-          read();
-        })
-        .catch((error) => {
-          rl.write("\n\x1B[E\x1B[!p");
-          if (error != null) {
-            rl.println(`error: ${error}`);
-          }
-          setTimeout(read);
-        });
-    }
-  } else if (params.has("fetchEval")) {
-    rl.println("λMARWOOD");
-    rl.println("");
-
-    let url64 = params.get("fetchEval");
-
-    url64 = url64.replace("-", "+");
-    url64 = url64.replace("_", "/");
-
-    const url = Buffer.from(url64, "base64").toString("utf8");
-
-    if (url == null) {
-      return;
-    }
-
-    if (url != null) {
-      fetch(url)
-        .then((response) => {
-          response.text().then((text) => {
-            rl.appendHistory(text);
-            rl.print("> ");
-            rl.println(text);
-            vm.eval(text)
-              .then(() => {
-                read();
-              })
-              .catch((error) => {
-                rl.write("\n\x1B[E\x1B[!p");
-                if (error != null) {
-                  rl.println(`error: ${error}`);
-                }
-                setTimeout(read);
-              });
-            }).catch((error) => {
-              rl.println(`error: ${error}`);
-              setTimeout(read);
-            });
-        }).catch((error) => {
-          rl.println(`error: ${error}`);
-          setTimeout(read);
-        });
-    }
-  } else if (params.has("gist")) {
-    setTimeout(async () => { 
-      try {
-        await evalGist(params.get("gist"));
-      } catch (error) {
+  if (text != null) {
+    rl.appendHistory(text);
+    rl.print("> ");
+    rl.println(text);
+    try {
+      await vm.eval(text);
+    } catch(error) {
+        rl.write("\n\x1B[E\x1B[!p");
         if (error != null) {
           rl.println(`error: ${error}`);
         }
-      }
-      setTimeout(read);
-    });
-  } else {
-    animate_then_read("λMARWOOD");
+    }
   }
-});
+
+  setTimeout(read);
+}
 
 async function evalGist(gistId) {
+  rl.println("λMARWOOD");
+  rl.println("");
+
   const gistUrl = "https://api.github.com/gists/" + gistId;
   const gistDesc = await fetch(gistUrl);
   if (gistDesc.status != 200) {
@@ -197,5 +157,15 @@ async function evalGist(gistId) {
   rl.appendHistory(code);
   rl.print("> ");
   rl.println(code);
-  await vm.eval(code);
+
+  try {
+    await vm.eval(code);
+  } catch(error) {
+      rl.write("\n\x1B[E\x1B[!p");
+      if (error != null) {
+        rl.println(`error: ${error}`);
+      }
+  }
+
+  setTimeout(read);
 }
