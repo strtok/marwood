@@ -1,6 +1,7 @@
+use crate::error::Error;
 use crate::vm::builtin::{pop_argc, pop_string, pop_symbol};
 use crate::vm::vcell::VCell;
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use crate::{lex, parse};
 
 pub fn load_builtins(vm: &mut Vm) {

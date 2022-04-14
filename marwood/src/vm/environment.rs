@@ -1,8 +1,8 @@
 use crate::cell::Cell;
+use crate::error::Error;
+use crate::error::Error::InvalidDefineSyntax;
 use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
-use crate::vm::Error;
-use crate::vm::Error::InvalidDefineSyntax;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 

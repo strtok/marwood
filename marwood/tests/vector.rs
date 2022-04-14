@@ -5,7 +5,7 @@ use marwood::lex;
 use marwood::parse;
 use marwood::vm::Vm;
 
-use marwood::vm::Error::{ExpectedPairButFound, InvalidSyntax, InvalidVectorIndex};
+use marwood::error::Error::{ExpectedPairButFound, InvalidSyntax, InvalidVectorIndex};
 
 #[test]
 fn vector_and_make_vector() {

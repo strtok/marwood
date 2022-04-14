@@ -1,6 +1,6 @@
+use crate::error::Error;
+use crate::error::Error::InvalidStackIndex;
 use crate::vm::vcell::VCell;
-use crate::vm::Error;
-use crate::vm::Error::InvalidStackIndex;
 use log::trace;
 use std::fmt::Display;
 

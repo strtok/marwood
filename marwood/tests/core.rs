@@ -2,12 +2,12 @@
 mod common;
 
 use marwood::cell::Cell;
-use marwood::lex;
-use marwood::parse;
-use marwood::vm::Error::{
+use marwood::error::Error::{
     InvalidDefineSyntax, InvalidProcedure, InvalidSyntax, InvalidUsePrimitive, UnquotedNil,
     VariableNotBound,
 };
+use marwood::lex;
+use marwood::parse;
 use marwood::vm::Vm;
 
 #[test]

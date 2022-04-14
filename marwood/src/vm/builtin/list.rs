@@ -1,7 +1,8 @@
+use crate::error::Error;
+use crate::error::Error::{ExpectedPairButFound, InvalidSyntax};
 use crate::vm::builtin::{pop_argc, pop_index};
 use crate::vm::vcell::VCell;
-use crate::vm::Error::{ExpectedPairButFound, InvalidSyntax};
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("append", append);

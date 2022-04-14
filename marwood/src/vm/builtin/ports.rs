@@ -1,6 +1,7 @@
+use crate::error::Error;
 use crate::vm::builtin::pop_argc;
 use crate::vm::vcell::VCell;
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("display", display);

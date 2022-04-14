@@ -1,8 +1,9 @@
+use crate::error::Error;
+use crate::error::Error::{InvalidNumArgs, InvalidSyntax};
 use crate::number::Number;
 use crate::vm::vcell::VCell;
 use crate::vm::vector::Vector;
-use crate::vm::Error::{InvalidNumArgs, InvalidSyntax};
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use std::cell::RefCell;
 use std::rc::Rc;
 

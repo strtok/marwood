@@ -5,7 +5,7 @@ use marwood::lex;
 use marwood::parse;
 use marwood::vm::Vm;
 
-use marwood::vm::Error::{ExpectedPairButFound, InvalidNumArgs, InvalidSyntax};
+use marwood::error::Error::{ExpectedPairButFound, InvalidNumArgs, InvalidSyntax};
 
 #[test]
 fn car_and_cdr() {

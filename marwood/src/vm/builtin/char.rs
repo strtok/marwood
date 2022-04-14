@@ -1,8 +1,9 @@
+use crate::error::Error;
+use crate::error::Error::InvalidSyntax;
 use crate::number::Number;
 use crate::vm::builtin::{pop_argc, pop_char, pop_integer};
 use crate::vm::vcell::VCell;
-use crate::vm::Error::InvalidSyntax;
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("char->integer", char_to_integer);

@@ -5,7 +5,7 @@ use marwood::lex;
 use marwood::parse;
 use marwood::vm::Vm;
 
-use marwood::vm::Error::{InvalidArgs, InvalidNumArgs, InvalidSyntax};
+use marwood::error::Error::{InvalidArgs, InvalidNumArgs, InvalidSyntax};
 
 #[test]
 fn numerical_prefixes() {

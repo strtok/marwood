@@ -1,15 +1,16 @@
 use crate::cell::Cell;
+use crate::error::Error;
+use crate::error::Error::{
+    InvalidArgs, InvalidNumArgs, InvalidSyntax, InvalidUsePrimitive, LambdaMissingExpression,
+    UnquotedNil,
+};
 use crate::vm::environment::{free_symbols, internally_defined_symbols, BindingLocation};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
-use crate::vm::Error::{
-    InvalidArgs, InvalidNumArgs, InvalidSyntax, InvalidUsePrimitive, LambdaMissingExpression,
-    UnquotedNil,
-};
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use log::trace;
 use std::ops::Deref;
 use std::rc::Rc;

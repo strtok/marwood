@@ -1,7 +1,8 @@
+use crate::error::Error;
+use crate::error::Error::InvalidBytecode;
 use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
-use crate::vm::Error::InvalidBytecode;
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};

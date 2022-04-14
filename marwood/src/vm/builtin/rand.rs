@@ -1,7 +1,8 @@
+use crate::error::Error;
+use crate::error::Error::InvalidSyntax;
 use crate::vm::builtin::{pop_argc, pop_integer};
 use crate::vm::vcell::VCell;
-use crate::vm::Error::InvalidSyntax;
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use rand::Rng;
 
 pub fn load_builtins(vm: &mut Vm) {

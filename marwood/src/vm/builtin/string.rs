@@ -1,8 +1,9 @@
+use crate::error::Error;
+use crate::error::Error::{InvalidStringIndex, InvalidSyntax};
 use crate::number::Number;
 use crate::vm::builtin::{pop_argc, pop_char, pop_index, pop_string, pop_usize, pop_vector};
 use crate::vm::vcell::VCell;
-use crate::vm::Error::{InvalidStringIndex, InvalidSyntax};
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use std::ops::DerefMut;
 
 pub fn load_builtins(vm: &mut Vm) {

@@ -1,4 +1,6 @@
 use crate::char::write_escaped_char;
+use crate::error::Error;
+use crate::error::Error::ExpectedType;
 use crate::number::Number;
 use crate::vm::continuation::Continuation;
 use crate::vm::environment::LexicalEnvironment;
@@ -6,8 +8,7 @@ use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
 use crate::vm::vector::Vector;
-use crate::vm::Error::ExpectedType;
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use std::cell::RefCell;
 use std::fmt;
 use std::fmt::{Debug, Formatter};

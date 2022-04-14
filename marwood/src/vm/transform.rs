@@ -1,7 +1,7 @@
 use crate::cell;
 use crate::cell::Cell;
-use crate::vm::Error;
-use crate::vm::Error::{InvalidDefineSyntax, InvalidSyntax};
+use crate::error::Error;
+use crate::error::Error::{InvalidDefineSyntax, InvalidSyntax};
 
 macro_rules! car {
     ($cell:expr) => {{

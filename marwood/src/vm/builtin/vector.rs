@@ -1,8 +1,9 @@
+use crate::error::Error;
+use crate::error::Error::{ExpectedPairButFound, InvalidSyntax, InvalidVectorIndex};
 use crate::number::Number;
 use crate::vm::builtin::{pop_argc, pop_index, pop_vector};
 use crate::vm::vcell::VCell;
-use crate::vm::Error::{ExpectedPairButFound, InvalidSyntax, InvalidVectorIndex};
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("make-vector", make_vector);

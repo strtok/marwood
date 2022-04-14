@@ -1,11 +1,12 @@
 use crate::cell::Cell;
+use crate::error::Error;
+use crate::error::Error::{ErrorSignal, InvalidSyntax};
 use crate::vm::builtin::pop_argc;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::ArgumentCount;
-use crate::vm::Error::{ErrorSignal, InvalidSyntax};
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use log::trace;
 use std::rc::Rc;
 

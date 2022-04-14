@@ -5,7 +5,7 @@ use marwood::lex;
 use marwood::parse;
 use marwood::vm::Vm;
 
-use marwood::vm::Error::{InvalidStringIndex, InvalidSyntax};
+use marwood::error::Error::{InvalidStringIndex, InvalidSyntax};
 
 #[test]
 fn eval_string_char_literals() {

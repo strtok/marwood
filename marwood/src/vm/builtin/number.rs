@@ -1,8 +1,9 @@
+use crate::error::Error;
+use crate::error::Error::{InvalidArgs, InvalidSyntax};
 use crate::number::{Exactness, Number};
 use crate::vm::builtin::{pop_argc, pop_integer, pop_number, pop_string, pop_usize};
 use crate::vm::vcell::VCell;
-use crate::vm::Error::{InvalidArgs, InvalidSyntax};
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("*", multiply);

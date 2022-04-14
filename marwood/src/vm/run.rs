@@ -1,13 +1,14 @@
 use crate::cell::Cell;
+use crate::error::Error;
+use crate::error::Error::{
+    InvalidBytecode, InvalidNumArgs, InvalidProcedure, InvalidSyntax, VariableNotBound,
+};
 use crate::vm::environment::{BindingSource, EnvironmentMap, LexicalEnvironment};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::LexicalEnvPtr;
-use crate::vm::Error::{
-    InvalidBytecode, InvalidNumArgs, InvalidProcedure, InvalidSyntax, VariableNotBound,
-};
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 use log::trace;
 use std::rc::Rc;
 

@@ -1,5 +1,6 @@
+use crate::error::Error;
 use crate::vm::vcell::VCell;
-use crate::vm::{Error, Vm};
+use crate::vm::Vm;
 
 impl Vm {
     /// eqv
