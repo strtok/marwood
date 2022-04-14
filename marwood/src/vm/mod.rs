@@ -169,9 +169,6 @@ pub enum Error {
     #[error("expected pair, but found {0}")]
     ExpectedPairButFound(String),
 
-    #[error("expected stack value")]
-    ExpectedStackValue,
-
     #[error("invalid argument for {0}: expected {1}, but got {2}")]
     InvalidArgs(String, String, String),
 
@@ -201,9 +198,6 @@ pub enum Error {
 
     #[error("misplaced macro keyword {0}")]
     MisplacedMacroKeyword(String),
-
-    #[error("unknown procedure {0}")]
-    UnknownProcedure(String),
 
     #[error("{0} is not bound")]
     VariableNotBound(String),
