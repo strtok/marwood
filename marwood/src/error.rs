@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::parse;
+use crate::{lex, parse};
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum Error {
@@ -56,4 +56,7 @@ pub enum Error {
 
     #[error(transparent)]
     ParseError(#[from] parse::Error),
+
+    #[error(transparent)]
+    LexError(#[from] lex::Error),
 }
