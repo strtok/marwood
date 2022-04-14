@@ -1,4 +1,5 @@
 use crate::cell::Cell;
+use crate::char::named_to_char;
 use crate::lex::TokenType::NumberPrefix;
 use crate::lex::{Token, TokenType};
 use crate::list;
@@ -6,7 +7,6 @@ use crate::number::{Exactness, Number};
 use crate::parse::Error::{
     Eof, ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken, UnknownChar,
 };
-use crate::vm::char::named_to_char;
 use std::iter::Peekable;
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]

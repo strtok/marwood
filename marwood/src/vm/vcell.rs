@@ -1,5 +1,5 @@
+use crate::char::write_escaped_char;
 use crate::number::Number;
-use crate::vm::char::write_escaped_char;
 use crate::vm::continuation::Continuation;
 use crate::vm::environment::LexicalEnvironment;
 use crate::vm::lambda::Lambda;

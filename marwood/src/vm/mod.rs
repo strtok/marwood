@@ -9,7 +9,6 @@ use log::trace;
 use std::fmt::Debug;
 
 pub mod builtin;
-pub mod char;
 pub mod compare;
 pub mod compile;
 pub mod continuation;

@@ -1,5 +1,5 @@
+use crate::char::write_escaped_char;
 use crate::number::Number;
-use crate::vm::char::write_escaped_char;
 use ::lazy_static::lazy_static;
 use std::borrow::Borrow;
 use std::collections::HashSet;
@@ -423,7 +423,7 @@ impl Display for Cell {
                             _ if it as u32 == 0x8 => write!(f, "\\b")?,
                             _ if it as u32 == 0xb => write!(f, "\\v")?,
                             _ if it as u32 == 0xc => write!(f, "\\f")?,
-                            _ if it.is_ascii_control() => write!(f, "\\x{:x};", it as u32)?,
+                            _ if it.is_control() => write!(f, "\\x{:x};", it as u32)?,
                             it => write!(f, "{}", it)?,
                         };
                     }
