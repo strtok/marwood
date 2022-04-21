@@ -1,5 +1,6 @@
 #[macro_use]
 mod common;
+use marwood::cell;
 use marwood::cell::Cell;
 use marwood::lex;
 use marwood::parse;
@@ -13,8 +14,8 @@ fn car_and_cdr() {
         "(car '(1 2 3))" => "1",
         "(cdr '(1 2 3))" => "(2 3)"
     ];
-    fails!["(car 1)" => ExpectedPairButFound("1".into()),
-           "(cdr 1)" => ExpectedPairButFound("1".into())
+    fails!["(car 1)" => ExpectedPairButFound(cell![1]),
+           "(cdr 1)" => ExpectedPairButFound(cell![1])
     ];
 }
 

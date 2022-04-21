@@ -100,7 +100,7 @@ pub fn list_to_vector(vm: &mut Vm) -> Result<VCell, Error> {
         if list.is_nil() {
             return Ok(VCell::vector(vec![]));
         } else {
-            return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
+            return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list)));
         }
     }
     let mut outv = vec![];

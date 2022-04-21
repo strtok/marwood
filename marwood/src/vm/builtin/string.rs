@@ -190,9 +190,7 @@ pub fn list_string(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "list->string")?;
     let mut rest = vm.heap.get(vm.stack.pop()?);
     if !rest.is_pair() && !rest.is_nil() {
-        return Err(Error::ExpectedPairButFound(
-            vm.heap.get_as_cell(&rest).to_string(),
-        ));
+        return Err(Error::ExpectedPairButFound(vm.heap.get_as_cell(&rest)));
     }
     let mut s = String::new();
     while rest.is_pair() {

@@ -7,7 +7,7 @@ macro_rules! car {
     ($cell:expr) => {{
         $cell
             .car()
-            .ok_or(Error::ExpectedPairButFound($cell.to_string()))?
+            .ok_or(Error::ExpectedPairButFound($cell.clone()))?
     }};
 }
 
@@ -15,7 +15,7 @@ macro_rules! cdr {
     ($cell:expr) => {{
         $cell
             .cdr()
-            .ok_or(Error::ExpectedPairButFound($cell.to_string()))?
+            .ok_or(Error::ExpectedPairButFound($cell.clone()))?
     }};
 }
 

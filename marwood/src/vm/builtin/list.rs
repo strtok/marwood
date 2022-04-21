@@ -20,7 +20,7 @@ pub fn car(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "car")?;
     Ok(match vm.heap.get(vm.stack.pop()?) {
         VCell::Pair(car, _) => VCell::ptr(car),
-        arg => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg).to_string())),
+        arg => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg))),
     })
 }
 
@@ -28,7 +28,7 @@ pub fn cdr(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "cdr")?;
     Ok(match vm.heap.get(vm.stack.pop()?) {
         VCell::Pair(_, cdr) => VCell::ptr(cdr),
-        arg => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg).to_string())),
+        arg => return Err(ExpectedPairButFound(vm.heap.get_as_cell(&arg))),
     })
 }
 
@@ -78,7 +78,7 @@ pub fn set_cdr(vm: &mut Vm) -> Result<VCell, Error> {
 fn clone_list(vm: &mut Vm, list: VCell) -> Result<(VCell, VCell), Error> {
     let mut rest = list.clone();
     if !rest.is_pair() {
-        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&rest).to_string()));
+        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&rest)));
     }
 
     let mut head = VCell::Nil;
@@ -127,9 +127,7 @@ pub fn append(vm: &mut Vm) -> Result<VCell, Error> {
             }
             VCell::Pair(_, _) => {}
             vcell => {
-                return Err(ExpectedPairButFound(
-                    vm.heap.get_as_cell(&vcell).to_string(),
-                ));
+                return Err(ExpectedPairButFound(vm.heap.get_as_cell(&vcell)));
             }
         }
         let (head, sub_tail) = clone_list(vm, list)?;
@@ -150,7 +148,7 @@ pub fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
         return if rest.is_nil() {
             Ok(rest)
         } else {
-            Err(ExpectedPairButFound(vm.heap.get_as_cell(&rest).to_string()))
+            Err(ExpectedPairButFound(vm.heap.get_as_cell(&rest)))
         };
     }
     let mut tail = vm.heap.put(VCell::Nil);
@@ -203,7 +201,7 @@ pub fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
     let list_ptr = vm.stack.pop()?.clone();
     let list = vm.heap.get(&list_ptr);
     if !list.is_pair() && !list.is_nil() {
-        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
+        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list)));
     }
     let tail = get_list_tail(vm, &list_ptr, idx)?;
     match vm.heap.get(&tail) {
@@ -222,7 +220,7 @@ pub fn list_tail(vm: &mut Vm) -> Result<VCell, Error> {
     let list_ptr = vm.stack.pop()?.clone();
     let list = vm.heap.get(&list_ptr);
     if !list.is_pair() && !list.is_nil() {
-        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list).to_string()));
+        return Err(ExpectedPairButFound(vm.heap.get_as_cell(&list)));
     }
     get_list_tail(vm, &list_ptr, idx)
 }

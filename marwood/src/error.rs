@@ -9,8 +9,8 @@ pub enum Error {
     #[error("expected {0} but encountered {1}")]
     ExpectedType(&'static str, &'static str),
 
-    #[error("expected pair, but found {0}")]
-    ExpectedPairButFound(String),
+    #[error("expected pair, but found {0:#}")]
+    ExpectedPairButFound(Cell),
 
     #[error("invalid argument for {0}: expected {1}, but got {2}")]
     InvalidArgs(String, String, String),

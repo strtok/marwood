@@ -1,8 +1,10 @@
 #[macro_use]
 mod common;
+use marwood::cell;
 use marwood::cell::Cell;
 use marwood::lex;
 use marwood::parse;
+use marwood::vector;
 use marwood::vm::Vm;
 
 use marwood::error::Error::{ExpectedPairButFound, InvalidSyntax, InvalidVectorIndex};
@@ -70,7 +72,7 @@ fn list_vector_conversions() {
     fails!["(vector->list '(1 2 3))" =>
             InvalidSyntax("(1 2 3) is not a vector".into())];
     fails!["(list->vector #(1 2 3))" =>
-            ExpectedPairButFound("#(1 2 3)".into())];
+            ExpectedPairButFound(vector![cell![1], cell![2], cell![3]])];
 }
 
 #[test]
