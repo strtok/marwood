@@ -1,6 +1,7 @@
 #[macro_use]
 mod common;
 
+use marwood::cell;
 use marwood::cell::Cell;
 use marwood::error::Error::{
     InvalidDefineSyntax, InvalidProcedure, InvalidSyntax, InvalidUsePrimitive, UnquotedNil,
@@ -72,8 +73,8 @@ fn gc_cleans_intern_map() {
 #[test]
 fn invalid_procedure_calls() {
     fails![
-        "(1 2 3)" => InvalidProcedure("1".to_string()),
-        "((+ 1 1) 2 3)" => InvalidProcedure("2".to_string())
+        "(1 2 3)" => InvalidProcedure(cell![1]),
+        "((+ 1 1) 2 3)" => InvalidProcedure(cell![2])
     ];
 }
 

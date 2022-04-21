@@ -135,7 +135,7 @@ impl Vm {
                         return Ok(false);
                     }
                     other => {
-                        return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
+                        return Err(InvalidProcedure(self.heap.get_as_cell(&other)));
                     }
                 };
                 self.stack.push(VCell::EnvironmentPointer(self.ep));
@@ -167,7 +167,7 @@ impl Vm {
                         return Ok(false);
                     }
                     other => {
-                        return Err(InvalidProcedure(self.heap.get_as_cell(&other).to_string()));
+                        return Err(InvalidProcedure(self.heap.get_as_cell(&other)));
                     }
                 };
 

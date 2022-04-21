@@ -24,8 +24,8 @@ pub enum Error {
     #[error("invalid define syntax: {0}")]
     InvalidDefineSyntax(String),
 
-    #[error("call of non-procedure: {0}")]
-    InvalidProcedure(String),
+    #[error("call of non-procedure: {0:#}")]
+    InvalidProcedure(Cell),
 
     #[error("invalid stack index: {0}")]
     InvalidStackIndex(usize),
