@@ -4,8 +4,7 @@ mod common;
 use marwood::cell;
 use marwood::cell::Cell;
 use marwood::error::Error::{
-    InvalidDefineSyntax, InvalidProcedure, InvalidSyntax, InvalidUsePrimitive, UnquotedNil,
-    VariableNotBound,
+    InvalidProcedure, InvalidSyntax, InvalidUsePrimitive, UnquotedNil, VariableNotBound,
 };
 use marwood::lex;
 use marwood::parse;
@@ -286,7 +285,7 @@ fn set_pair() {
 fn internal_define() {
     evals!["((lambda (x) (define y 10) (+ x y)) 20)" => "30"];
     fails!["(lambda (x) (define y 10) (+ x y) (define z 10))" => 
-            InvalidDefineSyntax("out of context: (define z 10)".into())];
+            InvalidSyntax("out of context define: (define z 10)".into())];
 }
 
 #[test]

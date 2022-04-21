@@ -1,7 +1,7 @@
 use crate::cell;
 use crate::cell::Cell;
 use crate::error::Error;
-use crate::error::Error::{InvalidDefineSyntax, InvalidSyntax};
+use crate::error::Error::InvalidSyntax;
 
 macro_rules! car {
     ($cell:expr) => {{
@@ -38,7 +38,7 @@ pub struct Pattern {
 impl Pattern {
     pub fn try_new(expr: &Cell, ellipsis: &Cell, literals: &[Cell]) -> Result<Pattern, Error> {
         if !expr.is_pair() {
-            return Err(InvalidDefineSyntax("pattern must be a ()".into()));
+            return Err(InvalidSyntax("pattern must be a ()".into()));
         }
 
         let mut pattern = Pattern {
@@ -91,31 +91,28 @@ impl Pattern {
                 Cell::Symbol(_) => {
                     if pattern.is_ellipsis(it) {
                         if idx == 0 || (idx == len - 1 && improper) {
-                            return Err(InvalidDefineSyntax(format!(
-                                "invalid ellipsis placement in {}",
+                            return Err(InvalidSyntax(format!(
+                                "invalid ellipsis placement in {:#}",
                                 expr
                             )));
                         }
                         ellipsis_ct += 1;
                         if ellipsis_ct > 1 {
-                            return Err(InvalidDefineSyntax(format!(
-                                "duplicate ellipsis in {}",
-                                expr
-                            )));
+                            return Err(InvalidSyntax(format!("duplicate ellipsis in {:#}", expr)));
                         }
                         continue;
                     }
 
                     if pattern.is_variable_candidate(it) {
                         if pattern.is_variable(it) {
-                            return Err(InvalidDefineSyntax(format!(
-                                "duplicate pattern variable {}",
+                            return Err(InvalidSyntax(format!(
+                                "duplicate pattern variable {:#}",
                                 it
                             )));
                         }
                         pattern.variables.push(it.clone())
                     } else if ellipsis_next {
-                        return Err(InvalidDefineSyntax(
+                        return Err(InvalidSyntax(
                             "ellipsis must follow pattern variable".into(),
                         ));
                     }
@@ -178,21 +175,17 @@ impl Transform {
         let expr = expr.collect_vec();
         let (keyword, mut syntax_rules) = match expr.as_slice() {
             [_, keyword, syntax_rules] => (*keyword, *syntax_rules),
-            _ => {
-                return Err(InvalidDefineSyntax(
-                    "expected keyword and syntax-rules".into(),
-                ))
-            }
+            _ => return Err(InvalidSyntax("expected keyword and syntax-rules".into())),
         };
 
         // keyword must be a symbol
         if !keyword.is_symbol() {
-            return Err(InvalidDefineSyntax("keyword must be an identifier".into()));
+            return Err(InvalidSyntax("keyword must be an identifier".into()));
         }
 
         // Skip past "syntax-rules"
         if car!(syntax_rules) != &cell!["syntax-rules"] {
-            return Err(InvalidDefineSyntax("expected syntax-rules".into()));
+            return Err(InvalidSyntax("expected syntax-rules".into()));
         }
         syntax_rules = cdr!(syntax_rules);
 
@@ -214,7 +207,7 @@ impl Transform {
             .collect::<Vec<_>>();
 
         if literals.iter().any(|it| !it.is_symbol()) {
-            return Err(InvalidDefineSyntax("literals must be identifiers".into()));
+            return Err(InvalidSyntax("literals must be identifiers".into()));
         }
         syntax_rules = cdr!(syntax_rules);
 
@@ -263,7 +256,7 @@ impl Transform {
         let mut iter = template.iter().peekable();
 
         if template.is_pair() && car!(template) == ellipsis {
-            return Err(InvalidDefineSyntax("ellipsis out of place".into()));
+            return Err(InvalidSyntax("ellipsis out of place".into()));
         }
 
         while let Some(template) = iter.next() {
@@ -271,13 +264,13 @@ impl Transform {
                 Cell::Pair(_, _) => Self::check_template_syntax(template, pattern, ellipsis)?,
                 Cell::Symbol(_) => {
                     if !pattern.is_variable(template) && iter.peek() == Some(&ellipsis) {
-                        return Err(InvalidDefineSyntax(
+                        return Err(InvalidSyntax(
                             "ellipses must follow a pattern variable".into(),
                         ));
                     }
                     if template == ellipsis {
                         if ellipsis_in_pattern || (improper && iter.peek().is_none()) {
-                            return Err(InvalidDefineSyntax("ellipses out of place".into()));
+                            return Err(InvalidSyntax("ellipses out of place".into()));
                         }
                         ellipsis_in_pattern = true;
                         continue;

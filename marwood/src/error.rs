@@ -21,9 +21,6 @@ pub enum Error {
     #[error("invalid bytecode")]
     InvalidBytecode,
 
-    #[error("invalid define syntax: {0}")]
-    InvalidDefineSyntax(String),
-
     #[error("call of non-procedure: {0:#}")]
     InvalidProcedure(Cell),
 
