@@ -1,3 +1,4 @@
+use marwood::cell::Cell;
 use marwood::vm::Vm;
 use marwood::{lex, parse};
 
@@ -12,7 +13,11 @@ fn main() {
                    acc
                    (factorial (- n 1) (* acc n)))))
     "#;
-    vm.eval(&parse!(code)).unwrap();
+
+    let (cell, remaining_text): (Cell, Option<&str>) = parse::parse_text(&code).unwrap();
+    assert_eq!(remaining_text, None);
+    vm.eval(&cell).unwrap();
+
     for it in 0..10 {
         println!(
             "the factorial of {} is {}",

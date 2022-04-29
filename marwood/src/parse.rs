@@ -2,11 +2,11 @@ use crate::cell::Cell;
 use crate::char::named_to_char;
 use crate::lex::TokenType::NumberPrefix;
 use crate::lex::{Token, TokenType};
-use crate::list;
 use crate::number::{Exactness, Number};
 use crate::parse::Error::{
     Eof, ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken, UnknownChar,
 };
+use crate::{lex, list};
 use std::iter::Peekable;
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
@@ -27,6 +27,25 @@ pub enum Error {
     SyntaxError(String),
     #[error("unknown character {0}")]
     UnknownChar(String),
+    #[error(transparent)]
+    LexError(#[from] lex::Error),
+}
+
+/// Parse text
+///
+/// Tokenize and parse one expression, returning the resulting Cell
+/// and any remaining text, or Error if an error occurred.
+///
+/// # Arguments
+/// *`text` - the text to parse
+pub fn parse_text(text: &str) -> Result<(Cell, Option<&str>), Error> {
+    let tokens = lex::scan(text)?;
+    let mut cur = tokens.iter().peekable();
+    let cell = parse(text, &mut cur)?;
+
+    let remaining_text = cur.peek().map(|Token { span, .. }| &text[span.0..]);
+
+    Ok((cell, remaining_text))
 }
 
 /// Parse one expression from the token stream.
