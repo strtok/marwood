@@ -15,10 +15,7 @@ fn main() {
     vm.eval_text(&code).unwrap();
 
     for it in 0..10 {
-        println!(
-            "the factorial of {} is {}",
-            it,
-            vm.eval_text(&format!("(factorial {})", it)).unwrap().0
-        );
+        let (cell, _) = vm.eval_text(&format!("(factorial {})", it)).unwrap();
+        println!("the factorial of {} is {}", it, cell);
     }
 }
