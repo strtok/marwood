@@ -5,10 +5,14 @@ extern crate marwood;
 
 fn main() {
     let mut vm = Vm::new();
-    vm.eval(&parse!(
-        "(define factorial (lambda (n) (if (eq? n 0) 1 (* n (factorial (- n 1))))))"
-    ))
-    .unwrap();
+    let code = r#"
+        (define (factorial n)
+            (let factorial ([n n] [acc 1])
+               (if (zero? n)
+                   acc
+                   (factorial (- n 1) (* acc n)))))
+    "#;
+    vm.eval(&parse!(code)).unwrap();
     for it in 0..10 {
         println!(
             "the factorial of {} is {}",
