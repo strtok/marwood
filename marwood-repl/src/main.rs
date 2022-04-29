@@ -1,6 +1,5 @@
-use log::trace;
 use marwood::cell::Cell;
-use marwood::lex::{scan, Token};
+use marwood::lex::scan;
 use marwood::parse::parse;
 use marwood::syntax::ReplHighlighter;
 use marwood::vm::{SystemInterface, Vm};
@@ -85,7 +84,7 @@ fn main() {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
-                remaining = parse_and_eval(&mut vm, &line).trim().to_string();
+                remaining = eval(&mut vm, &line).trim().to_string();
             }
             Err(ReadlineError::Interrupted | ReadlineError::Eof) => break,
             Err(err) => {
@@ -98,43 +97,22 @@ fn main() {
 
 /// Evaluate one expression from the input text and return
 /// any text that was not evaluated.
-fn parse_and_eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
-    // Tokenize the entire input
-    let tokens = match scan(text) {
-        Ok(tokens) => tokens,
-        Err(e) => {
-            println!("error: {}", e);
-            return "";
-        }
-    };
-
-    // Parse one expression from the token stream
-    let mut cur = tokens.iter().peekable();
-    trace!("lexer: {:?}", tokens);
-    match parse(text, &mut cur) {
-        Ok(cell) => {
-            trace!("parser: {}", cell);
-            match vm.eval(&cell) {
-                Ok(Cell::Void) => {
+fn eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
+    match vm.eval_text(text) {
+        Ok((cell, remaining_text)) => {
+            match cell {
+                Cell::Void => {
                     println!();
                 }
-                Ok(cell) => {
+                _ => {
                     println!("{:#}", cell);
                 }
-                Err(e) => {
-                    println!("error: {}", e);
-                }
-            };
+            }
+            remaining_text.unwrap_or("")
         }
         Err(e) => {
             println!("error: {}", e);
+            ""
         }
-    }
-
-    // Given the position of the next token in the stream, determine
-    // how far the parser consumed and return the remaining text
-    match cur.peek() {
-        Some(Token { span, .. }) => &text[span.0..],
-        None => "",
     }
 }
