@@ -1,6 +1,4 @@
-use marwood::cell::Cell;
 use marwood::vm::Vm;
-use marwood::{lex, parse};
 
 extern crate marwood;
 
@@ -14,15 +12,13 @@ fn main() {
                    (factorial (- n 1) (* acc n)))))
     "#;
 
-    let (cell, remaining_text): (Cell, Option<&str>) = parse::parse_text(&code).unwrap();
-    assert_eq!(remaining_text, None);
-    vm.eval(&cell).unwrap();
+    vm.eval_text(&code).unwrap();
 
     for it in 0..10 {
         println!(
             "the factorial of {} is {}",
             it,
-            vm.eval(&parse!(&format!("(factorial {})", it))).unwrap()
+            vm.eval_text(&format!("(factorial {})", it)).unwrap().0
         );
     }
 }

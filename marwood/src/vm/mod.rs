@@ -99,6 +99,19 @@ impl Vm {
         Ok(())
     }
 
+    /// Eval Text
+    ///
+    /// Parse and eval one expression, returning the result of
+    /// evaluation and remaining text if any.
+    ///
+    /// # Arguments
+    /// `text` - The text to eval
+    pub fn eval_text<'a>(&mut self, text: &'a str) -> Result<(Cell, Option<&'a str>), Error> {
+        let (cell, remaining_text) = parse::parse_text(text)?;
+        self.prepare_eval(&cell)?;
+        Ok((self.run()?, remaining_text))
+    }
+
     pub fn set_system_interface(&mut self, sys: Box<dyn SystemInterface>) {
         self.sys = sys;
     }
