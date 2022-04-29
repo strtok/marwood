@@ -6,9 +6,9 @@
 [Test]: https://github.com/strtok/marwood/actions/workflows/test.yml
 [Deploy Badge]: https://github.com/strtok/marwood/actions/workflows/deploy.yml/badge.svg
 [Deploy]: https://github.com/strtok/marwood/actions/workflows/deploy.yml
-Marwood is an embeddable [Scheme R5RS](https://schemers.org/Documents/Standards/R5RS/) implementation, featuring:
+Marwood is an embeddable [Scheme R7RS](https://small.r7rs.org) implementation, featuring:
 
-* a scheme r5rs compiler & 64 bit runtime composed of 3x64bit cells
+* a scheme R7RS compiler & 64 bit runtime
 * a terminal based repl using [rustyline](https://github.com/kkawakam/rustyline)
 * a WebAssembly repl at [repl.marwood.io](https://repl.marwood.io).
 
@@ -44,13 +44,18 @@ Here's the scheme that will execute in the VM given the rust example:
 And the rust code to execute the scheme above in marwood:
 ```rust
 let mut vm = Vm::new();
- 
-vm.eval(&parse!("(define make-adder (lambda (x) (lambda (y) (+ x y))))")).unwrap();
-vm.eval(&parse!("(define add-1000 (make-adder 1000))")).unwrap();
+
+vm.eval_text("(define make-adder (lambda (x) (lambda (y) (+ x y))))")
+    .unwrap();
+vm.eval_text("(define add-1000 (make-adder 1000))")
+    .unwrap();
 
 for it in 0..5 {
     match vm.eval(&list!["add-1000", it]) {
-        Ok(result) => assert_eq!(result, cell![1000 + it]),
+        Ok(result) => {
+            println!("{} => {}", it, result);
+            assert_eq!(result, cell![1000 + it])
+        }
         Err(e) => error!("error: {}", e),
     }
 }
