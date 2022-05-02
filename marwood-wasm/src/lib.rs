@@ -61,7 +61,7 @@ impl Marwood {
     pub fn eval(&mut self, text: &str, count: usize) -> EvalResult {
         let tokens = match lex::scan(text) {
             Ok(tokens) => tokens,
-            Err(lex::Error::Eof) => {
+            Err(lex::Error::Incomplete) => {
                 return EvalResult::new_eof();
             }
             Err(e) => {
@@ -76,7 +76,7 @@ impl Marwood {
                 Ok(()) => {}
                 Err(e) => return EvalResult::new_error(format!("error: {}", e)),
             },
-            Err(parse::Error::Eof) => return EvalResult::new_eof(),
+            Err(parse::Error::Incomplete) => return EvalResult::new_eof(),
             Err(e) => return EvalResult::new_error(format!("error: {}", e)),
         };
 
@@ -101,7 +101,7 @@ impl Marwood {
     pub fn check(&self, text: &str) -> CheckResult {
         let tokens = match lex::scan(text) {
             Ok(tokens) => tokens,
-            Err(lex::Error::Eof) => {
+            Err(lex::Error::Incomplete) => {
                 return CheckResult::new(true);
             }
             Err(_) => {
@@ -112,7 +112,7 @@ impl Marwood {
         let mut cur = tokens.iter().peekable();
         CheckResult::new(matches!(
             parse::parse(text, &mut cur),
-            Err(parse::Error::Eof)
+            Err(parse::Error::Incomplete)
         ))
     }
 

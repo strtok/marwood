@@ -75,8 +75,8 @@ impl Token {
 /// The type of error encountered by the scanner.
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum Error {
-    #[error("unexpected EOF")]
-    Eof,
+    #[error("incomplete")]
+    Incomplete,
     #[error("unexpected character '{0}'")]
     UnexpectedToken(char),
     #[error("unexpected character following '{0}': '{1}'")]
@@ -231,7 +231,7 @@ fn scan_symbol(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
 }
 
 fn scan_string(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
-    let start = cur.peek().ok_or(Error::Eof)?.0;
+    let start = cur.peek().ok_or(Error::Incomplete)?.0;
     cur.next();
 
     let mut escape_next = false;
@@ -251,7 +251,7 @@ fn scan_string(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     }
     // empty string
     if !terminated {
-        return Err(Error::Eof);
+        return Err(Error::Incomplete);
     }
     let end = cur.next().unwrap().0 + '"'.len_utf8();
     Ok(Token::new((start, end), TokenType::String))
@@ -279,7 +279,7 @@ fn scan_char(cur: &mut Peekable<CharIndices>, start: usize) -> Result<Token, Err
             return Ok(Token::new((start, end), TokenType::Char));
         }
     } else {
-        return Err(Error::Eof);
+        return Err(Error::Incomplete);
     }
 
     while let Some(&(offset, c)) = cur.peek() {

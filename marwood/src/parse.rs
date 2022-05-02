@@ -4,15 +4,15 @@ use crate::lex::TokenType::NumberPrefix;
 use crate::lex::{Token, TokenType};
 use crate::number::{Exactness, Number};
 use crate::parse::Error::{
-    Eof, ExpectedListTerminator, ExpectedVectorTerminator, UnexpectedToken, UnknownChar,
+    ExpectedListTerminator, ExpectedVectorTerminator, Incomplete, UnexpectedToken, UnknownChar,
 };
 use crate::{lex, list};
 use std::iter::Peekable;
 
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub enum Error {
-    #[error("unexpected EOF")]
-    Eof,
+    #[error("incomplete")]
+    Incomplete,
     #[error("unexpected token '{0}'")]
     UnexpectedToken(String),
     #[error("unexpected one token after .")]
@@ -60,7 +60,7 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
 ) -> Result<Cell, Error> {
     let token = match cur.next() {
         Some(token) => token,
-        None => return Err(Error::Eof),
+        None => return Err(Error::Incomplete),
     };
     match token.token_type {
         TokenType::SingleQuote => Ok(list!["quote", parse(text, cur)?]),
@@ -103,7 +103,7 @@ fn parse_list<'a, T: Iterator<Item = &'a Token>>(
 ) -> Result<Cell, Error> {
     let mut list = vec![];
     loop {
-        match cur.peek().ok_or(Error::Eof)?.token_type {
+        match cur.peek().ok_or(Error::Incomplete)?.token_type {
             TokenType::RightParen => {
                 let start_token = start_token.span(text).chars().next().unwrap();
                 let end_token = cur.next().unwrap().span(text).chars().next().unwrap();
@@ -149,13 +149,13 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
     }
 
     // Exactly one value must be parsed after the dot
-    let last_cdr = match cur.peek().ok_or(Error::Eof)?.token_type {
+    let last_cdr = match cur.peek().ok_or(Error::Incomplete)?.token_type {
         TokenType::Dot | TokenType::RightParen => Err(Error::ExpectedOneTokenAfterDot),
         _ => Ok(parse(text, cur)?),
     }?;
 
     // The next token must be a ')'
-    match cur.next().ok_or(Error::Eof)?.token_type {
+    match cur.next().ok_or(Error::Incomplete)?.token_type {
         TokenType::RightParen => Ok(Cell::new_improper_list(list, last_cdr)),
         _ => Err(Error::ExpectedOneTokenAfterDot),
     }
@@ -181,7 +181,7 @@ fn parse_vector<'a, T: Iterator<Item = &'a Token>>(
 ) -> Result<Cell, Error> {
     let mut vector = vec![];
     loop {
-        match cur.peek().ok_or(Error::Eof)?.token_type {
+        match cur.peek().ok_or(Error::Incomplete)?.token_type {
             TokenType::RightParen => {
                 let end_token = cur.next().unwrap().span(text).chars().next().unwrap();
                 if end_token != ')' {
@@ -278,7 +278,7 @@ pub fn parse_string(span: &str) -> Result<Cell, Error> {
                     })?
                 }
                 Some(c) => *c,
-                None => return Err(Error::Eof),
+                None => return Err(Error::Incomplete),
             });
             cur.next();
         } else {
@@ -319,7 +319,7 @@ fn parse_number<'a, T: Iterator<Item = &'a Token>>(
             "#x" => radix = 16,
             _ => panic!("unexpected number prefix {}", token.span(text)),
         }
-        token = cur.next().ok_or(Eof)?;
+        token = cur.next().ok_or(Incomplete)?;
     }
 
     let span = token.span(text);
@@ -402,7 +402,7 @@ mod tests {
         assert_eq!(parse(text, &mut cur), Ok(cell!["foo"]));
         assert_eq!(parse(text, &mut cur), Ok(cell!["bar"]));
         assert_eq!(parse(text, &mut cur), Ok(cell!["baz"]));
-        assert_eq!(parse(text, &mut cur), Err(Error::Eof));
+        assert_eq!(parse(text, &mut cur), Err(Error::Incomplete));
     }
 
     #[test]
@@ -411,7 +411,7 @@ mod tests {
         let tokens = lex::scan(text).unwrap();
         let mut cur = (&tokens).iter().peekable();
         assert_eq!(parse(text, &mut cur), Ok(list!["foo", "bar"]));
-        assert_eq!(parse(text, &mut cur), Err(Error::Eof));
+        assert_eq!(parse(text, &mut cur), Err(Error::Incomplete));
     }
 
     #[test]

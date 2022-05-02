@@ -22,10 +22,10 @@ impl Validator for InputValidator {
         match scan(ctx.input()) {
             Ok(tokens) => match parse(ctx.input(), &mut tokens.iter().peekable()) {
                 Ok(_) => Ok(ValidationResult::Valid(None)),
-                Err(parse::Error::Eof) => Ok(ValidationResult::Incomplete),
+                Err(parse::Error::Incomplete) => Ok(ValidationResult::Incomplete),
                 Err(_) => Ok(ValidationResult::Valid(None)),
             },
-            Err(lex::Error::Eof) => Ok(ValidationResult::Incomplete),
+            Err(lex::Error::Incomplete) => Ok(ValidationResult::Incomplete),
             Err(_) => Ok(ValidationResult::Valid(None)),
         }
     }
