@@ -134,7 +134,7 @@ async function evalGist(gistId) {
   rl.println("");
 
   const gistUrl = "https://api.github.com/gists/" + gistId;
-  const gistDesc = await fetch(gistUrl);
+  const gistDesc = await fetch(gistUrl, {cache: "no-store"});
   if (gistDesc.status != 200) {
     rl.println(`could not fetch gist ${gistId}: ${gistDesc.status} ${gistDesc.statusText}`);
     return;
@@ -146,7 +146,7 @@ async function evalGist(gistId) {
   for (const fileName of Object.keys(gistDescJson.files).sort()) {
     let fileDesc = gistDescJson.files[fileName];
     let rawUrl = fileDesc.raw_url;
-    let response = await fetch(rawUrl);
+    let response = await fetch(rawUrl, {cache: "no-store"});
     if (response.status != 200) {
       rl.println("could not fetch ${fileName}: ${response.status} ${response.statusText}");
       return;
