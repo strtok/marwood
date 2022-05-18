@@ -475,7 +475,7 @@ pub fn internally_defined_symbols(body: &Cell) -> Result<HashSet<&Cell>, Error> 
     for expr in body {
         if expr.is_pair() && expr.car().unwrap().is_define() {
             if !beginning_of_body {
-                return Err(InvalidSyntax(format!("out of context define: {}", expr)));
+                return Err(InvalidSyntax(format!("out of context define: {:#}", expr)));
             }
             let expr = expr.cdr().unwrap();
             if expr.is_pair() {

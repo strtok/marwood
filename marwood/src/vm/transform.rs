@@ -291,7 +291,7 @@ impl Transform {
     /// # Arguments
     /// `expr` - The expression to transform
     pub fn transform(&self, expr: &Cell) -> Result<Cell, Error> {
-        let invalid_syntax = || Err(InvalidSyntax(self.keyword.to_string()));
+        let invalid_syntax = || Err(InvalidSyntax(format!("{:#}", self.keyword)));
         if !expr.is_pair() {
             invalid_syntax()?;
         }
@@ -301,7 +301,7 @@ impl Transform {
             if self.pattern_match(cdr!(&rule.0.expr), cdr!(expr), &mut env) {
                 return self
                     .expand(&rule.1, &rule.0, &mut env)
-                    .ok_or_else(|| InvalidSyntax(self.keyword.to_string()));
+                    .ok_or_else(|| InvalidSyntax(format!("{:#}", self.keyword)));
             }
         }
 

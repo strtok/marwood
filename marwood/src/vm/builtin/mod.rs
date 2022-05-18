@@ -85,7 +85,7 @@ fn pop_number(vm: &mut Vm) -> Result<Number, Error> {
         VCell::Number(num) => Ok(num),
         vcell => {
             return Err(InvalidSyntax(format!(
-                "{} is not a valid number",
+                "{:#} is not a valid number",
                 vm.heap.get_as_cell(&vcell)
             )))
         }
@@ -115,7 +115,7 @@ fn pop_char(vm: &mut Vm) -> Result<char, Error> {
         VCell::Char(c) => Ok(c),
         vcell => {
             return Err(InvalidSyntax(format!(
-                "{} is not a valid character",
+                "{:#} is not a valid character",
                 vm.heap.get_as_cell(&vcell)
             )))
         }
@@ -127,7 +127,7 @@ fn pop_string(vm: &mut Vm, proc: &str) -> Result<Rc<RefCell<String>>, Error> {
         VCell::String(s) => Ok(s),
         vcell => {
             return Err(InvalidSyntax(format!(
-                "bad argument to {}: {} is not a string",
+                "bad argument to {}: {:#} is not a string",
                 proc,
                 vm.heap.get_as_cell(&vcell)
             )))
@@ -140,7 +140,7 @@ fn pop_symbol(vm: &mut Vm, proc: &str) -> Result<Rc<String>, Error> {
         VCell::Symbol(s) => Ok(s),
         vcell => {
             return Err(InvalidSyntax(format!(
-                "bad argument to {}: {} is not a symbol",
+                "bad argument to {}: {:#} is not a symbol",
                 proc,
                 vm.heap.get_as_cell(&vcell)
             )))
@@ -158,7 +158,7 @@ fn pop_index(vm: &mut Vm, proc: &str) -> Result<usize, Error> {
         }),
         vcell => {
             return Err(InvalidSyntax(format!(
-                "{} is not a valid index",
+                "{:#} is not a valid index",
                 vm.heap.get_as_cell(&vcell)
             )))
         }
@@ -170,7 +170,7 @@ fn pop_vector(vm: &mut Vm) -> Result<Rc<Vector>, Error> {
         VCell::Vector(vector) => Ok(vector),
         vcell => {
             return Err(InvalidSyntax(format!(
-                "{} is not a vector",
+                "{:#} is not a vector",
                 vm.heap.get_as_cell(&vcell)
             )))
         }

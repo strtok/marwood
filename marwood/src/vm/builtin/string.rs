@@ -198,7 +198,7 @@ pub fn list_string(vm: &mut Vm) -> Result<VCell, Error> {
             VCell::Char(c) => s.push(c),
             vcell => {
                 return Err(InvalidSyntax(format!(
-                    "list->string expected char but found {}",
+                    "list->string expected char but found {:#}",
                     vm.heap.get_as_cell(&vcell)
                 )))
             }

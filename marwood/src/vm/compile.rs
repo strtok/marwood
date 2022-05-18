@@ -318,7 +318,7 @@ impl Vm {
 
         if !variable.is_symbol() || variable.is_primitive_symbol() {
             return Err(InvalidSyntax(format!(
-                "expected variable, but got {}",
+                "expected variable, but got {:#}",
                 variable
             )));
         }

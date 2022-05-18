@@ -105,7 +105,7 @@ fn clone_list(vm: &mut Vm, list: VCell) -> Result<(VCell, VCell), Error> {
                 return Ok((head, tail));
             } else {
                 return Err(InvalidSyntax(format!(
-                    "{} is an improper list",
+                    "{:#} is an improper list",
                     vm.heap.get_as_cell(&list)
                 )));
             }
@@ -162,7 +162,7 @@ pub fn reverse(vm: &mut Vm) -> Result<VCell, Error> {
                 break;
             } else {
                 return Err(InvalidSyntax(format!(
-                    "{} is an improper list",
+                    "{:#} is an improper list",
                     vm.heap.get_as_cell(&list)
                 )));
             }
@@ -186,7 +186,7 @@ fn get_list_tail(vm: &mut Vm, list: &VCell, idx: usize) -> Result<VCell, Error> 
         let node = vm.heap.get(&rest).clone();
         if (!node.is_pair() && rest_idx != 0) || node.is_nil() {
             return Err(InvalidSyntax(format!(
-                "{} is out of range for {}",
+                "{} is out of range for {:#}",
                 idx,
                 vm.heap.get_as_cell(list)
             )));
@@ -207,7 +207,7 @@ pub fn list_ref(vm: &mut Vm) -> Result<VCell, Error> {
     match vm.heap.get(&tail) {
         VCell::Pair(car, _) => Ok(VCell::Ptr(car)),
         _ => Err(InvalidSyntax(format!(
-            "{} is out of range for {}",
+            "{} is out of range for {:#}",
             idx,
             vm.heap.get_as_cell(&list)
         ))),
