@@ -41,7 +41,7 @@ impl Vm {
                     self.last_stacktrace = Some(StackTrace::new(
                         &self.stack,
                         &self.heap,
-                        self.ip.clone(),
+                        self.ip,
                         self.acc.clone(),
                     ));
                     return Err(e);

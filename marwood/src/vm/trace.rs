@@ -1,5 +1,4 @@
 use crate::cell::Cell;
-use crate::list;
 use crate::vm::heap::Heap;
 use crate::vm::opcode::OpCode;
 use crate::vm::stack::Stack;

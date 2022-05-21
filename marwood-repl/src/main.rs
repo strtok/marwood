@@ -2,7 +2,7 @@ use marwood::cell::Cell;
 use marwood::lex::scan;
 use marwood::parse::parse;
 use marwood::syntax::ReplHighlighter;
-use marwood::vm::trace::{StackFrame, StackTrace};
+use marwood::vm::trace::StackTrace;
 use marwood::vm::{SystemInterface, Vm};
 use marwood::{lex, parse};
 use rustyline::error::ReadlineError;
