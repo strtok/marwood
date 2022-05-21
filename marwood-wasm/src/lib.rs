@@ -94,8 +94,45 @@ impl Marwood {
             Ok(Some(Cell::Void)) => EvalResult::new_ok(""),
             Ok(Some(cell)) => EvalResult::new_ok(format!("{:#}", cell)),
             Ok(None) => EvalResult::new_not_completed(),
-            Err(e) => EvalResult::new_error(format!("error: {}", e)),
+            Err(e) => EvalResult::new_error(format!(
+                "error: {}\ntrace: \n{}",
+                e,
+                self.build_stacktrace()
+            )),
         }
+    }
+
+    fn build_stacktrace(&self) -> String {
+        let mut trace_text = String::new();
+        let trace = match self.vm.last_stacktrace() {
+            Some(trace) => trace,
+            None => {
+                return "".into();
+            }
+        };
+
+        for frame in &trace.frames {
+            let name = match &frame.name {
+                Some(name) => name.to_owned(),
+                _ => "λ".to_owned(),
+            };
+
+            let desc = match &frame.desc {
+                Some(desc) => desc.clone(),
+                _ => Cell::Nil,
+            };
+
+            match desc {
+                Cell::Nil => {
+                    trace_text = trace_text + &format!("\t({})\n", name);
+                }
+                _ => {
+                    trace_text = trace_text + &format!("\t({} {})\n", name, desc);
+                }
+            }
+        }
+
+        trace_text
     }
 
     pub fn check(&self, text: &str) -> CheckResult {
