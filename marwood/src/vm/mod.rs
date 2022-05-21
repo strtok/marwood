@@ -5,6 +5,7 @@ use crate::parse;
 use crate::vm::environment::GlobalEnvironment;
 use crate::vm::heap::Heap;
 use crate::vm::stack::Stack;
+use crate::vm::trace::StackTrace;
 use crate::vm::vcell::VCell;
 use log::trace;
 use std::fmt::Debug;
@@ -20,6 +21,7 @@ pub mod lambda;
 pub mod opcode;
 pub mod run;
 pub mod stack;
+pub mod trace;
 pub mod transform;
 pub mod vcell;
 pub mod vector;
@@ -43,6 +45,9 @@ pub struct Vm {
 
     /// System Interface (display, write, etc).
     sys: Box<dyn SystemInterface>,
+
+    /// Stacktrace of last error
+    last_stacktrace: Option<StackTrace>,
 }
 
 impl Vm {
@@ -59,6 +64,7 @@ impl Vm {
             acc: VCell::undefined(),
             bp: 0,
             sys: Box::new(StubInterface {}),
+            last_stacktrace: None,
         };
         vm.load_builtins();
         vm.load_prelude();
@@ -141,6 +147,10 @@ impl Vm {
             .iter_bindings()
             .map(|sym| self.heap.get_at_index(*sym).as_symbol().unwrap())
             .collect()
+    }
+
+    pub fn last_stacktrace(&self) -> Option<&StackTrace> {
+        self.last_stacktrace.as_ref()
     }
 }
 

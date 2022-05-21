@@ -2,6 +2,7 @@ use marwood::cell::Cell;
 use marwood::lex::scan;
 use marwood::parse::parse;
 use marwood::syntax::ReplHighlighter;
+use marwood::vm::trace::{StackFrame, StackTrace};
 use marwood::vm::{SystemInterface, Vm};
 use marwood::{lex, parse};
 use rustyline::error::ReadlineError;
@@ -112,7 +113,34 @@ fn eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
         }
         Err(e) => {
             println!("error: {}", e);
+            if let Some(trace) = vm.last_stacktrace() {
+                print_stacktrace(trace);
+            }
             ""
+        }
+    }
+}
+
+fn print_stacktrace(trace: &StackTrace) {
+    println!("\nstack trace:");
+    for frame in &trace.frames {
+        let name = match &frame.name {
+            Some(name) => name.to_owned(),
+            _ => "λ".to_owned(),
+        };
+
+        let desc = match &frame.desc {
+            Some(desc) => desc.clone(),
+            _ => Cell::Nil,
+        };
+
+        match desc {
+            Cell::Nil => {
+                println!("\t({})", name)
+            }
+            _ => {
+                println!("\t({} {})", name, desc);
+            }
         }
     }
 }

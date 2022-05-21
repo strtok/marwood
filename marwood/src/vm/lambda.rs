@@ -14,7 +14,7 @@ pub struct Lambda {
     pub envmap: EnvironmentMap,
     pub args: Vec<VCell>,
     pub bc: Vec<VCell>,
-    desc_args: Option<Cell>,
+    pub desc_args: Option<Cell>,
 }
 
 impl Lambda {
@@ -62,9 +62,11 @@ impl Lambda {
     pub fn set_top_level(&mut self) {
         self.top_level = true;
     }
+
     pub fn is_top_level(&self) -> bool {
         self.top_level
     }
+
     pub fn set_desc(&mut self, cell: Cell) {
         self.desc_args = Some(cell);
     }

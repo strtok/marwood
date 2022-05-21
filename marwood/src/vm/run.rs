@@ -6,6 +6,7 @@ use crate::error::Error::{
 use crate::vm::environment::{BindingSource, EnvironmentMap, LexicalEnvironment};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
+use crate::vm::trace::StackTrace;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::LexicalEnvPtr;
 use crate::vm::Vm;
@@ -22,6 +23,7 @@ impl Vm {
     }
 
     pub fn run_count(&mut self, count: usize) -> Result<Option<Cell>, Error> {
+        self.last_stacktrace = None;
         let mut cycles = 0;
         loop {
             cycles += 1;
@@ -35,7 +37,15 @@ impl Vm {
             match self.run_one() {
                 Ok(true) => break,
                 Ok(false) => continue,
-                Err(e) => return Err(e),
+                Err(e) => {
+                    self.last_stacktrace = Some(StackTrace::new(
+                        &self.stack,
+                        &self.heap,
+                        self.ip.clone(),
+                        self.acc.clone(),
+                    ));
+                    return Err(e);
+                }
             }
         }
         trace!("cycles: {}", cycles);
