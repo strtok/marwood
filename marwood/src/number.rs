@@ -365,7 +365,13 @@ impl PartialEq for Number {
                 },
             },
             Number::Rational(lhs) => match rhs {
-                Number::Fixnum(rhs) => lhs.to_i64().unwrap() == *rhs,
+                Number::Fixnum(rhs) => {
+                    if rhs.to_i32().is_some() {
+                        Rational32::from_integer(*rhs as i32) == *lhs
+                    } else {
+                        false
+                    }
+                }
                 Number::Float(rhs) => match lhs.to_f64() {
                     Some(lhs) => lhs == *rhs,
                     None => false,
@@ -1235,6 +1241,8 @@ mod tests {
 
         assert_eq!(Number::from(Rational32::new(1, 2)), Number::from(0.5));
         assert_eq!(Number::from(0.5), Number::from(Rational32::new(1, 2)));
+
+        assert_ne!(Number::from(Rational32::new(1, 2)), Number::from(0));
     }
 
     #[test]
