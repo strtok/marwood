@@ -47,7 +47,9 @@ impl Highlighter for InputValidator {
 }
 
 #[derive(Debug)]
-struct ReplSystemInterface {}
+struct ReplSystemInterface {
+    term_dimensions: (usize, usize),
+}
 impl SystemInterface for ReplSystemInterface {
     fn display(&self, cell: &Cell) {
         print!("{}", cell);
@@ -58,7 +60,7 @@ impl SystemInterface for ReplSystemInterface {
     }
 
     fn terminal_dimensions(&self) -> (usize, usize) {
-        (0, 0)
+        self.term_dimensions
     }
 
     fn time_utc(&self) -> u64 {
@@ -79,7 +81,11 @@ fn main() {
     let mut remaining = "".to_string();
 
     let mut vm = Vm::new();
-    vm.set_system_interface(Box::new(ReplSystemInterface {}));
+    let term_dimensions = match rl.dimensions() {
+        Some((cols, rows)) => (cols, rows),
+        None => (0, 0),
+    };
+    vm.set_system_interface(Box::new(ReplSystemInterface { term_dimensions }));
     loop {
         let readline = rl.readline_with_initial("> ", (&remaining, ""));
         match readline {
