@@ -296,14 +296,19 @@ fn scan_char(cur: &mut Peekable<CharIndices>, start: usize) -> Result<Token, Err
 fn scan_number(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
     let start = cur.peek().unwrap().0;
     let mut end = start;
+    let mut token_type = TokenType::Number;
     while let Some(&(offset, c)) = cur.peek() {
         if !is_subsequent_number(c) && start != end {
-            break;
+            if is_subsequent_identifier(c) && c != ';' {
+                token_type = TokenType::Symbol;
+            } else {
+                break;
+            }
         }
         end = offset + c.len_utf8();
         cur.next();
     }
-    Ok(Token::new((start, end), TokenType::Number))
+    Ok(Token::new((start, end), token_type))
 }
 
 pub fn is_initial_number(c: char) -> bool {
@@ -387,7 +392,8 @@ mod tests {
     #[test]
     fn symbols() {
         lexes! {
-            "foo" => TokenType::Symbol
+            "foo" => TokenType::Symbol,
+            "-x" => TokenType::Symbol
         };
     }
 
