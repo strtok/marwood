@@ -5,6 +5,7 @@ use crate::vm::vcell::VCell;
 use crate::vm::Vm;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::fmt::{Display, Formatter};
 use std::iter::Peekable;
 
@@ -159,7 +160,7 @@ impl Vm {
     pub fn decompile_text(&self, lambda: &Lambda) -> String {
         let mut text = String::new();
         for instruction in self.decompile(lambda).unwrap() {
-            text.push_str(&format!("{}\n", instruction));
+            let _ = writeln!(text, "{}", instruction);
         }
         text
     }

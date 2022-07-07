@@ -45,13 +45,14 @@ impl StackTrace {
         // If the just executed instruction was procedure application for a builtin, then
         // the builtin is the top frame.
         match op_code {
-            OpCode::TCallAcc | OpCode::CallAcc => match heap.get(&acc) {
-                VCell::BuiltInProc(proc) => frames.push(StackFrame {
-                    name: Some(proc.desc().to_owned()),
-                    desc: None,
-                }),
-                _ => {}
-            },
+            OpCode::TCallAcc | OpCode::CallAcc => {
+                if let VCell::BuiltInProc(proc) = heap.get(&acc) {
+                    frames.push(StackFrame {
+                        name: Some(proc.desc().to_owned()),
+                        desc: None,
+                    })
+                }
+            }
             _ => {}
         }
 
@@ -63,15 +64,12 @@ impl StackTrace {
 
         // Iterate the stack backwards
         for sp in (0..stack.get_sp()).rev() {
-            match stack.get(sp) {
-                Ok(VCell::InstructionPointer(ip, _)) => {
-                    let ip = heap.get_at_index(*ip).as_lambda().unwrap();
-                    frames.push(StackFrame {
-                        name: None,
-                        desc: ip.desc_args.clone(),
-                    })
-                }
-                _ => {}
+            if let Ok(VCell::InstructionPointer(ip, _)) = stack.get(sp) {
+                let ip = heap.get_at_index(*ip).as_lambda().unwrap();
+                frames.push(StackFrame {
+                    name: None,
+                    desc: ip.desc_args.clone(),
+                });
             }
         }
 

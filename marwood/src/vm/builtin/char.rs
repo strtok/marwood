@@ -117,7 +117,7 @@ pub fn char_foldcase(vm: &mut Vm) -> Result<VCell, Error> {
 pub fn digit_value(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "digit-value")?;
     let c = pop_char(vm)?;
-    if !c.is_digit(10) {
+    if !c.is_ascii_digit() {
         Ok(false.into())
     } else {
         Ok(Number::from(c.to_digit(10).unwrap()).into())

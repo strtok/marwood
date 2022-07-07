@@ -312,11 +312,11 @@ fn scan_number(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
 }
 
 pub fn is_initial_number(c: char) -> bool {
-    c.is_digit(10) || c == '+' || c == '-'
+    c.is_ascii_digit() || c == '+' || c == '-'
 }
 
 pub fn is_subsequent_number(c: char) -> bool {
-    c.is_digit(10) || c.is_digit(16) || c == '.' || c == '/'
+    c.is_ascii_digit() || c.is_ascii_hexdigit() || c == '.' || c == '/'
 }
 
 pub fn is_initial_identifier(c: char) -> bool {
@@ -344,7 +344,7 @@ pub fn is_special_subsequent(c: char) -> bool {
 }
 
 pub fn is_subsequent_identifier(c: char) -> bool {
-    is_initial_identifier(c) || c.is_digit(10) || is_special_subsequent(c)
+    is_initial_identifier(c) || c.is_ascii_digit() || is_special_subsequent(c)
 }
 
 #[cfg(test)]
