@@ -9,6 +9,8 @@ use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
 use crate::vm::vector::Vector;
 use crate::vm::Vm;
+use std::borrow::Cow;
+use std::borrow::Cow::{Borrowed, Owned};
 use std::cell::RefCell;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -465,6 +467,18 @@ impl From<i32> for VCell {
 impl From<Number> for VCell {
     fn from(num: Number) -> Self {
         VCell::Number(num)
+    }
+}
+
+impl<'a> From<VCell> for Cow<'a, VCell> {
+    fn from(vcell: VCell) -> Self {
+        Owned(vcell)
+    }
+}
+
+impl<'a> From<&'a VCell> for Cow<'a, VCell> {
+    fn from(vcell: &'a VCell) -> Self {
+        Borrowed(vcell)
     }
 }
 

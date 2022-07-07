@@ -7,6 +7,7 @@ use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
 use log::trace;
 use num::ToPrimitive;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Deref;
 
@@ -164,14 +165,20 @@ impl Heap {
     /// Get
     ///
     /// Return a vcell from the heap at the given ptr. If the vcell
-    /// is not a heap pointer, panic.
+    /// is not a heap pointer, return it.
     ///
     /// # Arguments
     /// `vcell` - The ptr vcell
-    pub fn get(&self, vcell: &VCell) -> VCell {
-        match vcell {
-            VCell::Ptr(ptr) => self.get_at_index(*ptr).clone(),
-            _ => panic!("heap get() called on non-reference value {}", vcell),
+    pub fn get<'a, T: Into<Cow<'a, VCell>>>(&self, vcell: T) -> VCell {
+        match vcell.into() {
+            Cow::Borrowed(vcell) => match vcell {
+                VCell::Ptr(ptr) => self.get_at_index(*ptr).clone(),
+                vcell => vcell.clone(),
+            },
+            Cow::Owned(vcell) => match vcell {
+                VCell::Ptr(ptr) => self.get_at_index(ptr).clone(),
+                vcell => vcell,
+            },
         }
     }
 
