@@ -109,6 +109,10 @@ impl Heap {
     ///
     /// Put the given cell value on the next available free vcell in the
     /// heap and return the position of the vcell.
+    ///
+    /// Unlike put, maybe_put will not place non-mutable values on the heap
+    /// (e.g. numbers, booleans, etc). Mutable / aggregate structures such
+    /// as pairs and vectors must still be placed on the heap.
     pub fn maybe_put<T: Into<VCell> + Clone>(&mut self, vcell: T) -> VCell {
         let vcell = vcell.into();
         match &vcell {
