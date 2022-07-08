@@ -130,7 +130,7 @@ impl Vm {
                         let proc = proc.as_ref();
                         self.acc = match proc.eval(self)? {
                             VCell::Ptr(ptr) => VCell::Ptr(ptr),
-                            vcell => self.heap.put(vcell),
+                            vcell => self.heap.maybe_put(vcell),
                         };
                         return Ok(false);
                     }
@@ -162,7 +162,7 @@ impl Vm {
                         let proc = proc.as_ref();
                         self.acc = match proc.eval(self)? {
                             VCell::Ptr(ptr) => VCell::Ptr(ptr),
-                            vcell => self.heap.put(vcell),
+                            vcell => self.heap.maybe_put(vcell),
                         };
                         return Ok(false);
                     }
@@ -263,7 +263,7 @@ impl Vm {
 
                 // If there's exactly one vararg, then we can convert it in place
                 if argc == req_argc + 1 {
-                    let arg = self.stack.get_offset(-3)?.clone();
+                    let arg = self.heap.put(self.stack.get_offset(-3)?.clone());
                     let nil = self.heap.put(VCell::Nil);
                     *self.stack.get_offset_mut(-3)? =
                         self.heap.put(VCell::Pair(arg.as_ptr()?, nil.as_ptr()?));
@@ -277,7 +277,7 @@ impl Vm {
                     let varargc = argc - req_argc;
                     let mut varargs = self.heap.put(VCell::Nil).as_ptr()?;
                     for _ in 0..varargc {
-                        let arg = self.stack.pop()?.clone();
+                        let arg = self.heap.put(self.stack.pop()?.clone());
                         let pair = VCell::Pair(arg.as_ptr()?, varargs);
                         varargs = self.heap.put(pair).as_ptr()?;
                     }

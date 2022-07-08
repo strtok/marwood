@@ -88,6 +88,7 @@ pub fn vector_to_list(vm: &mut Vm) -> Result<VCell, Error> {
     let mut tail = vm.heap.put(VCell::Nil);
     for idx in (0..vector.len()).rev() {
         let car = vector.get(idx).unwrap();
+        let car = vm.heap.put(car);
         tail = vm.heap.put(VCell::Pair(car.as_ptr()?, tail.as_ptr()?));
     }
     Ok(tail)

@@ -311,11 +311,6 @@ impl GlobalEnvironment {
     /// # Arguments
     /// `slot` - The slot to return a value for
     pub fn put_slot(&mut self, slot: usize, vcell: VCell) {
-        assert!(
-            matches!(vcell, VCell::Ptr(_) | VCell::Undefined),
-            "unexpected put_slot() of {:?}",
-            vcell
-        );
         *self.slots.get_mut(slot).expect("invalid environment slot") = vcell;
     }
 }
@@ -511,14 +506,6 @@ mod tests {
         env.put_slot(0, VCell::ptr(42));
         assert_eq!(env.get_slot(0), VCell::ptr(42));
         env.put_slot(0, VCell::undefined());
-    }
-
-    #[test]
-    #[should_panic]
-    fn put_slot_panics_if_non_ptr() {
-        let mut env = GlobalEnvironment::new();
-        assert_eq!(env.get_binding(50_usize), 0);
-        env.put_slot(0, VCell::nil());
     }
 
     #[test]

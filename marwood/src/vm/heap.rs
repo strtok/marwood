@@ -87,7 +87,38 @@ impl Heap {
     pub fn put<T: Into<VCell> + Clone>(&mut self, vcell: T) -> VCell {
         let vcell = vcell.into();
         match &vcell {
-            VCell::Ptr(_) => panic!("put() on {} would double box", vcell),
+            VCell::Ptr(_) => vcell,
+            VCell::Symbol(sym) => match self.symbol_table.get(sym.deref()) {
+                Some(ptr) => VCell::ptr(*ptr),
+                None => {
+                    let ptr = self.alloc();
+                    *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
+                    self.symbol_table.insert(sym.deref().into(), ptr);
+                    VCell::ptr(ptr)
+                }
+            },
+            vcell => {
+                let ptr = self.alloc();
+                *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
+                VCell::Ptr(ptr)
+            }
+        }
+    }
+
+    /// Maybe Put
+    ///
+    /// Put the given cell value on the next available free vcell in the
+    /// heap and return the position of the vcell.
+    pub fn maybe_put<T: Into<VCell> + Clone>(&mut self, vcell: T) -> VCell {
+        let vcell = vcell.into();
+        match &vcell {
+            VCell::Number(_)
+            | VCell::Bool(_)
+            | VCell::Char(_)
+            | VCell::Nil
+            | VCell::Void
+            | VCell::Undefined => vcell,
+            VCell::Ptr(_) => vcell,
             VCell::Symbol(sym) => match self.symbol_table.get(sym.deref()) {
                 Some(ptr) => VCell::ptr(*ptr),
                 None => {
@@ -114,13 +145,33 @@ impl Heap {
     /// # Arguments
     /// `ast` - The structure to allocate recursively on the heap.
     pub fn put_cell(&mut self, ast: &cell::Cell) -> VCell {
+        let vcell = self.maybe_put_cell(ast);
+        if vcell.is_ptr() {
+            vcell
+        } else {
+            self.put(vcell)
+        }
+    }
+
+    /// Maybe Put Cell
+    ///
+    /// Allocate the given cell on the heap, returning a VCell::Ptr
+    /// to the root of the allocated structure. This will recursively
+    /// allocate a structure and may result in multiple allocations.
+    ///
+    /// Unline put_cell, maybe_put_cell will not place non-aggregate types
+    /// such as numbers, bools, nil, void, etc on the heap.
+    ///
+    /// # Arguments
+    /// `ast` - The structure to allocate recursively on the heap.
+    pub fn maybe_put_cell(&mut self, ast: &cell::Cell) -> VCell {
         match *ast {
-            cell::Cell::Undefined => self.put(VCell::Undefined),
-            cell::Cell::Void => self.put(VCell::Void),
-            cell::Cell::Nil => self.put(VCell::Nil),
-            cell::Cell::Number(ref val) => self.put(VCell::Number(val.clone())),
-            cell::Cell::Bool(val) => self.put(VCell::Bool(val)),
-            cell::Cell::Char(val) => self.put(VCell::Char(val)),
+            cell::Cell::Undefined => VCell::Undefined,
+            cell::Cell::Void => VCell::Void,
+            cell::Cell::Nil => VCell::Nil,
+            cell::Cell::Number(ref val) => VCell::Number(val.clone()),
+            cell::Cell::Bool(val) => VCell::Bool(val),
+            cell::Cell::Char(val) => VCell::Char(val),
             cell::Cell::Pair(ref car, ref cdr) => {
                 match (self.put_cell(car.deref()), self.put_cell(cdr.deref())) {
                     (VCell::Ptr(car), VCell::Ptr(cdr)) => self.put(VCell::Pair(car, cdr)),
@@ -135,7 +186,7 @@ impl Heap {
             cell::Cell::Vector(ref vector) => {
                 let mut outv = Vec::with_capacity(vector.len());
                 for it in vector {
-                    outv.push(self.put_cell(it))
+                    outv.push(self.maybe_put_cell(it))
                 }
                 self.put(VCell::vector(outv))
             }

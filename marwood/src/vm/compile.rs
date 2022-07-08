@@ -286,7 +286,7 @@ impl Vm {
         }
 
         lambda.emit(OpCode::MovImmediate);
-        lambda.emit(self.heap.put(VCell::Void));
+        lambda.emit(VCell::Void);
         lambda.emit(VCell::Acc);
         Ok(())
     }
@@ -344,7 +344,7 @@ impl Vm {
         }
 
         lambda.emit(OpCode::MovImmediate);
-        lambda.emit(self.heap.put(VCell::Void));
+        lambda.emit(VCell::Void);
         lambda.emit(VCell::Acc);
         Ok(())
     }
@@ -617,7 +617,7 @@ impl Vm {
             }
             None => {
                 lambda.emit(OpCode::MovImmediate);
-                lambda.emit(self.heap.put(VCell::Void));
+                lambda.emit(VCell::Void);
                 lambda.emit(VCell::Acc);
             }
         }
@@ -636,7 +636,7 @@ impl Vm {
     /// `expr` - The expression to quote.
     pub fn compile_quote(&mut self, lambda: &mut Lambda, expr: &Cell) -> Result<(), Error> {
         lambda.emit(OpCode::MovImmediate);
-        lambda.emit(self.heap.put_cell(expr));
+        lambda.emit(self.heap.maybe_put_cell(expr));
         lambda.emit(VCell::Acc);
         Ok(())
     }

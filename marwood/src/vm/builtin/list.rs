@@ -34,14 +34,14 @@ pub fn cdr(vm: &mut Vm) -> Result<VCell, Error> {
 
 pub fn cons(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "cons")?;
-    let cdr = vm.stack.pop()?.as_ptr()?;
-    let car = vm.stack.pop()?.as_ptr()?;
+    let cdr = vm.heap.put(vm.stack.pop()?.clone()).as_ptr()?;
+    let car = vm.heap.put(vm.stack.pop()?.clone()).as_ptr()?;
     Ok(VCell::Pair(car, cdr))
 }
 
 pub fn set_car(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "set-car!")?;
-    let obj = vm.stack.pop()?.clone();
+    let obj = vm.heap.put(vm.stack.pop()?.clone());
     let pair = vm.stack.pop()?.clone();
     let new_pair = match vm.heap.get(&pair) {
         VCell::Pair(_, cdr) => VCell::Pair(obj.as_ptr()?, cdr),
@@ -55,7 +55,7 @@ pub fn set_car(vm: &mut Vm) -> Result<VCell, Error> {
 
 pub fn set_cdr(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 2, Some(2), "set-cdr!")?;
-    let obj = vm.stack.pop()?.clone();
+    let obj = vm.heap.put(vm.stack.pop()?.clone());
     let pair = vm.stack.pop()?.clone();
     let new_pair = match vm.heap.get(&pair) {
         VCell::Pair(car, _) => VCell::Pair(car, obj.as_ptr()?),
@@ -118,7 +118,7 @@ pub fn append(vm: &mut Vm) -> Result<VCell, Error> {
     if argc == 0 {
         return Ok(VCell::Nil);
     }
-    let mut tail = vm.stack.pop()?.clone();
+    let mut tail = vm.heap.put(vm.stack.pop()?.clone());
     for _ in 0..(argc - 1) {
         let list = vm.heap.get(&vm.stack.pop()?.clone());
         match list {
