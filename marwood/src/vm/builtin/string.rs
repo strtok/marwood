@@ -167,10 +167,7 @@ pub fn string_vector(vm: &mut Vm) -> Result<VCell, Error> {
     let s = pop_string(vm, "string->vector")?;
     let s = s.borrow();
     let s = s.as_str();
-    let v = s
-        .chars()
-        .map(|c| vm.heap.put(VCell::Char(c)))
-        .collect::<Vec<_>>();
+    let v = s.chars().map(|c| VCell::Char(c)).collect::<Vec<_>>();
     Ok(VCell::vector(v))
 }
 

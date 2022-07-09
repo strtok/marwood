@@ -32,7 +32,7 @@ pub fn make_vector(vm: &mut Vm) -> Result<VCell, Error> {
     let argc = pop_argc(vm, 1, Some(2), "make-vector")?;
     let fill = match argc {
         2 => vm.stack.pop()?.clone(),
-        _ => vm.heap.put(VCell::Number(Number::from(0))),
+        _ => VCell::Number(Number::from(0)),
     };
 
     let len = match vm.heap.get(vm.stack.pop()?) {
