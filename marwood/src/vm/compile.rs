@@ -627,7 +627,7 @@ impl Vm {
 
     /// Compile Quote
     ///
-    /// Quote is compiled as a single argument instruction (QUOTE VAL). Quote is
+    /// Quote is compiled as a MOV <val> %acc instruction. Quote is
     /// special in that the value in cell is not evaluated before being placed
     /// on the heap.
     ///
