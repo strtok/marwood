@@ -174,6 +174,7 @@ impl Vm {
                 "define" => self.compile_define(lambda, expr),
                 "define-syntax" => self.compile_define_syntax(lambda, expr),
                 "lambda" | "λ" => self.compile_lambda(lambda, expr, false),
+                "quasiquote" => self.compile_quasiquote(lambda, car!(rest), 0),
                 "quote" => self.compile_quote(lambda, car!(rest)),
                 "if" => self.compile_if(lambda, tail, expr),
                 "set!" => self.compile_set(lambda, tail, expr),
@@ -627,7 +628,7 @@ impl Vm {
 
     /// Compile Quote
     ///
-    /// Quote is compiled as a MOV <val> %acc instruction. Quote is
+    /// Quote is compiled as a MOV <value> %acc instruction. Quote is
     /// special in that the value in cell is not evaluated before being placed
     /// on the heap.
     ///
@@ -638,6 +639,68 @@ impl Vm {
         lambda.emit(OpCode::MovImmediate);
         lambda.emit(self.heap.maybe_put_cell(expr));
         lambda.emit(VCell::Acc);
+        Ok(())
+    }
+
+    /// Compile Quasiquote
+    ///
+    /// Unlike quote, quasiquote may contain a mix of quoted and unquoted expressions. Quasiquote
+    /// is compiled as a chain of CONS instructions, calling back into compile_expression for any
+    /// expressions that have been unquoted.
+    ///
+    /// # Arguments
+    /// `lambda` - The lambda to emit bytecode to
+    /// `expr` - The expression to quote.
+    /// `depth` - The quasiquote depth
+    pub fn compile_quasiquote(
+        &mut self,
+        lambda: &mut Lambda,
+        expr: &Cell,
+        mut depth: usize,
+    ) -> Result<(), Error> {
+        trace!("quasiquote {} {}", depth, expr);
+
+        if !expr.is_pair() {
+            return self.compile_quote(lambda, expr);
+        }
+
+        if expr.car().unwrap().is_unquote() {
+            if depth == 0 {
+                return self.compile_expression(lambda, false, car!(cdr!(expr)));
+            } else {
+                depth = depth - 1;
+            }
+        }
+
+        if expr.car().unwrap().is_quasiquote() {
+            depth = depth + 1;
+        }
+
+        let mut count = 0;
+        let mut rest = expr;
+        while rest.is_pair() {
+            let car = rest.car().unwrap();
+            if car.is_pair() {
+                self.compile_quasiquote(lambda, car, depth)?;
+                lambda.emit(OpCode::PushAcc);
+            } else {
+                lambda.emit(OpCode::PushImmediate);
+                let car = self.heap.maybe_put_cell(car);
+                lambda.emit(car);
+            }
+            rest = rest.cdr().unwrap();
+            count += 1;
+        }
+        lambda.emit(OpCode::PushImmediate);
+        lambda.emit(self.heap.maybe_put_cell(rest));
+
+        for i in 0..count {
+            lambda.emit(OpCode::Cons);
+            if i < count - 1 {
+                lambda.emit(OpCode::PushAcc);
+            }
+        }
+
         Ok(())
     }
 }

@@ -98,6 +98,16 @@ impl Vm {
                 self.stack.push(self.acc.clone());
             }
             OpCode::Halt => return Ok(true),
+
+            // Primitive Procedure Implementations
+            //
+            // The CONS opcode represents a primitive version of the cons procedure.
+            OpCode::Cons => {
+                let cdr = self.heap.put(self.stack.pop()?.clone());
+                let car = self.heap.put(self.stack.pop()?.clone());
+                self.acc = self.heap.put(VCell::pair(car.as_ptr()?, cdr.as_ptr()?));
+            }
+
             // Procedure Application
             //
             // The opcodes CLOSURE, CALL, ENTER and RET are related to creation and application

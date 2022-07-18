@@ -44,6 +44,16 @@ fn eval_quote() {
 }
 
 #[test]
+fn quasiquote() {
+    evals![
+        "(define x 42)" => "#<void>",
+        "`,1001" => "1001",
+        "`(10 20 ,(+ 10 10 10))" => "(10 20 30)",
+        "``(x ,x ,,x)" => "(quasiquote (x (unquote x) (unquote 42)))"
+    ];
+}
+
+#[test]
 fn procedure_display() {
     prints![
         "+" => "#<procedure:+>",

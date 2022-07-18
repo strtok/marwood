@@ -162,6 +162,14 @@ impl Cell {
         self.is_symbol_str("quote")
     }
 
+    pub fn is_quasiquote(&self) -> bool {
+        self.is_symbol_str("quasiquote")
+    }
+
+    pub fn is_unquote(&self) -> bool {
+        self.is_symbol_str("unquote")
+    }
+
     pub fn is_define(&self) -> bool {
         self.is_symbol_str("define")
     }
@@ -186,8 +194,15 @@ impl Cell {
     /// `cell`
     pub fn is_primitive_symbol(&self) -> bool {
         lazy_static! {
-            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> =
-                HashSet::from(["define", "lambda", "if", "quote", "set!"]);
+            static ref PRIMITIVE_SYMBOLS: HashSet<&'static str> = HashSet::from([
+                "define",
+                "lambda",
+                "if",
+                "quasiquote",
+                "quote",
+                "set!",
+                "unquote"
+            ]);
         }
         match self {
             Cell::Symbol(sym) => PRIMITIVE_SYMBOLS.contains(sym.as_str()),

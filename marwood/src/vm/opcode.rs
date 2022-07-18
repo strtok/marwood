@@ -24,6 +24,7 @@ pub enum OpCode {
     // Procedures
     CallAcc,
     ClosureAcc,
+    Cons,
     Enter,
     Ret,
     TCallAcc,
@@ -94,6 +95,7 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
         static ref SCHEMA: HashMap<OpCode, Schema> = HashMap::from([
             (OpCode::CallAcc, Schema::new("CALL", vec![Operand::Acc])),
             (OpCode::ClosureAcc, Schema::new("CLOSURE", vec![Operand::Acc])),
+            (OpCode::Cons, Schema::new("CONS", vec![])),
             (OpCode::Enter, Schema::new("ENTER", vec![])),
             (OpCode::Halt, Schema::new("HALT", vec![])),
             (OpCode::Jmp, Schema::new("JMP", vec![Operand::Immediate])),

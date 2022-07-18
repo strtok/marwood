@@ -380,7 +380,7 @@ fn find_free_symbols_in_proc<'a>(
     env: &mut HashSet<&'a Cell>,
     free: &mut HashSet<&'a Cell>,
 ) -> Result<(), Error> {
-    if car.is_quote() {
+    if car.is_quote() || car.is_quasiquote() {
         return Ok(());
     }
 

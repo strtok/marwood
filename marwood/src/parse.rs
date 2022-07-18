@@ -64,6 +64,8 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
     };
     match token.token_type {
         TokenType::SingleQuote => Ok(list!["quote", parse(text, cur)?]),
+        TokenType::Quasiquote => Ok(list!["quasiquote", parse(text, cur)?]),
+        TokenType::Unquote => Ok(list!["unquote", parse(text, cur)?]),
         TokenType::RightParen => Err(Error::UnexpectedToken(")".into())),
         TokenType::LeftParen => parse_list(text, cur, token),
         TokenType::HashParen => parse_vector(text, cur),
@@ -422,6 +424,14 @@ mod tests {
             "(foo bar baz)" => list!["foo", "bar", "baz"],
             "()" => cell![],
             "( )" => cell![]
+        };
+    }
+
+    #[test]
+    fn quasiquote() {
+        parses! {
+            "`(1 2 3)" => list!["quasiquote", list![1,2,3]],
+            ",(1 2 3)" => list!["unquote", list![1,2,3]]
         };
     }
 

@@ -13,11 +13,13 @@ pub enum TokenType {
     LeftParen,
     Number,
     NumberPrefix,
+    Quasiquote,
     RightParen,
     SingleQuote,
     String,
     Symbol,
     True,
+    Unquote,
     WhiteSpace,
     HashParen,
 }
@@ -111,7 +113,7 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
 
     while let Some(&(_, c)) = cur.peek() {
         tokens.push(match c {
-            '(' | ')' | '[' | ']' | '{' | '}' | '\'' => scan_simple_token(&mut cur)?,
+            '(' | ')' | '[' | ']' | '{' | '}' | '\'' | '`' | ',' => scan_simple_token(&mut cur)?,
             '#' => scan_hash_token(&mut cur)?,
             '.' => scan_dot(&mut cur)?,
             '"' => scan_string(&mut cur)?,
@@ -192,6 +194,8 @@ fn scan_simple_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
             '(' | '[' | '{' => TokenType::LeftParen,
             ')' | ']' | '}' => TokenType::RightParen,
             '\'' => TokenType::SingleQuote,
+            '`' => TokenType::Quasiquote,
+            ',' => TokenType::Unquote,
             _ => {
                 panic!();
             }
@@ -501,6 +505,19 @@ mod tests {
         fails! {
             "#" => Error::UnexpectedCharacterFollowing('#'.into(), "\\n".into()),
             "#p" => Error::UnexpectedCharacterFollowing('#'.into(), "p".into())
+        };
+    }
+
+    #[test]
+    fn quasiquote() {
+        lexes! {
+            "`(1 ,2)" =>
+            ("`", TokenType::Quasiquote),
+            ("(", TokenType::LeftParen),
+            ("1", TokenType::Number),
+            (",", TokenType::Unquote),
+            ("2", TokenType::Number),
+            (")", TokenType::RightParen)
         };
     }
 }
