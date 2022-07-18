@@ -668,12 +668,12 @@ impl Vm {
             if depth == 0 {
                 return self.compile_expression(lambda, false, car!(cdr!(expr)));
             } else {
-                depth = depth - 1;
+                depth -= 1;
             }
         }
 
         if expr.car().unwrap().is_quasiquote() {
-            depth = depth + 1;
+            depth += 1;
         }
 
         let mut count = 0;
