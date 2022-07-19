@@ -10,7 +10,6 @@ use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
-use crate::vm::vector::Vector;
 use crate::vm::Vm;
 use log::trace;
 use std::ops::Deref;
@@ -670,10 +669,9 @@ impl Vm {
                 self.compile_quasiquote(lambda, it, depth)?;
                 lambda.emit(OpCode::PushAcc);
             }
-            let new_vector = Rc::new(Vector::new(vec![]));
-            let new_vector_ptr = self.heap.put(VCell::Vector(new_vector.clone()));
+            let new_vector = self.heap.put(VCell::vector(vec![]));
             lambda.emit(OpCode::PushImmediate);
-            lambda.emit(new_vector_ptr);
+            lambda.emit(new_vector);
             for i in 0..vector.len() {
                 lambda.emit(OpCode::VPush);
                 if i < vector.len() - 1 {

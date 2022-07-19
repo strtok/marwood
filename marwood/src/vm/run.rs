@@ -112,7 +112,7 @@ impl Vm {
             // The VPush opcode represents a primitive instruction for pushing an element to
             // a vector's front
             OpCode::VPush => {
-                let vector_ptr = self.heap.get(self.stack.pop()?).clone();
+                let vector_ptr = self.heap.get(self.stack.pop()?);
                 let vector = vector_ptr.as_vector()?;
                 let elt = self.stack.pop()?.clone();
                 vector.push_front(elt);
