@@ -10,6 +10,7 @@ use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
+use crate::vm::vector::Vector;
 use crate::vm::Vm;
 use log::trace;
 use std::ops::Deref;
@@ -660,12 +661,41 @@ impl Vm {
     ) -> Result<(), Error> {
         trace!("quasiquote {} {}", depth, expr);
 
+        //
+        // Vector
+        //
+        if expr.is_vector() {
+            let vector = expr.as_vector().unwrap();
+            for it in vector {
+                self.compile_quasiquote(lambda, it, depth)?;
+                lambda.emit(OpCode::PushAcc);
+            }
+            let new_vector = Rc::new(Vector::new(vec![]));
+            let new_vector_ptr = self.heap.put(VCell::Vector(new_vector.clone()));
+            lambda.emit(OpCode::PushImmediate);
+            lambda.emit(new_vector_ptr);
+            for i in 0..vector.len() {
+                lambda.emit(OpCode::VPush);
+                if i < vector.len() - 1 {
+                    lambda.emit(OpCode::PushAcc);
+                }
+            }
+            return Ok(());
+        }
+
+        //
+        // Atom
+        //
         if !expr.is_pair() {
             return self.compile_quote(lambda, expr);
         }
 
+        //
+        // Pair / List
+        //
         if expr.car().unwrap().is_unquote() {
             if depth == 0 {
+                trace!("unquote {}!", car!(cdr!(expr)));
                 return self.compile_expression(lambda, false, car!(cdr!(expr)));
             } else {
                 depth -= 1;
@@ -680,7 +710,7 @@ impl Vm {
         let mut rest = expr;
         while rest.is_pair() {
             let car = rest.car().unwrap();
-            if car.is_pair() {
+            if car.is_pair() || car.is_vector() {
                 self.compile_quasiquote(lambda, car, depth)?;
                 lambda.emit(OpCode::PushAcc);
             } else {

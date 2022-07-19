@@ -120,6 +120,10 @@ impl Cell {
         matches!(self, Cell::Symbol(_))
     }
 
+    pub fn is_vector(&self) -> bool {
+        matches!(self, Cell::Vector(_))
+    }
+
     pub fn is_list(&self) -> bool {
         if self.is_pair() {
             let mut rest = self.cdr().unwrap();
@@ -255,6 +259,13 @@ impl Cell {
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             Cell::Bool(val) => Some(*val),
+            _ => None,
+        }
+    }
+
+    pub fn as_vector(&self) -> Option<&Vec<Cell>> {
+        match self {
+            Cell::Vector(vec) => Some(vec),
             _ => None,
         }
     }

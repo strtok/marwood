@@ -101,11 +101,22 @@ impl Vm {
 
             // Primitive Procedure Implementations
             //
+
             // The CONS opcode represents a primitive version of the cons procedure.
             OpCode::Cons => {
                 let cdr = self.heap.put(self.stack.pop()?.clone());
                 let car = self.heap.put(self.stack.pop()?.clone());
                 self.acc = self.heap.put(VCell::pair(car.as_ptr()?, cdr.as_ptr()?));
+            }
+
+            // The VPush opcode represents a primitive instruction for pushing an element to
+            // a vector's front
+            OpCode::VPush => {
+                let vector_ptr = self.heap.get(self.stack.pop()?).clone();
+                let vector = vector_ptr.as_vector()?;
+                let elt = self.stack.pop()?.clone();
+                vector.push_front(elt);
+                self.acc = vector_ptr;
             }
 
             // Procedure Application

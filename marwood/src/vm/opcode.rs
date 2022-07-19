@@ -12,6 +12,7 @@ use std::iter::Peekable;
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum OpCode {
     // VM Primitives
+    Cons,
     Jmp,
     Jnt,
     Mov,
@@ -20,11 +21,11 @@ pub enum OpCode {
     PushAcc,
     PushImmediate,
     Halt,
+    VPush,
 
-    // Procedures
+    // Procedure Application
     CallAcc,
     ClosureAcc,
-    Cons,
     Enter,
     Ret,
     TCallAcc,
@@ -107,6 +108,7 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::PushAcc, Schema::new("PUSH", vec![Operand::Acc])),
             (OpCode::Ret, Schema::new("RET", vec![])),
             (OpCode::TCallAcc, Schema::new("TCALL", vec![Operand::Acc])),
+            (OpCode::VPush, Schema::new("VPUSH", vec![])),
             (OpCode::VarArg, Schema::new("VARARG", vec![]))
         ]);
     }

@@ -32,6 +32,11 @@ impl Vector {
         }
     }
 
+    pub fn push_front(&self, value: VCell) {
+        let mut vector = self.vector.borrow_mut();
+        vector.insert(0, value);
+    }
+
     pub fn clone_vector(&self, start: Option<usize>, end: Option<usize>) -> Vec<VCell> {
         let v = self.vector.borrow();
         let mut start = start.unwrap_or(0);
