@@ -710,14 +710,8 @@ impl Vm {
         let mut rest = expr;
         while rest.is_pair() {
             let car = rest.car().unwrap();
-            if car.is_pair() || car.is_vector() {
-                self.compile_quasiquote(lambda, car, depth)?;
-                lambda.emit(OpCode::PushAcc);
-            } else {
-                lambda.emit(OpCode::PushImmediate);
-                let car = self.heap.maybe_put_cell(car);
-                lambda.emit(car);
-            }
+            self.compile_quasiquote(lambda, car, depth)?;
+            lambda.emit(OpCode::PushAcc);
             rest = rest.cdr().unwrap();
             count += 1;
         }
