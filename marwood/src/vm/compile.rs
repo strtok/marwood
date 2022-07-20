@@ -658,8 +658,6 @@ impl Vm {
         expr: &Cell,
         mut depth: usize,
     ) -> Result<(), Error> {
-        trace!("quasiquote {} {}", depth, expr);
-
         //
         // Vector
         //
@@ -692,7 +690,6 @@ impl Vm {
         //
         if expr.car().unwrap().is_unquote() {
             if depth == 0 {
-                trace!("unquote {}!", car!(cdr!(expr)));
                 return self.compile_expression(lambda, false, car!(cdr!(expr)));
             } else {
                 depth -= 1;
