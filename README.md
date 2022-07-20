@@ -14,7 +14,7 @@ Marwood is an embeddable [Scheme R7RS](https://small.r7rs.org) implementation, f
 
 And these scheme language features:
 
-* most R7RS (small) language and library features
+* most R7RS language and library features
 * Tail call optimization
 * First class continuations (call/cc)
 * Support for scheme's numerical tower, including rationals
