@@ -32,9 +32,9 @@ impl Vector {
         }
     }
 
-    pub fn push_front(&self, value: VCell) {
+    pub fn push(&self, value: VCell) {
         let mut vector = self.vector.borrow_mut();
-        vector.insert(0, value);
+        vector.push(value);
     }
 
     pub fn clone_vector(&self, start: Option<usize>, end: Option<usize>) -> Vec<VCell> {

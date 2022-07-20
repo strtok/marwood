@@ -21,7 +21,7 @@ pub enum OpCode {
     PushAcc,
     PushImmediate,
     Halt,
-    VPush,
+    VPushAcc,
 
     // Procedure Application
     CallAcc,
@@ -108,7 +108,7 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
             (OpCode::PushAcc, Schema::new("PUSH", vec![Operand::Acc])),
             (OpCode::Ret, Schema::new("RET", vec![])),
             (OpCode::TCallAcc, Schema::new("TCALL", vec![Operand::Acc])),
-            (OpCode::VPush, Schema::new("VPUSH", vec![])),
+            (OpCode::VPushAcc, Schema::new("VPUSH", vec![])),
             (OpCode::VarArg, Schema::new("VARARG", vec![]))
         ]);
     }

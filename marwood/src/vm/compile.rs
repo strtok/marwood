@@ -665,19 +665,18 @@ impl Vm {
         //
         if expr.is_vector() {
             let vector = expr.as_vector().unwrap();
-            for it in vector {
-                self.compile_quasiquote(lambda, it, depth)?;
-                lambda.emit(OpCode::PushAcc);
-            }
+
             let new_vector = self.heap.put(VCell::vector(vec![]));
-            lambda.emit(OpCode::PushImmediate);
+            lambda.emit(OpCode::MovImmediate);
             lambda.emit(new_vector);
-            for i in 0..vector.len() {
-                lambda.emit(OpCode::VPush);
-                if i < vector.len() - 1 {
-                    lambda.emit(OpCode::PushAcc);
-                }
+            lambda.emit(VCell::Acc);
+
+            for it in vector {
+                lambda.emit(OpCode::PushAcc);
+                self.compile_quasiquote(lambda, it, depth)?;
+                lambda.emit(OpCode::VPushAcc);
             }
+
             return Ok(());
         }
 

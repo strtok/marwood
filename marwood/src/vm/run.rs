@@ -109,13 +109,12 @@ impl Vm {
                 self.acc = self.heap.put(VCell::pair(car.as_ptr()?, cdr.as_ptr()?));
             }
 
-            // The VPush opcode represents a primitive instruction for pushing an element to
-            // a vector's front
-            OpCode::VPush => {
+            // The VPushAcc opcode represents a primitive instruction for pushing an an element in
+            // %acc on to the vector at the top of the stack.
+            OpCode::VPushAcc => {
                 let vector_ptr = self.heap.get(self.stack.pop()?);
                 let vector = vector_ptr.as_vector()?;
-                let elt = self.stack.pop()?.clone();
-                vector.push_front(elt);
+                vector.push(self.acc.clone());
                 self.acc = vector_ptr;
             }
 
