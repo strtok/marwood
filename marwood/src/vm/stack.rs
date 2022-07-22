@@ -117,12 +117,16 @@ impl Stack {
         &mut self.sp
     }
 
+    /// Grow
+    ///
     /// Grow the stack by doubling its current size. Any new elements
     /// have the value of VCell::Undefined
     fn grow(&mut self) {
         self.stack.resize(self.stack.len() * 2, VCell::Undefined);
     }
 
+    /// Len
+    ///
     /// Return the current stack size
     pub fn len(&self) -> usize {
         self.stack.len()
@@ -132,6 +136,8 @@ impl Stack {
         self.sp == 0
     }
 
+    /// Push
+    ///
     /// Push a value at the top of the stack, incrementing SP
     pub fn push<T: Into<VCell> + Display>(&mut self, vcell: T) {
         match self.stack.get_mut(self.sp + 1) {
@@ -146,6 +152,8 @@ impl Stack {
         }
     }
 
+    /// Pop
+    ///
     /// Pop the top of the stack, returning a Option<VCell> that is
     /// Some(&VCell), or None if the stack was empty.
     pub fn pop(&mut self) -> Result<&VCell, Error> {
@@ -159,6 +167,7 @@ impl Stack {
         };
     }
 
+    /// Print a stack trace of the slots between start and end
     pub fn trace(&self, start: usize, end: usize) {
         for it in (start..end).rev() {
             trace!(
@@ -169,6 +178,10 @@ impl Stack {
         }
     }
 
+    /// To Continuation
+    ///
+    /// Clone a subset of the stack into the return Stack, cloning
+    /// only the portion of the stack necessary to save the current continuation.
     pub fn to_continuation(&self) -> Stack {
         Stack {
             stack: self.stack[0..self.sp + 1].to_vec(),
@@ -176,6 +189,9 @@ impl Stack {
         }
     }
 
+    /// Restore Continuation
+    ///
+    /// Given a continuation stack returned by to_continuation, restore it.
     pub fn restore_continuation(&mut self, cont: &Stack) {
         self.stack
             .split_at_mut(cont.stack.len())
