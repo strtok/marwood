@@ -537,6 +537,17 @@ impl Heap {
     pub fn chunk_size(&self) -> usize {
         self.chunk_size
     }
+
+    /// Print the heap slots between start and end
+    pub fn trace(&self, start: usize, end: usize) {
+        for it in (start..end).rev() {
+            trace!(
+                "${:02x} = {}",
+                it,
+                self.heap.get(it).unwrap_or(&VCell::Undefined)
+            );
+        }
+    }
 }
 
 #[cfg(test)]
