@@ -4,6 +4,7 @@ use crate::error::Error::ExpectedType;
 use crate::number::Number;
 use crate::vm::continuation::Continuation;
 use crate::vm::environment::LexicalEnvironment;
+use crate::vm::heap::HeapRef;
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
@@ -34,7 +35,7 @@ pub enum VCell {
     Char(char),
     Nil,
     Number(Number),
-    Pair(usize, usize),
+    Pair(HeapRef, HeapRef),
     Symbol(Rc<String>),
     String(Rc<RefCell<String>>),
     Vector(Rc<Vector>),
@@ -45,11 +46,11 @@ pub enum VCell {
 
     // lambda, closure and lexical environments
     Continuation(Rc<Continuation>),
-    Closure(usize, usize),
+    Closure(HeapRef, HeapRef),
     Lambda(Rc<Lambda>),
     LexicalEnv(Rc<LexicalEnvironment>),
     LexicalEnvSlot(usize),
-    LexicalEnvPtr(usize, usize),
+    LexicalEnvPtr(HeapRef, usize),
     Macro(Rc<Transform>),
 
     // VM registers and stack values
@@ -58,11 +59,11 @@ pub enum VCell {
     BasePointer(usize),
     BasePointerOffset(i64),
     BuiltInProc(Rc<BuiltInProc>),
-    EnvironmentPointer(usize),
+    EnvironmentPointer(HeapRef),
     GlobalEnvSlot(usize),
-    InstructionPointer(usize, usize),
+    InstructionPointer(HeapRef, usize),
     OpCode(OpCode),
-    Ptr(usize),
+    Ptr(HeapRef),
 }
 
 #[derive(Clone)]

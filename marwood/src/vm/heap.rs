@@ -11,6 +11,8 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Deref;
 
+pub type HeapRef = usize;
+
 #[derive(Debug)]
 pub struct Heap {
     chunk_size: usize,

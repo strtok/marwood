@@ -3,7 +3,7 @@ use crate::error::Error;
 use crate::lex;
 use crate::parse;
 use crate::vm::environment::GlobalEnvironment;
-use crate::vm::heap::Heap;
+use crate::vm::heap::{Heap, HeapRef};
 use crate::vm::stack::Stack;
 use crate::vm::trace::StackTrace;
 use crate::vm::vcell::VCell;
@@ -39,8 +39,8 @@ pub struct Vm {
 
     /// Registers
     acc: VCell,
-    ep: usize,
-    ip: (usize, usize),
+    ep: HeapRef,
+    ip: (HeapRef, usize),
     bp: usize,
 
     /// System Interface (display, write, etc).
