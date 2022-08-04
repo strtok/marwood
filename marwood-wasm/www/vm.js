@@ -100,13 +100,13 @@ export class Vm {
 
     let result;
     if (this.evalIter == 0) {
-      result = this.marwood.eval(this.remainingInput, 250000);
+      result = this.marwood.eval(this.remainingInput, 1000000);
       this.remainingInput = result.remaining;
       if (this.remainingInput != null && this.remainingInput.length == 0) {
         this.remainingInput = null;
       }
     } else {
-      result = this.marwood.eval_continue(250000);
+      result = this.marwood.eval_continue(1000000);
     }
 
     if (result.completed) {
