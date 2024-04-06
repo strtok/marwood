@@ -12,7 +12,6 @@ use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
 use crate::vm::Vm;
 use log::trace;
-use std::ops::Deref;
 use std::rc::Rc;
 
 macro_rules! car {
@@ -87,7 +86,7 @@ impl Vm {
         let proc = expr.car().unwrap();
         let mut rest = expr.cdr().unwrap();
 
-        if let Cell::Symbol(proc) = proc.deref() {
+        if let Cell::Symbol(proc) = proc {
             if let "quote" | "define-syntax" = proc.as_str() {
                 return Ok(expr.clone());
             }
@@ -169,7 +168,7 @@ impl Vm {
     ) -> Result<(), Error> {
         let proc = expr.car().unwrap();
         let rest = expr.cdr().unwrap();
-        match proc.deref() {
+        match proc {
             Cell::Symbol(proc) => match proc.as_str() {
                 "define" => self.compile_define(lambda, expr),
                 "define-syntax" => self.compile_define_syntax(lambda, expr),

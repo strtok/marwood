@@ -13,28 +13,29 @@ default = ["console_error_panic_hook"]
 [dependencies.web-sys]
 version = "0.3.56"
 features = [
-  'Document',
-  'Element',
-  'HtmlElement',
-  'HtmlDivElement',
-  'Node',
-  'Window',
-  'CssStyleDeclaration',
-  'EventTarget',
-  'MessageEvent',
-  'console'
+    'Document',
+    'Element',
+    'HtmlElement',
+    'HtmlDivElement',
+    'Node',
+    'Window',
+    'CssStyleDeclaration',
+    'EventTarget',
+    'MessageEvent',
+    'console',
 ]
 
 [dependencies]
 log = { version = "0.4", features = ["release_max_level_off"] }
-js-sys = "0.3.56"
-wasm-bindgen = "0.2.79"
-marwood = { path= "../marwood" }
-console_error_panic_hook = { version = "0.1.7", optional = true }
-getrandom = {version="0.2.6", features=["js"]}
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+marwood = { path = "../marwood" }
+console_error_panic_hook = { version = "0.1", optional = true }
+getrandom = { version = "0.2.6", features = ["js"] }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.29"
+wasm-bindgen-test = "0.3"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ['-O4', '-g']
+

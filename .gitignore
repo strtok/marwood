@@ -1,7 +1,6 @@
 /target
 .idea/*
 .vscode/*
-Cargo.lock
 node_modules/
 pkg/
 marwood-wasm/package-lock.json

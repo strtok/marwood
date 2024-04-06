@@ -41,7 +41,7 @@ impl Highlighter for InputValidator {
         )
     }
 
-    fn highlight_char(&self, line: &str, pos: usize) -> bool {
+    fn highlight_char(&self, line: &str, pos: usize, _forced: bool) -> bool {
         self.highlighter.highlight_check(line, pos + 1)
     }
 }
@@ -76,7 +76,7 @@ fn main() {
     let validator = InputValidator {
         highlighter: ReplHighlighter::new(),
     };
-    let mut rl = Editor::new();
+    let mut rl = Editor::new().expect("expected an editor");
     rl.set_helper(Some(validator));
     let mut remaining = "".to_string();
 
@@ -90,7 +90,7 @@ fn main() {
         let readline = rl.readline_with_initial("> ", (&remaining, ""));
         match readline {
             Ok(line) => {
-                rl.add_history_entry(line.as_str());
+                let _ = rl.add_history_entry(line.as_str());
                 remaining = eval(&mut vm, &line).trim().to_string();
             }
             Err(ReadlineError::Interrupted | ReadlineError::Eof) => break,
