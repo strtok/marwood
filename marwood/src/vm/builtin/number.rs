@@ -337,7 +337,7 @@ pub fn atan(vm: &mut Vm) -> Result<VCell, Error> {
             if let Some(result) = y.atan2(x.clone()) {
                 Ok(result.into())
             } else {
-                return Err(InvalidSyntax(format!("atan is undefined for {} {}", y, x)));
+                Err(InvalidSyntax(format!("atan is undefined for {} {}", y, x)))
             }
         }
         _ => {
@@ -346,7 +346,7 @@ pub fn atan(vm: &mut Vm) -> Result<VCell, Error> {
             if let Some(result) = y.atan() {
                 Ok(result.into())
             } else {
-                return Err(InvalidSyntax(format!("atan is undefined for {}", y)));
+                Err(InvalidSyntax(format!("atan is undefined for {}", y)))
             }
         }
     }

@@ -57,9 +57,7 @@ impl ReplHighlighter {
                 return false;
             }
         };
-        if index > 0 {
-            index -= 1;
-        }
+        index = index.saturating_sub(1);
         matches!(
             find_token_at_cursor(&tokens, index),
             Some((

@@ -83,19 +83,17 @@ fn pop_argc(vm: &mut Vm, min: usize, max: Option<usize>, proc: &str) -> Result<u
 fn pop_number(vm: &mut Vm) -> Result<Number, Error> {
     match vm.heap.get(vm.stack.pop()?) {
         VCell::Number(num) => Ok(num),
-        vcell => {
-            return Err(InvalidSyntax(format!(
-                "{:#} is not a valid number",
-                vm.heap.get_as_cell(&vcell)
-            )))
-        }
+        vcell => Err(InvalidSyntax(format!(
+            "{:#} is not a valid number",
+            vm.heap.get_as_cell(&vcell)
+        ))),
     }
 }
 
 fn pop_integer(vm: &mut Vm) -> Result<Number, Error> {
     match pop_number(vm) {
         Ok(num) if num.is_integer() => Ok(num),
-        Ok(num) => return Err(InvalidSyntax(format!("{} is not a valid integer", num))),
+        Ok(num) => Err(InvalidSyntax(format!("{} is not a valid integer", num))),
         Err(e) => Err(e),
     }
 }
@@ -105,7 +103,7 @@ fn pop_usize(vm: &mut Vm) -> Result<usize, Error> {
         Ok(num) if num.is_integer() && num >= Number::from(0) && num.to_usize().is_some() => {
             Ok(num.to_usize().unwrap())
         }
-        Ok(num) => return Err(InvalidSyntax(format!("{} is not a valid size", num))),
+        Ok(num) => Err(InvalidSyntax(format!("{} is not a valid size", num))),
         Err(e) => Err(e),
     }
 }
@@ -113,38 +111,32 @@ fn pop_usize(vm: &mut Vm) -> Result<usize, Error> {
 fn pop_char(vm: &mut Vm) -> Result<char, Error> {
     match vm.heap.get(vm.stack.pop()?) {
         VCell::Char(c) => Ok(c),
-        vcell => {
-            return Err(InvalidSyntax(format!(
-                "{:#} is not a valid character",
-                vm.heap.get_as_cell(&vcell)
-            )))
-        }
+        vcell => Err(InvalidSyntax(format!(
+            "{:#} is not a valid character",
+            vm.heap.get_as_cell(&vcell)
+        ))),
     }
 }
 
 fn pop_string(vm: &mut Vm, proc: &str) -> Result<Rc<RefCell<String>>, Error> {
     match vm.heap.get(vm.stack.pop()?) {
         VCell::String(s) => Ok(s),
-        vcell => {
-            return Err(InvalidSyntax(format!(
-                "bad argument to {}: {:#} is not a string",
-                proc,
-                vm.heap.get_as_cell(&vcell)
-            )))
-        }
+        vcell => Err(InvalidSyntax(format!(
+            "bad argument to {}: {:#} is not a string",
+            proc,
+            vm.heap.get_as_cell(&vcell)
+        ))),
     }
 }
 
 fn pop_symbol(vm: &mut Vm, proc: &str) -> Result<Rc<String>, Error> {
     match vm.heap.get(vm.stack.pop()?) {
         VCell::Symbol(s) => Ok(s),
-        vcell => {
-            return Err(InvalidSyntax(format!(
-                "bad argument to {}: {:#} is not a symbol",
-                proc,
-                vm.heap.get_as_cell(&vcell)
-            )))
-        }
+        vcell => Err(InvalidSyntax(format!(
+            "bad argument to {}: {:#} is not a symbol",
+            proc,
+            vm.heap.get_as_cell(&vcell)
+        ))),
     }
 }
 
@@ -156,23 +148,19 @@ fn pop_index(vm: &mut Vm, proc: &str) -> Result<usize, Error> {
                 proc, num
             ))
         }),
-        vcell => {
-            return Err(InvalidSyntax(format!(
-                "{:#} is not a valid index",
-                vm.heap.get_as_cell(&vcell)
-            )))
-        }
+        vcell => Err(InvalidSyntax(format!(
+            "{:#} is not a valid index",
+            vm.heap.get_as_cell(&vcell)
+        ))),
     }
 }
 
 fn pop_vector(vm: &mut Vm) -> Result<Rc<Vector>, Error> {
     match vm.heap.get(vm.stack.pop()?) {
         VCell::Vector(vector) => Ok(vector),
-        vcell => {
-            return Err(InvalidSyntax(format!(
-                "{:#} is not a vector",
-                vm.heap.get_as_cell(&vcell)
-            )))
-        }
+        vcell => Err(InvalidSyntax(format!(
+            "{:#} is not a vector",
+            vm.heap.get_as_cell(&vcell)
+        ))),
     }
 }

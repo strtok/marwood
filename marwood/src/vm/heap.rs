@@ -31,7 +31,7 @@ impl Heap {
         Heap {
             chunk_size,
             heap: vec![VCell::undefined(); chunk_size],
-            free_list: (0..chunk_size).rev().into_iter().collect(),
+            free_list: (0..chunk_size).rev().collect(),
             heap_map: gc::Map::new(chunk_size),
             symbol_table: HashMap::new(),
         }
@@ -359,10 +359,10 @@ impl Heap {
                     ptr = cdr;
                 }
                 VCell::Continuation(cont) => {
-                    self.mark_continuation(&*cont);
+                    self.mark_continuation(&cont);
                 }
                 VCell::Lambda(ptr) => {
-                    self.mark_lambda(&*ptr);
+                    self.mark_lambda(&ptr);
                 }
                 VCell::Closure(lambda, env) => {
                     self.mark(lambda);
@@ -410,7 +410,7 @@ impl Heap {
                 self.mark(*lambda);
             }
             VCell::Continuation(cont) => {
-                self.mark_continuation(&*cont);
+                self.mark_continuation(cont);
             }
             VCell::Lambda(lambda) => self.mark_lambda(lambda.as_ref()),
             VCell::Closure(lambda, env) => {

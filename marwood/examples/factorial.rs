@@ -12,7 +12,7 @@ fn main() {
                    (factorial (- n 1) (* acc n)))))
     "#;
 
-    vm.eval_text(&code).unwrap();
+    vm.eval_text(code).unwrap();
 
     for it in 0..10 {
         let (cell, _) = vm.eval_text(&format!("(factorial {})", it)).unwrap();

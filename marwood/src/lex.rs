@@ -55,7 +55,7 @@ impl Token {
     /// # Safety
     /// This method assumes the originally scanned &str be used, and
     /// may panic otherwise.
-    pub fn span<'a, 'b>(&'a self, text: &'b str) -> &'b str {
+    pub fn span<'a>(&self, text: &'a str) -> &'a str {
         &text[self.span.0..self.span.1]
     }
 
@@ -63,7 +63,7 @@ impl Token {
     ///
     /// Given the originally scanned &str, extract any text before this
     /// token.
-    pub fn span_prefix<'a, 'b>(&'a self, text: &'b str) -> &'b str {
+    pub fn span_prefix<'a>(&self, text: &'a str) -> &'a str {
         &text[0..self.span.0]
     }
 
@@ -246,11 +246,7 @@ fn scan_string(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
             terminated = true;
             break;
         }
-        if c == '\\' && !escaping {
-            escape_next = true;
-        } else {
-            escape_next = false;
-        }
+        escape_next = c == '\\' && !escaping;
         cur.next();
     }
     // empty string

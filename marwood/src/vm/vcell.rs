@@ -316,14 +316,14 @@ impl VCell {
 
     pub fn as_symbol(&self) -> Result<&str, Error> {
         match self {
-            VCell::Symbol(s) => Ok(&*s),
+            VCell::Symbol(s) => Ok(s),
             _ => Err(ExpectedType(SYMBOL_TYPE_TEXT, self.type_text())),
         }
     }
 
     pub fn as_string(&self) -> Result<&RefCell<String>, Error> {
         match self {
-            VCell::String(s) => Ok(&*s),
+            VCell::String(s) => Ok(s),
             _ => Err(ExpectedType(SYMBOL_TYPE_TEXT, self.type_text())),
         }
     }
@@ -337,14 +337,14 @@ impl VCell {
 
     pub fn as_lambda(&self) -> Result<&Lambda, Error> {
         match self {
-            VCell::Lambda(lambda) => Ok(&*lambda),
+            VCell::Lambda(lambda) => Ok(lambda),
             _ => Err(ExpectedType(LAMBDA_TYPE_TEXT, self.type_text())),
         }
     }
 
     pub fn as_macro(&self) -> Result<&Transform, Error> {
         match self {
-            VCell::Macro(transform) => Ok(&*transform),
+            VCell::Macro(transform) => Ok(transform),
             _ => Err(ExpectedType(MACRO_TYPE_TEXT, self.type_text())),
         }
     }
@@ -365,14 +365,14 @@ impl VCell {
 
     pub fn as_lexical_env(&self) -> Result<&LexicalEnvironment, Error> {
         match self {
-            VCell::LexicalEnv(env) => Ok(&*env),
+            VCell::LexicalEnv(env) => Ok(env),
             _ => Err(ExpectedType(LEXICAL_ENV_TYPE_TEXT, self.type_text())),
         }
     }
 
     pub fn as_vector(&self) -> Result<&Vector, Error> {
         match self {
-            VCell::Vector(vector) => Ok(&*vector),
+            VCell::Vector(vector) => Ok(vector),
             _ => Err(ExpectedType(VECTOR_TYPE_TEXT, self.type_text())),
         }
     }

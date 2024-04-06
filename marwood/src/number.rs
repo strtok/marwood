@@ -816,7 +816,7 @@ impl Number {
             Number::Fixnum(lhs) => match rhs {
                 Number::Fixnum(rhs) => Some((lhs / rhs).into()),
                 Number::BigInt(rhs) => Some((BigInt::from(*lhs) / &**rhs).into()),
-                Number::Float(rhs) => lhs.to_f64().map(|lhs| (lhs as f64 / rhs).trunc().into()),
+                Number::Float(rhs) => lhs.to_f64().map(|lhs| (lhs / rhs).trunc().into()),
                 Number::Rational(rhs) => {
                     if rhs.is_integer() {
                         Some((*lhs / rhs.to_i64().unwrap()).into())

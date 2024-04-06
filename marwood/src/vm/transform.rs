@@ -305,10 +305,10 @@ impl Transform {
             }
         }
 
-        return Err(InvalidSyntax(format!(
+        Err(InvalidSyntax(format!(
             "no matching syntax for {}",
             self.keyword
-        )));
+        )))
     }
 
     /// Pattern Match
@@ -320,11 +320,11 @@ impl Transform {
     /// `pattern` - The pattern to attempt to apply
     /// `expr` - The expression to match
     /// `bindings` - The set of matched variable bindings
-    fn pattern_match<'a, 'b>(
+    fn pattern_match<'a>(
         &self,
         pattern: &'a Cell,
         expr: &'a Cell,
-        env: &'b mut PatternEnvironment<'a>,
+        env: &mut PatternEnvironment<'a>,
     ) -> bool {
         // expr and pattern must either both be lists or improper lists
         if (pattern.is_pair() || pattern.is_nil()) && !(expr.is_pair() || expr.is_nil()) {

@@ -142,7 +142,7 @@ impl Display for DecompiledInstruction {
                 f,
                 "{0: <8} {1: <12} {2: <12} //{3: <10}",
                 op,
-                operands.get(0).unwrap_or(&"".to_string()),
+                operands.first().unwrap_or(&"".to_string()),
                 operands.get(1).unwrap_or(&"".to_string()),
                 values.join(" ")
             )
@@ -151,7 +151,7 @@ impl Display for DecompiledInstruction {
                 f,
                 "{0: <8} {1: <12} {2: <12}",
                 op,
-                operands.get(0).unwrap_or(&"".to_string()),
+                operands.first().unwrap_or(&"".to_string()),
                 operands.get(1).unwrap_or(&"".to_string()),
             )
         } else {
