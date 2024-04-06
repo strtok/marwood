@@ -1,10 +1,10 @@
 import { Terminal } from "xterm";
 import "xterm/css/xterm.css";
 import { Readline } from "xterm-readline";
-import { FitAddon } from "xterm-addon-fit";
-import { WebLinksAddon } from "xterm-addon-web-links";
-import { Unicode11Addon } from "xterm-addon-unicode11";
-import * as XtermWebfont from "xterm-webfont";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
+import * as XtermWebfont from "@liveconfig/xterm-webfont";
 import { Buffer } from "buffer";
 import { Vm } from "./vm";
 import { inflate } from "pako";
@@ -19,6 +19,7 @@ const term = new Terminal({
   fontSize: 14,
   cursorBlink: true,
   cursorStyle: "block",
+  allowProposedApi: true,
 });
 
 term.loadAddon(new XtermWebfont());

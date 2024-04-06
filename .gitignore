@@ -3,5 +3,3 @@
 .vscode/*
 node_modules/
 pkg/
-marwood-wasm/package-lock.json
-marwood-wasm/www/package-lock.json
