@@ -4,14 +4,14 @@ version = "0.5.0"
 description = "Scheme R7RS Virtual Machine"
 repository = "https://github.com/strtok/marwood"
 authors = ["Erik Bremen <strtok@gmail.com>"]
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 readme = "../README.md"
 
 [dependencies]
 log = { version = "0.4", features = ["release_max_level_info"] }
 num = "0.4.0"
-rand = "0.8.5"
+rand = "0.9"
 thiserror = "1.0.30"
 lazy_static = "1.4.0"
 

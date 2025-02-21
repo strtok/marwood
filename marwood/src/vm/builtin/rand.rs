@@ -1,8 +1,8 @@
 use crate::error::Error;
 use crate::error::Error::InvalidSyntax;
+use crate::vm::Vm;
 use crate::vm::builtin::{pop_argc, pop_integer};
 use crate::vm::vcell::VCell;
-use crate::vm::Vm;
 use rand::Rng;
 
 pub fn load_builtins(vm: &mut Vm) {
@@ -22,21 +22,21 @@ pub fn random_integer(vm: &mut Vm) -> Result<VCell, Error> {
             n
         )));
     }
-    let mut rng = ::rand::thread_rng();
-    let result: i64 = rng.gen_range(0..n);
+    let mut rng = ::rand::rng();
+    let result: i64 = rng.random_range(0..n);
     Ok(VCell::Number(result.into()))
 }
 
 pub fn random_real(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 0, Some(0), "random-real")?;
-    let mut rng = ::rand::thread_rng();
-    let result: f64 = rng.gen();
+    let mut rng = ::rand::rng();
+    let result: f64 = rng.random();
     Ok(VCell::Number(result.into()))
 }
 
 pub fn random_signed(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 0, Some(0), "random-signed")?;
-    let mut rng = ::rand::thread_rng();
-    let result: i64 = rng.gen();
+    let mut rng = ::rand::rng();
+    let result: i64 = rng.random();
     Ok(VCell::Number(result.into()))
 }
