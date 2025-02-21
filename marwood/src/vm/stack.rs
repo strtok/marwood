@@ -157,14 +157,14 @@ impl Stack {
     /// Pop the top of the stack, returning a Option<VCell> that is
     /// Some(&VCell), or None if the stack was empty.
     pub fn pop(&mut self) -> Result<&VCell, Error> {
-        return if self.sp > 0 {
+        if self.sp > 0 {
             self.sp -= 1;
             self.stack
                 .get(self.sp + 1)
                 .ok_or(InvalidStackIndex(self.sp + 1))
         } else {
             Err(InvalidStackIndex(0))
-        };
+        }
     }
 
     /// Print a stack trace of the slots between start and end

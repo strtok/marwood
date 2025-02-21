@@ -1,8 +1,8 @@
 use crate::error::Error;
 use crate::error::Error::InvalidBytecode;
+use crate::vm::Vm;
 use crate::vm::lambda::Lambda;
 use crate::vm::vcell::VCell;
-use crate::vm::Vm;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -46,9 +46,10 @@ pub enum Operand {
     /// The operand is used as a reference to a location to store a
     /// value. It must be a register or reference type.
     ///
-    /// * If the operand is a register, the value is stored in the
+    /// If the operand is a register, the value is stored in the
     /// register itself. No dereference occurs.
-    /// * If the operand is a reference type, the value is stored
+    ///
+    /// If the operand is a reference type, the value is stored
     /// in the location the reference points to.
     StoreReference,
 
@@ -57,9 +58,10 @@ pub enum Operand {
     /// The operand is used as a source of a value. It must be a register
     /// or reference type.
     ///
-    /// * If the operand is a register, then the value is read from the
+    /// If the operand is a register, then the value is read from the
     /// register.
-    /// * If the operand is a reference type, the value is read from
+    ///
+    /// If the operand is a reference type, the value is read from
     /// the location the reference points to.
     LoadReference,
 

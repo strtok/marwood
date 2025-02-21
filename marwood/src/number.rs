@@ -1246,6 +1246,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     fn partial_ord() {
         assert!(Number::from(200) > Number::from(100));
         assert!(!(Number::from(100) > Number::from(100)));
@@ -1424,7 +1425,7 @@ mod tests {
         verify![|x, y| x / y,
             BigInt::from(100), 50 => Rational32::from_integer(2),
             BigInt::from(i32_oflow), 2 => i32_oflow as f64 / 2_f64,
-            BigInt::from(100), i32_oflow => 100 as f64 / i32_oflow as f64,
+            BigInt::from(100), i32_oflow => 100_f64 / i32_oflow as f64,
             BigInt::from(100), BigInt::from(50) => Rational32::from_integer(2),
             BigInt::from(i32_oflow), BigInt::from(100) => i32_oflow as f64 / 100_f64,
             BigInt::from(100), BigInt::from(i32_oflow) => 100_f64 / i32_oflow as f64,
@@ -1536,11 +1537,13 @@ mod tests {
             Number::from(100.0) % Number::from(70),
             Some(Number::from(30.0))
         );
-        assert!((Number::from(f64::INFINITY) % Number::from(70))
-            .unwrap()
-            .to_f64()
-            .unwrap()
-            .is_nan());
+        assert!(
+            (Number::from(f64::INFINITY) % Number::from(70))
+                .unwrap()
+                .to_f64()
+                .unwrap()
+                .is_nan()
+        );
         assert_eq!(
             Number::from(100.0) % Number::from(BigInt::from(70)),
             Some(Number::from(30.0))
@@ -1611,11 +1614,13 @@ mod tests {
             Some(Number::from(0.0))
         );
         assert_eq!(Number::from(BigInt::from(0)).sin(), Some(Number::from(0.0)));
-        assert!(Number::from(BigInt::from_f64(f64::MAX).unwrap() * 2)
-            .sin()
-            .unwrap()
-            .to_f64()
-            .unwrap()
-            .is_nan());
+        assert!(
+            Number::from(BigInt::from_f64(f64::MAX).unwrap() * 2)
+                .sin()
+                .unwrap()
+                .to_f64()
+                .unwrap()
+                .is_nan()
+        );
     }
 }

@@ -264,13 +264,13 @@ pub fn parse_string(span: &str) -> Result<Cell, Error> {
                                 return Err(Error::SyntaxError(format!(
                                     "\\x expected hex digits but encountered '{}' in \"{}\"",
                                     c, span
-                                )))
+                                )));
                             }
                             None => {
                                 return Err(Error::SyntaxError(format!(
                                     "\\x must be terminated with ; in \"{}\"",
                                     span
-                                )))
+                                )));
                             }
                         }
                         cur.next();
@@ -370,7 +370,7 @@ mod tests {
     macro_rules! fails {
         ($($lhs:expr),+) => {{
              $(
-                assert!(matches!(parse($lhs, &mut lex::scan($lhs).unwrap().iter().peekable()), Err(_)));
+                assert!(parse($lhs, &mut lex::scan($lhs).unwrap().iter().peekable()).is_err());
              )+
         }};
     }

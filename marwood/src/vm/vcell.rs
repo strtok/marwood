@@ -2,6 +2,7 @@ use crate::char::write_escaped_char;
 use crate::error::Error;
 use crate::error::Error::ExpectedType;
 use crate::number::Number;
+use crate::vm::Vm;
 use crate::vm::continuation::Continuation;
 use crate::vm::environment::LexicalEnvironment;
 use crate::vm::heap::HeapRef;
@@ -9,7 +10,6 @@ use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
 use crate::vm::vector::Vector;
-use crate::vm::Vm;
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed, Owned};
 use std::cell::RefCell;
@@ -471,7 +471,7 @@ impl From<Number> for VCell {
     }
 }
 
-impl<'a> From<VCell> for Cow<'a, VCell> {
+impl From<VCell> for Cow<'_, VCell> {
     fn from(vcell: VCell) -> Self {
         Owned(vcell)
     }

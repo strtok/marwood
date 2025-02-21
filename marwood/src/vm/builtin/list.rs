@@ -1,8 +1,8 @@
 use crate::error::Error;
 use crate::error::Error::{ExpectedPairButFound, InvalidSyntax};
+use crate::vm::Vm;
 use crate::vm::builtin::{pop_argc, pop_index};
 use crate::vm::vcell::VCell;
-use crate::vm::Vm;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("append", append);
@@ -120,7 +120,7 @@ pub fn append(vm: &mut Vm) -> Result<VCell, Error> {
     }
     let mut tail = vm.heap.put(vm.stack.pop()?.clone());
     for _ in 0..(argc - 1) {
-        let list = vm.heap.get(&vm.stack.pop()?.clone());
+        let list = vm.heap.get(vm.stack.pop()?.clone());
         match list {
             VCell::Nil => {
                 continue;

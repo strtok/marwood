@@ -137,7 +137,6 @@ pub fn scan(text: &str) -> Result<Vec<Token>, Error> {
 /// Scan Comment
 ///
 /// Scan until a '\n' is encountered.
-
 fn scan_comment(cur: &mut Peekable<CharIndices>) -> Result<(), Error> {
     for (_, c) in cur {
         if c == '\n' {
@@ -361,8 +360,7 @@ mod tests {
 
     macro_rules! lexes {
         ($lhs:expr => $(($token_text:expr, $token_type:expr)),+) => {{
-            let mut v = vec![];
-            $(v.push(($token_text, $token_type));)+
+            let v = vec![$(($token_text, $token_type),)+];
             assert_eq!(expand(scan($lhs).unwrap(), $lhs), v);
         }};
         ($($lhs:expr => $rhs:expr),+) => {{

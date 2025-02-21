@@ -1,9 +1,9 @@
 use crate::error::Error;
 use crate::error::Error::{InvalidStringIndex, InvalidSyntax};
 use crate::number::Number;
+use crate::vm::Vm;
 use crate::vm::builtin::{pop_argc, pop_char, pop_index, pop_string, pop_usize, pop_vector};
 use crate::vm::vcell::VCell;
-use crate::vm::Vm;
 use std::ops::DerefMut;
 
 pub fn load_builtins(vm: &mut Vm) {
@@ -177,7 +177,7 @@ pub fn vector_string(vm: &mut Vm) -> Result<VCell, Error> {
     let v = pop_vector(vm)?;
     let mut s = String::with_capacity(v.len());
     for it in 0..v.len() {
-        let vcell = vm.heap.get(&v.get(it).unwrap());
+        let vcell = vm.heap.get(v.get(it).unwrap());
         s.push(vcell.as_char()?);
     }
     Ok(VCell::string(s))
@@ -197,7 +197,7 @@ pub fn list_string(vm: &mut Vm) -> Result<VCell, Error> {
                 return Err(InvalidSyntax(format!(
                     "list->string expected char but found {:#}",
                     vm.heap.get_as_cell(&vcell)
-                )))
+                )));
             }
         }
         rest = vm.heap.get(&rest.as_cdr()?);

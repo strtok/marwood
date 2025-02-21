@@ -4,13 +4,13 @@ use crate::error::Error::{
     InvalidArgs, InvalidNumArgs, InvalidSyntax, InvalidUsePrimitive, LambdaMissingExpression,
     UnquotedNil,
 };
-use crate::vm::environment::{free_symbols, internally_defined_symbols, BindingLocation};
+use crate::vm::Vm;
+use crate::vm::environment::{BindingLocation, free_symbols, internally_defined_symbols};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::transform::Transform;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::{BasePointerOffset, LexicalEnvSlot};
-use crate::vm::Vm;
 use log::trace;
 use std::rc::Rc;
 
@@ -231,7 +231,7 @@ impl Vm {
     /// * (define (⟨variable⟩ . ⟨formal⟩) ⟨body⟩)
     ///
     /// `lambda` - The lambda to emit bytecode to
-    /// `expr` - (define variable expression)    
+    /// `expr` - (define variable expression)
     pub fn compile_define(&mut self, lambda: &mut Lambda, expr: &Cell) -> Result<(), Error> {
         let rest = cdr!(expr);
 
@@ -355,7 +355,7 @@ impl Vm {
     /// heap.
     ///
     /// `lambda` - The lambda to emit bytecode to
-    /// `expr` - (define variable expression)    
+    /// `expr` - (define variable expression)
     pub fn compile_define_syntax(&mut self, lambda: &mut Lambda, expr: &Cell) -> Result<(), Error> {
         let transform = Transform::try_new(expr)?;
         let symbol = transform.keyword().clone();
@@ -376,7 +376,7 @@ impl Vm {
     /// Compile Lambda
     ///
     /// A lambda should be the following form:
-    ///     
+    ///
     /// (lambda ⟨formals⟩ ⟨body⟩)
     ///   or
     /// (define ⟨variable formals⟩ ⟨body⟩)
@@ -517,10 +517,10 @@ impl Vm {
     ///```
     /// Proecure application is as follows:
     ///
-    /// 1. Evaluate and push the arguments left-to-right, resulting in
-    /// the last argument.
-    /// 2. Push the number of arguments on the stack.
-    /// 3. Evaluate proc, the result of which will be in ACC.
+    ///     1. Evaluate and push the arguments left-to-right, resulting in
+    ///        the last argument.
+    ///     2. Push the number of arguments on the stack.
+    ///     3. Evaluate proc, the result of which will be in ACC.
     /// 4. Emit a CALL instruction that will execute the procedure in ACC.
     ///
     /// # Arguments

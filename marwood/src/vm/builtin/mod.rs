@@ -1,9 +1,9 @@
 use crate::error::Error;
 use crate::error::Error::{InvalidNumArgs, InvalidSyntax};
 use crate::number::Number;
+use crate::vm::Vm;
 use crate::vm::vcell::VCell;
 use crate::vm::vector::Vector;
-use crate::vm::Vm;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -35,7 +35,6 @@ mod vector;
 /// is argc, and immediately preceding argc are the arguments being applied.
 /// All builtins must pop the argc value along with argc* arguments off
 /// the stack before returning.
-
 impl Vm {
     pub fn load_builtins(&mut self) {
         char::load_builtins(self);
@@ -79,7 +78,6 @@ fn pop_argc(vm: &mut Vm, min: usize, max: Option<usize>, proc: &str) -> Result<u
 /// Numerical Procedures
 ///
 ///
-
 fn pop_number(vm: &mut Vm) -> Result<Number, Error> {
     match vm.heap.get(vm.stack.pop()?) {
         VCell::Number(num) => Ok(num),

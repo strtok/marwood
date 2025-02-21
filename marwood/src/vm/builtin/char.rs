@@ -1,9 +1,9 @@
 use crate::error::Error;
 use crate::error::Error::InvalidSyntax;
 use crate::number::Number;
+use crate::vm::Vm;
 use crate::vm::builtin::{pop_argc, pop_char, pop_integer};
 use crate::vm::vcell::VCell;
-use crate::vm::Vm;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("char->integer", char_to_integer);
@@ -83,8 +83,8 @@ pub fn char_upcase(vm: &mut Vm) -> Result<VCell, Error> {
     let c = pop_char(vm)?;
     if c.is_ascii() {
         Ok(c.to_ascii_uppercase().into())
-    } else if c.to_uppercase().into_iter().count() == 1 {
-        Ok(c.to_uppercase().into_iter().next().unwrap().into())
+    } else if c.to_uppercase().count() == 1 {
+        Ok(c.to_uppercase().next().unwrap().into())
     } else {
         Ok(c.into())
     }
@@ -95,8 +95,8 @@ pub fn char_downcase(vm: &mut Vm) -> Result<VCell, Error> {
     let c = pop_char(vm)?;
     if c.is_ascii() {
         Ok(c.to_ascii_lowercase().into())
-    } else if c.to_lowercase().into_iter().count() == 1 {
-        Ok(c.to_lowercase().into_iter().next().unwrap().into())
+    } else if c.to_lowercase().count() == 1 {
+        Ok(c.to_lowercase().next().unwrap().into())
     } else {
         Ok(c.into())
     }
@@ -107,8 +107,8 @@ pub fn char_foldcase(vm: &mut Vm) -> Result<VCell, Error> {
     let c = pop_char(vm)?;
     if c.is_ascii() {
         Ok(c.to_ascii_lowercase().into())
-    } else if c.to_lowercase().into_iter().count() == 1 {
-        Ok(c.to_lowercase().into_iter().next().unwrap().into())
+    } else if c.to_lowercase().count() == 1 {
+        Ok(c.to_lowercase().next().unwrap().into())
     } else {
         Ok(c.into())
     }

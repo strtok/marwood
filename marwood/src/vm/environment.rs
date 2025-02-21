@@ -21,7 +21,6 @@ use std::collections::{HashMap, HashSet};
 /// the notion of a "deep binding" represented by a HashMap along with shallow bindings,
 /// and LexicalEnvironment only has the notion of shallow bindings because lexical bindings
 /// are known at compile time.
-
 /// Binding Source
 ///
 /// Binding is used to specify the source of a binding in a lexical environment.
@@ -132,7 +131,7 @@ impl EnvironmentMap {
         self.map
             .iter()
             .enumerate()
-            .find(|it| it.1 .0 == *sym)
+            .find(|it| it.1.0 == *sym)
             .map(|it| it.0)
     }
 
@@ -569,10 +568,10 @@ mod tests {
                 r#"
                 (define (factorial n)
                     (define (factorial n acc)
-                       (if (= n 0) 
+                       (if (= n 0)
                           acc
                           (factorial (- n 1) (* n acc))))
-                    (factorial n 1))                    
+                    (factorial n 1))
             "#
             ]),
             Ok(HashSet::from([
@@ -610,9 +609,11 @@ mod tests {
             internally_defined_symbols(&parse!["((define foo 10)(define (bar baz) 10))"]),
             Ok(HashSet::from([&cell!["foo"], &cell!["bar"]]))
         );
-        assert!(internally_defined_symbols(&parse![
-            "((define foo 10)(set! foo 5)(define (bar baz) 10))"
-        ])
-        .is_err());
+        assert!(
+            internally_defined_symbols(&parse![
+                "((define foo 10)(set! foo 5)(define (bar baz) 10))"
+            ])
+            .is_err()
+        );
     }
 }

@@ -435,7 +435,7 @@ impl Transform {
     ) -> Option<Cell> {
         match template {
             Cell::Symbol(_) => {
-                return if pattern.is_variable(template) {
+                if pattern.is_variable(template) {
                     env.get_binding(template).cloned()
                 } else {
                     Some(template.clone())
@@ -542,11 +542,11 @@ impl<'a> PatternEnvironment<'a> {
         match self.bindings[start..self.bindings.len()]
             .iter()
             .enumerate()
-            .find(|it| it.1 .0 == symbol)
+            .find(|it| it.1.0 == symbol)
         {
             Some(binding) => {
                 *iter = Some(start + binding.0 + 1);
-                Some(binding.1 .1)
+                Some(binding.1.1)
             }
             None => {
                 *iter = None;
@@ -564,34 +564,34 @@ mod tests {
 
     #[test]
     fn bad_patterns() {
-        assert!(Pattern::try_new(&parse!("#t"), &cell!["..."], &vec![]).is_err());
-        assert!(Pattern::try_new(&parse!("(_ ... a)"), &cell!["..."], &vec![]).is_err());
-        assert!(Pattern::try_new(&parse!("(_ a . ...)"), &cell!["..."], &vec![]).is_err());
-        assert!(Pattern::try_new(&parse!("(_ a a)"), &cell!["..."], &vec![]).is_err());
+        assert!(Pattern::try_new(&parse!("#t"), &cell!["..."], &[]).is_err());
+        assert!(Pattern::try_new(&parse!("(_ ... a)"), &cell!["..."], &[]).is_err());
+        assert!(Pattern::try_new(&parse!("(_ a . ...)"), &cell!["..."], &[]).is_err());
+        assert!(Pattern::try_new(&parse!("(_ a a)"), &cell!["..."], &[]).is_err());
     }
 
     #[test]
     fn pattern_variable() {
         assert_eq!(
-            Pattern::try_new(&parse!("(_ a b c)"), &cell!["..."], &vec![])
+            Pattern::try_new(&parse!("(_ a b c)"), &cell!["..."], &[])
                 .unwrap()
                 .variables,
             vec![cell!["a"], cell!["b"], cell!["c"]]
         );
         assert_eq!(
-            Pattern::try_new(&parse!("(_ a b . c)"), &cell!["..."], &vec![])
+            Pattern::try_new(&parse!("(_ a b . c)"), &cell!["..."], &[])
                 .unwrap()
                 .variables,
             vec![cell!["a"], cell!["b"], cell!["c"]]
         );
         assert_eq!(
-            Pattern::try_new(&parse!("(_ a* ...)"), &cell!["..."], &vec![])
+            Pattern::try_new(&parse!("(_ a* ...)"), &cell!["..."], &[])
                 .unwrap()
                 .variables,
             vec![cell!["a*"]]
         );
         assert_eq!(
-            Pattern::try_new(&parse!("(_ (a* b*) ...)"), &cell!["..."], &vec![])
+            Pattern::try_new(&parse!("(_ (a* b*) ...)"), &cell!["..."], &[])
                 .unwrap()
                 .variables,
             vec![cell!["a*"], cell!["b*"]]
@@ -601,7 +601,7 @@ mod tests {
     #[test]
     fn expanded_pattern_variables() {
         let pattern =
-            Pattern::try_new(&parse!("(_ a (b (c ...)) ...)"), &cell!["..."], &vec![]).unwrap();
+            Pattern::try_new(&parse!("(_ a (b (c ...)) ...)"), &cell!["..."], &[]).unwrap();
         assert_eq!(pattern.variables, vec![cell!["a"], cell!["b"], cell!["c"]]);
         assert_eq!(pattern.expanded_variables, vec![cell!["b"], cell!["c"]]);
     }
@@ -615,154 +615,184 @@ mod tests {
         assert!(
             Transform::try_new(&parse!("(define-syntax let (syntax-rules (1 2 3) ()))")).is_err()
         );
-        assert!(Transform::try_new(&parse!(
-            r#"        
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax begin
               (not-expected-rules ()
                 [(begin exp ...)
                  ((lambda () exp ...))]))"#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
     }
 
     #[test]
     fn bad_pattern_syntax() {
         // Variable reuse
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ exp exp) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
 
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ exp . exp) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
 
         // // nested variable reuse
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ (exp) exp) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
         //
         // // double ellipsis
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ foo ... bar ...) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
 
         // ellipses out of place
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ (... foo)) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
 
         // ellipsis in head position
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ (...)) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
 
         // Ellipsis in improper list tail
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ foo . ...) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
 
         // Ellipsis matching the keyword
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ ...) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
 
         // Ellipsis matching _
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ _ ...) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
 
         // Ellipsis matching a literal
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules (literal)
                 [(_ literal ...) ()]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
     }
 
     #[test]
     fn bad_template_syntax() {
         // Expansion of a non-pattern variavle
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ a ...) (b ...)]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
         // Invalid ellipsis position
-        assert!(Transform::try_new(&parse!(
-            r#"
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ a ...) (...)]))
         "#
-        ))
-        .is_err());
-        assert!(Transform::try_new(&parse!(
-            r#"
+            ))
+            .is_err()
+        );
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ a ...) (a ... ...)]))
         "#
-        ))
-        .is_err());
-        assert!(Transform::try_new(&parse!(
-            r#"
+            ))
+            .is_err()
+        );
+        assert!(
+            Transform::try_new(&parse!(
+                r#"
         (define-syntax bad
               (syntax-rules ()
                 [(_ a ...) (a . ...)]))
         "#
-        ))
-        .is_err());
+            ))
+            .is_err()
+        );
     }
 
     #[test]
@@ -803,7 +833,7 @@ mod tests {
     #[test]
     fn single_pattern_variable() {
         let transform = Transform::try_new(&parse!(
-            r#"        
+            r#"
         (define-syntax bind-zero
               (syntax-rules ()
                 [(_ a) (define a 0)]
@@ -820,7 +850,7 @@ mod tests {
     #[test]
     fn nested_pattern_variables() {
         let transform = Transform::try_new(&parse!(
-            r#"        
+            r#"
         (define-syntax add-nested
               (syntax-rules ()
                 [(_ (x) (y)) (+ x y)]
@@ -945,14 +975,16 @@ mod tests {
             (define-syntax sum
                   (syntax-rules (add sub)
                     [(math add a1 a2) (+ a1 a2)]
-                    [(math sub a1 a2) (- a1 a2)]                    
+                    [(math sub a1 a2) (- a1 a2)]
             ))
             "#
         ))
         .unwrap();
-        assert!(transform
-            .transform(&parse!("(math multiply 10 10)"))
-            .is_err());
+        assert!(
+            transform
+                .transform(&parse!("(math multiply 10 10)"))
+                .is_err()
+        );
         assert_eq!(
             transform.transform(&parse!("(math add 10 20)")),
             Ok(parse!("(+ 10 20)"))
@@ -1027,8 +1059,8 @@ mod tests {
     fn zip_multi() {
         let transform = Transform::try_new(&parse!(
             r#"
-        (define-syntax zip-mult (syntax-rules () 
-            [(_ (x x* ...) (y y* ...)) 
+        (define-syntax zip-mult (syntax-rules ()
+            [(_ (x x* ...) (y y* ...))
              (+ (* x y) (* x* y*) ...)]))
         "#
         ))
@@ -1054,7 +1086,7 @@ mod tests {
     #[test]
     fn begin_macro() {
         let transform = Transform::try_new(&parse!(
-            r#"        
+            r#"
         (define-syntax begin
               (syntax-rules ()
                 [(begin exp ...)
@@ -1068,12 +1100,12 @@ mod tests {
     #[test]
     fn when_macro() {
         let transform = Transform::try_new(&parse!(
-            r#"        
+            r#"
        (define-syntax when
           (syntax-rules ()
             [(when test result1 result2 ...)
              (if test
-                 (begin result1 result2 ...))]))                
+                 (begin result1 result2 ...))]))
         "#
         ));
         assert!(transform.is_ok());
@@ -1082,7 +1114,7 @@ mod tests {
     #[test]
     fn and_macro() {
         let transform = Transform::try_new(&parse!(
-            r#"        
+            r#"
         (define-syntax and
           (syntax-rules ()
             [(and) #t]
@@ -1097,7 +1129,7 @@ mod tests {
     #[test]
     fn or_macro() {
         let transform = Transform::try_new(&parse!(
-            r#"        
+            r#"
         (define-syntax or
           (syntax-rules ()
             [(or) #f]

@@ -305,7 +305,7 @@ pub struct IntoIter<'a> {
     next: &'a Cell,
 }
 
-impl<'a> ExactSizeIterator for IntoIter<'a> {}
+impl ExactSizeIterator for IntoIter<'_> {}
 
 impl<'a> Iterator for IntoIter<'a> {
     type Item = &'a Cell;
@@ -512,9 +512,7 @@ macro_rules! cell {
         Cell::from($elt)
     };
     ($($elt:expr),+) => {{
-        let mut v = vec![];
-        $(v.push(Cell::from($elt));)+
-        Cell::from(v)
+        Cell::from(vec![$(Cell::from($elt),)+])
     }};
 }
 
@@ -629,7 +627,7 @@ mod tests {
 
     #[test]
     fn improper_list() {
-        let improper_list = Cell::new_improper_list(vec![cell![1], cell![2]].into_iter(), cell![3]);
+        let improper_list = Cell::new_improper_list(vec![cell![1], cell![2]], cell![3]);
         assert!(!improper_list.is_list());
         assert!(improper_list.is_improper_list());
         assert_eq!(improper_list, cons!(cell!(1), cons!(cell!(2), cell!(3))));
@@ -659,7 +657,7 @@ mod tests {
 
     #[test]
     fn iter_improper() {
-        let improper_list = Cell::new_improper_list(vec![cell![1], cell![2]].into_iter(), cell![3]);
+        let improper_list = Cell::new_improper_list(vec![cell![1], cell![2]], cell![3]);
         assert_eq!(
             improper_list.iter_improper().collect::<Vec<&Cell>>(),
             vec![&cell![1], &cell![2], &cell![3]]
