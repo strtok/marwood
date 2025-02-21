@@ -516,7 +516,6 @@ impl Vm {
     ///     (proc arg1 arg2 arg3 ...)
     ///```
     /// Proecure application is as follows:
-    ///
     ///     1. Evaluate and push the arguments left-to-right, resulting in
     ///        the last argument.
     ///     2. Push the number of arguments on the stack.
