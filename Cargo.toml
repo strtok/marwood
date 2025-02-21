@@ -1,7 +1,3 @@
 [workspace]
-
-members = [
-    "marwood",
-    "marwood-repl",
-    "marwood-wasm"
-]
+resolver = "3"
+members = ["marwood", "marwood-repl", "marwood-wasm"]

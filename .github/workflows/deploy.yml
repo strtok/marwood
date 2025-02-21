@@ -30,7 +30,7 @@ jobs:
 
       - name: Build wasm
         run: |
-          wasm-pack build
+          RUSTFLAGS='--cfg getrandom_backend="wasm_js"' wasm-pack build
           npm install
         working-directory: ./marwood-wasm
 

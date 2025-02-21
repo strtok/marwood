@@ -2,7 +2,8 @@
 name = "marwood-wasm"
 version = "0.1.0"
 authors = ["Erik Bremen"]
-edition = "2021"
+edition = "2024"
+resolver = "3"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -27,15 +28,14 @@ features = [
 
 [dependencies]
 log = { version = "0.4", features = ["release_max_level_off"] }
-js-sys = "0.3"
+js-sys = "0.3.77"
 wasm-bindgen = "0.2"
 marwood = { path = "../marwood" }
 console_error_panic_hook = { version = "0.1", optional = true }
-getrandom = { version = "0.2.6", features = ["js"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ['-O4', '-g']
-
