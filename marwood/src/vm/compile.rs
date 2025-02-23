@@ -45,7 +45,6 @@ impl Vm {
         self.compile(&mut lambda, true, expr)?;
         lambda.emit(OpCode::Ret);
         trace!("main: \n{}", self.decompile_text(&lambda));
-        let lambda = self.optimize(lambda);
         let lambda = self.heap.put(lambda);
         entry_lambda.emit(OpCode::PushImmediate);
         entry_lambda.emit(VCell::ArgumentCount(0));
@@ -452,7 +451,6 @@ impl Vm {
 
         lambda.emit(OpCode::Ret);
         trace!("lambda: \n{}", self.decompile_text(&lambda));
-        lambda = self.optimize(lambda);
         let lambda = self.heap.put(lambda);
         iof.emit(OpCode::MovImmediate);
         iof.emit(lambda);

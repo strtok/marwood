@@ -19,7 +19,6 @@ pub mod gc;
 pub mod heap;
 pub mod lambda;
 pub mod opcode;
-pub mod optimize;
 pub mod run;
 pub mod stack;
 pub mod trace;
