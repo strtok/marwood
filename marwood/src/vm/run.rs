@@ -3,13 +3,13 @@ use crate::error::Error;
 use crate::error::Error::{
     InvalidBytecode, InvalidNumArgs, InvalidProcedure, InvalidSyntax, VariableNotBound,
 };
+use crate::vm::Vm;
 use crate::vm::environment::{BindingSource, EnvironmentMap, LexicalEnvironment};
 use crate::vm::lambda::Lambda;
 use crate::vm::opcode::OpCode;
 use crate::vm::trace::StackTrace;
 use crate::vm::vcell::VCell;
 use crate::vm::vcell::VCell::LexicalEnvPtr;
-use crate::vm::Vm;
 use log::trace;
 use std::rc::Rc;
 
@@ -618,6 +618,7 @@ impl Vm {
                 self.decompile_one(
                     &mut self.heap.get_at_index(self.ip.0).as_lambda().unwrap().bc[self.ip.1..]
                         .iter()
+                        .enumerate()
                         .peekable()
                 )
                 .unwrap()

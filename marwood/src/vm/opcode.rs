@@ -81,9 +81,9 @@ pub enum Operand {
 /// While schema would be useful to the virtual machine runtime, it's
 /// not currently referenced by the VM runtime code for performance
 /// concerns.
-struct Schema {
-    name: &'static str,
-    operands: Vec<Operand>,
+pub struct Schema {
+    pub name: &'static str,
+    pub operands: Vec<Operand>,
 }
 
 impl Schema {
@@ -93,7 +93,7 @@ impl Schema {
 }
 
 #[rustfmt::skip]
-fn schema() -> &'static HashMap<OpCode, Schema> {
+pub fn schema() -> &'static HashMap<OpCode, Schema> {
     lazy_static! {
         static ref SCHEMA: HashMap<OpCode, Schema> = HashMap::from([
             (OpCode::CallAcc, Schema::new("CALL", vec![Operand::Acc])),
@@ -119,6 +119,7 @@ fn schema() -> &'static HashMap<OpCode, Schema> {
 
 #[derive(Debug)]
 pub struct DecompiledInstruction {
+    offset: usize,
     op: &'static str,
     operands: Vec<(VCell, Operand)>,
     values: Vec<String>,
@@ -127,6 +128,7 @@ pub struct DecompiledInstruction {
 impl Display for DecompiledInstruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let op = self.op;
+        let offset = self.offset;
         let operands = self
             .operands
             .iter()
@@ -142,7 +144,7 @@ impl Display for DecompiledInstruction {
         if !operands.is_empty() && !values.is_empty() {
             write!(
                 f,
-                "{0: <8} {1: <12} {2: <12} //{3: <10}",
+                "{offset:04x} {0: <8} {1: <12} {2: <12} //{3: <10}",
                 op,
                 operands.first().unwrap_or(&"".to_string()),
                 operands.get(1).unwrap_or(&"".to_string()),
@@ -151,13 +153,13 @@ impl Display for DecompiledInstruction {
         } else if !operands.is_empty() {
             write!(
                 f,
-                "{0: <8} {1: <12} {2: <12}",
+                "{offset:04x} {0: <8} {1: <12} {2: <12}",
                 op,
                 operands.first().unwrap_or(&"".to_string()),
                 operands.get(1).unwrap_or(&"".to_string()),
             )
         } else {
-            write!(f, "{}", op)
+            write!(f, "{offset:04x} {op}")
         }
     }
 }
@@ -165,14 +167,14 @@ impl Display for DecompiledInstruction {
 impl Vm {
     pub fn decompile_text(&self, lambda: &Lambda) -> String {
         let mut text = String::new();
-        for instruction in self.decompile(lambda).unwrap() {
+        for instruction in self.decompile(lambda).unwrap().iter() {
             let _ = writeln!(text, "{}", instruction);
         }
         text
     }
 
     pub fn decompile(&self, lambda: &Lambda) -> Result<Vec<DecompiledInstruction>, Error> {
-        let mut cur = lambda.bc.iter().peekable();
+        let mut cur = lambda.bc.iter().enumerate().peekable();
         let mut instructions = vec![];
         while cur.peek().is_some() {
             instructions.push(self.decompile_one(&mut cur)?);
@@ -181,18 +183,18 @@ impl Vm {
         Ok(instructions)
     }
 
-    pub fn decompile_one<'a, T: Iterator<Item = &'a VCell>>(
+    pub fn decompile_one<'a, T: Iterator<Item = (usize, &'a VCell)>>(
         &self,
         iter: &mut Peekable<T>,
     ) -> Result<DecompiledInstruction, Error> {
-        if let Some(VCell::OpCode(opcode)) = iter.next() {
+        if let Some((offset, VCell::OpCode(opcode))) = iter.next() {
             let schema = schema().get(opcode).expect("unknown opcode");
             let mut operands = vec![];
             let mut values = vec![];
             for it in &schema.operands {
                 let operand = match it {
                     Operand::Acc => &VCell::Acc,
-                    _ => iter.next().expect("expected operand"),
+                    _ => iter.next().expect("expected operand").1,
                 };
 
                 operands.push((operand.clone(), it.clone()));
@@ -211,6 +213,7 @@ impl Vm {
                 }
             }
             Ok(DecompiledInstruction {
+                offset,
                 op: schema.name,
                 operands,
                 values,
