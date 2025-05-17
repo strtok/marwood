@@ -97,7 +97,7 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
 ///          advance the iterator enough to satisfy one expression.
 /// *`text` - the text backed by the token spans.
 /// * `start_token` - The start of list token, used to match the end of
-///     list token.
+///   list token.
 fn parse_list<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
@@ -176,7 +176,7 @@ fn parse_improper_list_tail<'a, T: Iterator<Item = &'a Token>>(
 ///          advance the iterator enough to satisfy one expression.
 /// *`text` - the text backed by the token spans.
 /// * `start_token` - The start of list token, used to match the end of
-///     list token.
+///   list token.
 fn parse_vector<'a, T: Iterator<Item = &'a Token>>(
     text: &str,
     cur: &mut Peekable<T>,
@@ -400,7 +400,7 @@ mod tests {
     fn consumes_one_expression_per_call() {
         let text = "foo bar baz";
         let tokens = lex::scan(text).unwrap();
-        let mut cur = (&tokens).iter().peekable();
+        let mut cur = (tokens).iter().peekable();
         assert_eq!(parse(text, &mut cur), Ok(cell!["foo"]));
         assert_eq!(parse(text, &mut cur), Ok(cell!["bar"]));
         assert_eq!(parse(text, &mut cur), Ok(cell!["baz"]));
@@ -411,7 +411,7 @@ mod tests {
     fn lists_are_fully_consumed() {
         let text = "(foo bar)";
         let tokens = lex::scan(text).unwrap();
-        let mut cur = (&tokens).iter().peekable();
+        let mut cur = (tokens).iter().peekable();
         assert_eq!(parse(text, &mut cur), Ok(list!["foo", "bar"]));
         assert_eq!(parse(text, &mut cur), Err(Error::Incomplete));
     }

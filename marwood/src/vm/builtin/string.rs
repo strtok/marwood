@@ -253,7 +253,7 @@ pub fn string_fill(vm: &mut Vm) -> Result<VCell, Error> {
     };
 
     let (start, end) = char_substring_offset(s, start, end)?;
-    let fill = std::iter::repeat(c).take(count).collect::<String>();
+    let fill = std::iter::repeat_n(c, count).collect::<String>();
 
     s.replace_range(start..end, &fill);
     Ok(VCell::void())
@@ -282,7 +282,7 @@ pub fn make_string(vm: &mut Vm) -> Result<VCell, Error> {
     };
     let size = pop_usize(vm)?;
     Ok(VCell::string(
-        std::iter::repeat(c).take(size).collect::<String>(),
+        std::iter::repeat_n(c, size).collect::<String>(),
     ))
 }
 

@@ -492,7 +492,7 @@ impl Heap {
     ///
     /// * State::Free - no op
     /// * State::Allocated - Mark the vcell as State::Free and append it to the
-    ///        free list.
+    ///   free list.
     /// * State::Used - Mark the vcell as allocated.
     pub fn sweep(&mut self) {
         let before = self.free_list.len();
