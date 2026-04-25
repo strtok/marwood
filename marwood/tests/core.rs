@@ -272,6 +272,102 @@ fn let_star() {
 }
 
 #[test]
+fn letrec_and_letrec_star() {
+    evals!["(letrec ((fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1))))))) (fact 5))" => "120"];
+    evals!["(letrec* ((a 10) (b (+ a 1))) (+ a b))" => "21"];
+    evals![r#"(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
+                       (odd?  (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+                (even? 10))"# => "#t"];
+}
+
+/// Hygiene: the `or` prelude macro introduces a binding named `var1`
+/// in its template. If the user has their own `var1` in scope, a
+/// non-hygienic expander will shadow it.
+#[test]
+fn or_hygiene_does_not_capture_var1() {
+    evals![
+        "(define var1 42)" => "#<void>",
+        "(or #f var1)" => "42"
+    ];
+}
+
+/// Hygiene: `cond` with `=>` introduces a `temp` binding around the
+/// user-supplied result expression. A result expression that closes
+/// over a user-level `temp` must still resolve to the user's binding.
+#[test]
+fn cond_arrow_hygiene_does_not_capture_temp() {
+    evals![
+        "(define temp 10)" => "#<void>",
+        "(cond (100 => (lambda (x) (+ x temp))))" => "110"
+    ];
+}
+
+/// Hygiene: `case` introduces an `atom-key` binding around the
+/// user-supplied clause bodies. User references to their own
+/// `atom-key` must not resolve to the macro-introduced binding.
+#[test]
+fn case_hygiene_does_not_capture_atom_key() {
+    evals![
+        "(define atom-key 'a)" => "#<void>",
+        "(case (+ 0 1) ((1 2 3) atom-key))" => "a"
+    ];
+}
+
+/// Symbols inside a `(quote ...)` form in a macro template are
+/// data, not identifier references, so they must intern to the same
+/// heap slot as a user-written literal of the same name. `expand`
+/// switches to a non-stamping mode under quote.
+#[test]
+fn quoted_symbol_in_template_is_eq_to_user_symbol() {
+    evals![
+        "(define-syntax give-foo (syntax-rules () ((_) 'foo)))" => "#<void>",
+        "(eq? (give-foo) 'foo)" => "#t"
+    ];
+}
+
+/// Free identifiers in a macro template refer to bindings visible
+/// at `define-syntax` time (the macro's definition environment),
+/// not at use time. The compiler captures resolvable globals into
+/// the macro's definition scope at definition time, so a later user
+/// redefinition of `+` does not re-target the template's `+`.
+#[test]
+fn template_free_identifier_refers_to_definition_env() {
+    evals![
+        "(define-syntax my-add (syntax-rules () ((_ a b) (+ a b))))" => "#<void>",
+        "(define + (lambda (a b) (- a b)))" => "#<void>",
+        "(my-add 5 3)" => "8"
+    ];
+}
+
+/// End-to-end smoke test for the macros defined in `prelude.scm`.
+/// Each form here is implemented via `define-syntax` rather than as
+/// a primitive, so the prelude depends on the macro expander matching,
+/// nested ellipsis, and hygiene all working together.
+#[test]
+fn prelude_macros_smoke() {
+    evals![
+        "(let ((x 1) (y 2)) (+ x y))" => "3",
+        "(let* ((x 1) (y (+ x 1))) (+ x y))" => "3",
+        "(letrec ((f (lambda (n) (if (= n 0) 1 (* n (f (- n 1))))))) (f 5))" => "120",
+        "(letrec* ((a 10) (b (+ a 1))) (+ a b))" => "21",
+        "(and)" => "#t",
+        "(and 1 2 3)" => "3",
+        "(and 1 #f 3)" => "#f",
+        "(or)" => "#f",
+        "(or #f #f 7)" => "7",
+        "(or #f 3 (error 'unreachable))" => "3",
+        "(when #t 1 2 3)" => "3",
+        "(unless #f 1 2 3)" => "3",
+        "(begin 1 2 3)" => "3",
+        "(cond ((= 1 2) 'no) ((= 1 1) 'yes) (else 'else))" => "yes",
+        "(cond (#f 'no) (else 'else))" => "else",
+        "(cond ((+ 1 2) => (lambda (x) (* x 10))))" => "30",
+        "(case (* 2 3) ((2 3 5 7) 'prime) ((1 4 6 8 9) 'composite))" => "composite",
+        "(case 'unknown ((a b) 'ab) ((c d) 'cd) (else 'other))" => "other"
+    ];
+}
+
+#[test]
 fn set() {
     evals!["(define (generator) (let ([x 0]) (lambda () (set! x (+ x 1)) x)))" => "#<void>",
            "(define counter (generator))" => "#<void>",

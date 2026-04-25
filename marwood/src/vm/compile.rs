@@ -86,8 +86,8 @@ impl Vm {
         let proc = expr.car().unwrap();
         let mut rest = expr.cdr().unwrap();
 
-        if let Cell::Symbol(proc) = proc {
-            if let "quote" | "define-syntax" = proc.as_str() {
+        if let Some(proc) = proc.as_symbol() {
+            if let "quote" | "define-syntax" = proc {
                 return Ok(expr.clone());
             }
         }
@@ -134,7 +134,9 @@ impl Vm {
     ) -> Result<(), Error> {
         match expr {
             Cell::Pair(_, _) => self.compile_procedure_application(lambda, tail, expr),
-            Cell::Symbol(_) => self.compile_symbol_expression(lambda, expr),
+            Cell::Symbol(_) | Cell::Identifier { .. } => {
+                self.compile_symbol_expression(lambda, expr)
+            }
             Cell::Nil => Err(UnquotedNil),
             Cell::Procedure(_)
             | Cell::Void
@@ -168,8 +170,12 @@ impl Vm {
     ) -> Result<(), Error> {
         let proc = expr.car().unwrap();
         let rest = expr.cdr().unwrap();
-        match proc {
-            Cell::Symbol(proc) => match proc.as_str() {
+        // Both Cell::Symbol and Cell::Identifier (template-introduced)
+        // dispatch on name here. Hygiene doesn't allow rebinding the
+        // primitives, so a `lambda` introduced by a macro template
+        // means the same as a user-typed `lambda`.
+        match proc.as_symbol() {
+            Some(proc) => match proc {
                 "define" => self.compile_define(lambda, expr),
                 "define-syntax" => self.compile_define_syntax(lambda, expr),
                 "lambda" | "λ" => self.compile_lambda(lambda, expr, false),
@@ -201,6 +207,23 @@ impl Vm {
         let sym_ref = self.heap.put_cell(sym);
         match lambda.binding_location(&sym_ref) {
             BindingLocation::Global => {
+                // Hygiene fallback: a `Cell::Identifier` is template-
+                // introduced, so its scoped intern only matches a
+                // template-introduced binder. If neither a lexical nor
+                // a (scoped) global binding exists, fall back to the
+                // unscoped name so that free template references —
+                // primitives, recursive macro keywords, user-globals
+                // — resolve to their normal meanings.
+                let sym_ref = if let Cell::Identifier { name, .. } = sym {
+                    let scoped_ptr = sym_ref.as_ptr().expect("expected ptr");
+                    if self.globenv.get(scoped_ptr).is_none() {
+                        self.heap.put_cell(&Cell::Symbol(name.clone()))
+                    } else {
+                        sym_ref
+                    }
+                } else {
+                    sym_ref
+                };
                 let sym_ref = sym_ref.as_ptr().expect("expected ptr");
                 let env_slot = VCell::env_slot(self.globenv.get_binding(sym_ref));
                 lambda.emit(OpCode::Mov);
@@ -243,7 +266,7 @@ impl Vm {
         // Extract the symbol given the form, and at the same time compile the
         // expression or lambda so that its result will be in %acc for the define.
         let symbol = match car!(rest) {
-            Cell::Symbol(_) => {
+            Cell::Symbol(_) | Cell::Identifier { .. } => {
                 if !cdr!(cdr!(rest)).is_nil() {
                     return Err(InvalidNumArgs("define".into()));
                 }
@@ -357,7 +380,34 @@ impl Vm {
     /// `lambda` - The lambda to emit bytecode to
     /// `expr` - (define variable expression)
     pub fn compile_define_syntax(&mut self, lambda: &mut Lambda, expr: &Cell) -> Result<(), Error> {
-        let transform = Transform::try_new(expr)?;
+        let mut transform = Transform::try_new(expr)?;
+
+        // For each name that appears free in some template and is
+        // bound in the global env at this point, allocate a scoped
+        // HeapRef under the macro's definition scope and copy the
+        // current binding's value into the new env slot. The expander
+        // stamps such names with `def_scope` so references in the
+        // expanded code resolve to this captured slot rather than to
+        // any later user redefinition of the same name.
+        let def_scope = transform.def_scope();
+        let free_names = transform.collect_free_template_names();
+        for name in free_names {
+            let unscoped_ref = self.heap.put_cell(&Cell::Symbol(name.clone()));
+            let unscoped_ptr = unscoped_ref.as_ptr().expect("expected ptr");
+            let value = match self.globenv.get(unscoped_ptr) {
+                Some(v) if !matches!(v, VCell::Undefined) => v,
+                _ => continue,
+            };
+            let scoped_ref = self.heap.put_cell(&Cell::Identifier {
+                name: name.clone(),
+                scope: def_scope,
+            });
+            let scoped_ptr = scoped_ref.as_ptr().expect("expected ptr");
+            let scoped_slot = self.globenv.get_binding(scoped_ptr);
+            self.globenv.put_slot(scoped_slot, value);
+            transform.mark_captured(name);
+        }
+
         let symbol = transform.keyword().clone();
         let transform = self.heap.put(VCell::Macro(Rc::new(transform)));
 

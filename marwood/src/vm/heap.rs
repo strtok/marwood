@@ -19,7 +19,13 @@ pub struct Heap {
     free_list: Vec<usize>,
     heap: Vec<VCell>,
     heap_map: gc::Map,
-    symbol_table: HashMap<String, usize>,
+    /// Intern table for symbols and hygienic identifiers, keyed by
+    /// (name, scope). `Cell::Symbol` always uses scope 0; each
+    /// `Cell::Identifier` uses its carried scope. Different scopes for
+    /// the same name produce distinct heap slots, which is the
+    /// mechanism that gives hygienic identifiers distinct binding
+    /// identity at compile time.
+    symbol_table: HashMap<(String, u32), usize>,
 }
 
 impl Heap {
@@ -75,8 +81,18 @@ impl Heap {
     /// adding it back to the free list.
     pub fn free(&mut self, ptr: usize) {
         self.heap_map.set(ptr, State::Free);
-        if let Some(VCell::Symbol(sym)) = self.heap.get(ptr) {
-            self.symbol_table.remove(&**sym);
+        if let Some(VCell::Symbol(_)) = self.heap.get(ptr) {
+            // VCell::Symbol doesn't carry the scope tag, so scan the
+            // intern table for the (name, scope) entry pointing at
+            // this slot. `free` is not on a hot path.
+            let key = self
+                .symbol_table
+                .iter()
+                .find(|(_, v)| **v == ptr)
+                .map(|(k, _)| k.clone());
+            if let Some(key) = key {
+                self.symbol_table.remove(&key);
+            }
         }
         *self.heap.get_mut(ptr).unwrap() = VCell::Undefined;
         self.free_list.push(ptr);
@@ -90,15 +106,19 @@ impl Heap {
         let vcell = vcell.into();
         match &vcell {
             VCell::Ptr(_) => vcell,
-            VCell::Symbol(sym) => match self.symbol_table.get(sym.deref()) {
-                Some(ptr) => VCell::ptr(*ptr),
-                None => {
-                    let ptr = self.alloc();
-                    *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
-                    self.symbol_table.insert(sym.deref().into(), ptr);
-                    VCell::ptr(ptr)
+            VCell::Symbol(sym) => {
+                let key = (sym.deref().clone(), 0u32);
+                match self.symbol_table.get(&key) {
+                    Some(ptr) => VCell::ptr(*ptr),
+                    None => {
+                        let ptr = self.alloc();
+                        *self.heap.get_mut(ptr).expect("heap index is out of bounds") =
+                            vcell.clone();
+                        self.symbol_table.insert(key, ptr);
+                        VCell::ptr(ptr)
+                    }
                 }
-            },
+            }
             vcell => {
                 let ptr = self.alloc();
                 *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
@@ -125,15 +145,19 @@ impl Heap {
             | VCell::Void
             | VCell::Undefined => vcell,
             VCell::Ptr(_) => vcell,
-            VCell::Symbol(sym) => match self.symbol_table.get(sym.deref()) {
-                Some(ptr) => VCell::ptr(*ptr),
-                None => {
-                    let ptr = self.alloc();
-                    *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
-                    self.symbol_table.insert(sym.deref().into(), ptr);
-                    VCell::ptr(ptr)
+            VCell::Symbol(sym) => {
+                let key = (sym.deref().clone(), 0u32);
+                match self.symbol_table.get(&key) {
+                    Some(ptr) => VCell::ptr(*ptr),
+                    None => {
+                        let ptr = self.alloc();
+                        *self.heap.get_mut(ptr).expect("heap index is out of bounds") =
+                            vcell.clone();
+                        self.symbol_table.insert(key, ptr);
+                        VCell::ptr(ptr)
+                    }
                 }
-            },
+            }
             vcell => {
                 let ptr = self.alloc();
                 *self.heap.get_mut(ptr).expect("heap index is out of bounds") = vcell.clone();
@@ -186,6 +210,9 @@ impl Heap {
             }
             cell::Cell::String(ref s) => self.put(VCell::string(s.clone())),
             cell::Cell::Symbol(ref sym) => self.put(VCell::symbol(sym.clone())),
+            cell::Cell::Identifier { ref name, scope } => {
+                self.put_scoped_symbol(name.clone(), scope)
+            }
             cell::Cell::Continuation => panic!("unexpected continuation"),
             cell::Cell::Macro => panic!("unexpected macro"),
             cell::Cell::Procedure(_) => panic!("unexpected lambda"),
@@ -247,11 +274,36 @@ impl Heap {
     /// # Arguments
     /// `sym` - The symbol to lookup
     pub fn get_sym_ref(&self, sym: &Cell) -> Option<VCell> {
-        if let Cell::Symbol(sym) = sym {
-            self.symbol_table.get(sym).map(|it| VCell::ptr(*it))
-        } else {
-            None
+        // Macros are global and unscoped, so look up by name only —
+        // a Cell::Identifier and a Cell::Symbol with the same name
+        // resolve to the same macro registration.
+        match sym {
+            Cell::Symbol(name) => self
+                .symbol_table
+                .get(&(name.clone(), 0))
+                .map(|it| VCell::ptr(*it)),
+            Cell::Identifier { name, .. } => self
+                .symbol_table
+                .get(&(name.clone(), 0))
+                .map(|it| VCell::ptr(*it)),
+            _ => None,
         }
+    }
+
+    /// Intern a (name, scope) symbol slot. Used by hygienic
+    /// `Cell::Identifier` allocation. Reuses an existing slot when
+    /// (name, scope) has been interned before; otherwise allocates a
+    /// new VCell::Symbol(name) on the heap.
+    pub fn put_scoped_symbol(&mut self, name: String, scope: u32) -> VCell {
+        let key = (name, scope);
+        if let Some(ptr) = self.symbol_table.get(&key) {
+            return VCell::ptr(*ptr);
+        }
+        let ptr = self.alloc();
+        *self.heap.get_mut(ptr).expect("heap index is out of bounds") =
+            VCell::symbol(key.0.clone());
+        self.symbol_table.insert(key, ptr);
+        VCell::ptr(ptr)
     }
 
     /// Get As Ast

@@ -15,6 +15,12 @@ pub enum Cell {
     Pair(Box<Cell>, Box<Cell>),
     String(String),
     Symbol(String),
+    /// A hygienic identifier: a symbol tagged with a `u32` scope
+    /// minted by the macro expander. Identifiers with different
+    /// scopes intern to distinct heap slots, so they bind
+    /// independently from `Cell::Symbol(name)` even when their
+    /// printed name matches.
+    Identifier { name: String, scope: u32 },
     Vector(Vec<Cell>),
 
     // Types that exist in VCell, but need Cell representation for
@@ -117,7 +123,7 @@ impl Cell {
     }
 
     pub fn is_symbol(&self) -> bool {
-        matches!(self, Cell::Symbol(_))
+        matches!(self, Cell::Symbol(_) | Cell::Identifier { .. })
     }
 
     pub fn is_vector(&self) -> bool {
@@ -189,6 +195,16 @@ impl Cell {
         }
     }
 
+    /// Hygiene scope for an identifier. Returns 0 for plain symbols
+    /// (the "unscoped" / user-input scope) and the carried scope for
+    /// hygienic identifiers.
+    pub fn scope(&self) -> u32 {
+        match self {
+            Cell::Identifier { scope, .. } => *scope,
+            _ => 0,
+        }
+    }
+
     /// Is Primitive Symbol
     ///
     /// Return true if the given cell is a primitive symbol (e.g. a built-in
@@ -252,6 +268,7 @@ impl Cell {
     pub fn as_symbol(&self) -> Option<&str> {
         match self {
             Cell::Symbol(val) => Some(val),
+            Cell::Identifier { name, .. } => Some(name),
             _ => None,
         }
     }
@@ -458,6 +475,12 @@ impl Display for Cell {
             },
             Cell::Symbol(val) => {
                 write!(f, "{}", val)
+            }
+            Cell::Identifier { name, .. } => {
+                // For now print just the name; the scope is an
+                // internal hygiene tag and shouldn't leak into
+                // user-visible output.
+                write!(f, "{}", name)
             }
             Cell::Nil => {
                 write!(f, "()")
