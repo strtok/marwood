@@ -495,11 +495,10 @@ impl Transform {
                         return false;
                     }
                 }
-                if let (Some(pt), Some(et)) = (p_tail, e_tail) {
-                    if !self.match_cell(pt, et, env) {
+                if let (Some(pt), Some(et)) = (p_tail, e_tail)
+                    && !self.match_cell(pt, et, env) {
                         return false;
                     }
-                }
                 true
             }
             Some(i) => {
@@ -557,11 +556,10 @@ impl Transform {
                     }
                 }
 
-                if let (Some(pt), Some(et)) = (p_tail, e_tail) {
-                    if !self.match_cell(pt, et, env) {
+                if let (Some(pt), Some(et)) = (p_tail, e_tail)
+                    && !self.match_cell(pt, et, env) {
                         return false;
                     }
-                }
                 true
             }
         }

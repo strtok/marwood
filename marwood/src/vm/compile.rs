@@ -86,11 +86,10 @@ impl Vm {
         let proc = expr.car().unwrap();
         let mut rest = expr.cdr().unwrap();
 
-        if let Some(proc) = proc.as_symbol() {
-            if let "quote" | "define-syntax" = proc {
+        if let Some(proc) = proc.as_symbol()
+            && let "quote" | "define-syntax" = proc {
                 return Ok(expr.clone());
             }
-        }
 
         if let Some(sym) = self.heap.get_sym_ref(proc) {
             let vcell = match self.globenv.get(sym.as_ptr()?) {

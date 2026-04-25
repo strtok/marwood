@@ -220,11 +220,11 @@ impl GlobalEnvironment {
         }
     }
 
-    pub fn iter_bindings(&self) -> std::collections::hash_map::Keys<usize, usize> {
+    pub fn iter_bindings(&self) -> std::collections::hash_map::Keys<'_, usize, usize> {
         self.bindings.keys()
     }
 
-    pub fn iter_slots(&self) -> std::slice::Iter<VCell> {
+    pub fn iter_slots(&self) -> std::slice::Iter<'_, VCell> {
         self.slots.iter()
     }
 

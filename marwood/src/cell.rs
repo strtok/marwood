@@ -89,11 +89,10 @@ impl Cell {
             }
         }
 
-        if last_cdr.is_some() {
-            if let Cell::Pair(_, ref mut cdr) = *tail.deref_mut() {
+        if last_cdr.is_some()
+            && let Cell::Pair(_, ref mut cdr) = *tail.deref_mut() {
                 *cdr = Box::new(last_cdr.take().unwrap());
             }
-        }
 
         head
     }
@@ -102,11 +101,11 @@ impl Cell {
         Cell::Pair(Box::new(car), Box::new(cdr))
     }
 
-    pub fn iter(&self) -> IntoIter {
+    pub fn iter(&self) -> IntoIter<'_> {
         IntoIter { next: self }
     }
 
-    pub fn iter_improper(&self) -> IntoIter {
+    pub fn iter_improper(&self) -> IntoIter<'_> {
         IntoIter { next: self }
     }
 
