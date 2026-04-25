@@ -3,7 +3,7 @@ use crate::error::Error::InvalidSyntax;
 use crate::vm::Vm;
 use crate::vm::builtin::{pop_argc, pop_integer};
 use crate::vm::vcell::VCell;
-use rand::Rng;
+use rand::RngExt;
 
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("random-integer", random_integer);

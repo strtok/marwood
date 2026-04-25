@@ -80,7 +80,7 @@ impl Cell {
         for cell in iter {
             match tail {
                 Cell::Pair(_, next) => {
-                    *next = Box::new(Cell::Pair(Box::new(cell), Box::new(Cell::Nil)));
+                    **next = Cell::Pair(Box::new(cell), Box::new(Cell::Nil));
                     tail = &mut (**next);
                 }
                 _ => {
@@ -91,7 +91,7 @@ impl Cell {
 
         if last_cdr.is_some()
             && let Cell::Pair(_, ref mut cdr) = *tail.deref_mut() {
-                *cdr = Box::new(last_cdr.take().unwrap());
+                **cdr = last_cdr.take().unwrap();
             }
 
         head

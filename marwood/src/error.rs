@@ -45,10 +45,10 @@ pub enum Error {
     #[error("invalid syntax: () must be quoted")]
     UnquotedNil,
 
-    #[error("vector index {0} out of range of 0..{}", .1 - 1)]
+    #[error("vector index {} out of range of 0..{}", .0, .1 - 1)]
     InvalidVectorIndex(usize, usize),
 
-    #[error("string index {0} out of range of 0..{}", .1 - 1)]
+    #[error("string index {} out of range of 0..{}", .0, .1 - 1)]
     InvalidStringIndex(usize, usize),
 
     #[error(transparent)]

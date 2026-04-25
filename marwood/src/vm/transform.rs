@@ -210,11 +210,10 @@ fn collect_free_names(
 /// Pattern variables that appear in a (sub-)template.
 fn collect_template_vars(template: &Cell, pattern: &Pattern, out: &mut Vec<Cell>) {
     match template {
-        Cell::Symbol(_) => {
-            if pattern.is_variable(template) && !out.iter().any(|v| v == template) {
+        Cell::Symbol(_)
+            if pattern.is_variable(template) && !out.iter().any(|v| v == template) => {
                 out.push(template.clone());
             }
-        }
         Cell::Pair(_, _) => {
             for it in template {
                 collect_template_vars(it, pattern, out);
@@ -544,7 +543,7 @@ impl Transform {
                         }
                     }
                 }
-                for (v, s) in sub_vars.into_iter().zip(seqs.into_iter()) {
+                for (v, s) in sub_vars.into_iter().zip(seqs) {
                     env.push((v, MatchValue::Seq(s)));
                 }
 
@@ -574,16 +573,15 @@ impl Transform {
     /// or `_`.
     fn collect_pattern_vars(&self, expr: &Cell, out: &mut Vec<Cell>) {
         match expr {
-            Cell::Symbol(_) => {
+            Cell::Symbol(_)
                 if expr.is_symbol()
                     && !self.is_literal(expr)
                     && !self.is_ellipsis_cell(expr)
                     && *expr != cell!["_"]
                     && !out.iter().any(|v| v == expr)
-                {
+                => {
                     out.push(expr.clone());
                 }
-            }
             Cell::Pair(_, _) => {
                 for it in expr {
                     self.collect_pattern_vars(it, out);

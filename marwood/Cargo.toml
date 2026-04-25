@@ -9,14 +9,14 @@ license = "MIT OR Apache-2.0"
 readme = "../README.md"
 
 [dependencies]
-log = { version = "0.4", features = ["release_max_level_info"] }
-num = "0.4.0"
-rand = "0.9"
-thiserror = "1.0.30"
-lazy_static = "1.4.0"
+log = "0.4"
+num = "0.4"
+rand = "0.10"
+thiserror = "2"
+lazy_static = "1.5"
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion = "0.6"
 
 [[bench]]
 name = "benchmark"

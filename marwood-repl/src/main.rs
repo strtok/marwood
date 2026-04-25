@@ -6,7 +6,7 @@ use marwood::vm::trace::StackTrace;
 use marwood::vm::{SystemInterface, Vm};
 use marwood::{lex, parse};
 use rustyline::error::ReadlineError;
-use rustyline::highlight::Highlighter;
+use rustyline::highlight::{CmdKind, Highlighter};
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Editor, Result};
 use rustyline_derive::{Completer, Helper, Hinter};
@@ -41,7 +41,7 @@ impl Highlighter for InputValidator {
         )
     }
 
-    fn highlight_char(&self, line: &str, pos: usize, _forced: bool) -> bool {
+    fn highlight_char(&self, line: &str, pos: usize, _forced: CmdKind) -> bool {
         self.highlighter.highlight_check(line, pos + 1)
     }
 }

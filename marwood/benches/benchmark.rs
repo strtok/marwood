@@ -1,4 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 use marwood::cell::Cell;
 use marwood::vm::Vm;
 use marwood::{cell, lex, parse};
