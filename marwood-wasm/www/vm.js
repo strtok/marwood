@@ -27,35 +27,69 @@ export class Vm {
   constructor(rl) {
     this.rl = rl;
     this.displayed = false;
-    this.remainingInput = null;
-    this.evalIter = 0;
-    this.stopping = false;
-    this.paused = false;
+    this.evalPromise = null;
+
+    // Main-thread Marwood is used only for synchronous syntax queries:
+    // check, highlight, last_token, autocomplete. Eval runs in the
+    // worker. Note: this main-thread instance has no eval state, so
+    // autocomplete won't see user-defined globals (regression vs the
+    // pre-worker REPL); to be addressed in a follow-up.
     this.marwood = Marwood.new();
 
-    globalThis.marwood_display = (text) => {
-      this.displayed = true;
-      this.rl.print(text);
-    };
-
-    globalThis.marwood_termCols = () => {
-      return this.rl.term.cols;
-    };
-
-    globalThis.marwood_termRows = () => {
-      return this.rl.term.rows;
-    };
+    this.spawnWorker();
 
     rl.setHighlighter(new Highlighter(this));
     rl.setCheckHandler(this.check.bind(this));
     rl.setCtrlCHandler(this.stop.bind(this));
-    rl.setPauseHandler((resume) => {
-      if (resume) {
-        this.resume();
-      } else {
-        this.pause();
-      }
+    rl.setPauseHandler(() => {});
+  }
+
+  spawnWorker() {
+    this.worker = new Worker(new URL("./worker.js", import.meta.url), {
+      type: "module",
     });
+    this.worker.onmessage = (e) => this.handleWorkerMessage(e.data);
+    this.sendTermSize();
+  }
+
+  sendTermSize() {
+    this.worker.postMessage({
+      type: "termSize",
+      cols: this.rl.term.cols,
+      rows: this.rl.term.rows,
+    });
+  }
+
+  handleWorkerMessage(msg) {
+    switch (msg.type) {
+      case "ready":
+        break;
+      case "display":
+        this.displayed = true;
+        this.rl.print(msg.text);
+        break;
+      case "output":
+        this.rl.println(msg.text);
+        break;
+      case "done":
+        if (this.displayed) {
+          this.rl.println("");
+          this.displayed = false;
+        }
+        if (this.evalPromise) {
+          const [resolve] = this.evalPromise;
+          this.evalPromise = null;
+          resolve();
+        }
+        break;
+      case "error":
+        if (this.evalPromise) {
+          const [, reject] = this.evalPromise;
+          this.evalPromise = null;
+          reject(msg.text);
+        }
+        break;
+    }
   }
 
   check(input) {
@@ -63,74 +97,23 @@ export class Vm {
   }
 
   eval(input) {
-    this.paused = false;
     return new Promise((resolve, reject) => {
       this.evalPromise = [resolve, reject];
-      this.remainingInput = input;
-      this.evalIter = 0;
       this.displayed = false;
-      this.stopping = false;
-      setTimeout(() => this.execute());
+      this.sendTermSize();
+      this.worker.postMessage({ type: "eval", text: input });
     });
   }
 
   stop() {
-    this.stopping = true;
-  }
-
-  pause() {
-    this.paused = true;
-  }
-
-  resume() {
-    this.paused = false;
-  }
-
-  execute() {
-    if (this.stopping) {
-      let [resolve, reject] = this.evalPromise;
+    if (this.worker) {
+      this.worker.terminate();
+      this.spawnWorker();
+    }
+    if (this.evalPromise) {
+      const [, reject] = this.evalPromise;
+      this.evalPromise = null;
       reject(null);
-      return;
     }
-
-    if (!this.rl.writeReady() || this.paused) {
-      setTimeout(() => this.execute(), 1);
-      return;
-    }
-
-    let result;
-    if (this.evalIter == 0) {
-      result = this.marwood.eval(this.remainingInput, 1000000);
-      this.remainingInput = result.remaining;
-      if (this.remainingInput != null && this.remainingInput.length == 0) {
-        this.remainingInput = null;
-      }
-    } else {
-      result = this.marwood.eval_continue(1000000);
-    }
-
-    if (result.completed) {
-      if (result.ok != null && result.ok.length > 0) {
-        this.rl.println(result.ok);
-      } else if (result.error != null && result.error.length > 0) {
-        this.rl.println(result.error);
-      } else if (this.displayed) {
-        this.rl.println("");
-        this.displayed = false;
-      }
-
-      if (this.remainingInput != null) {
-        this.evalIter = 0;
-        setTimeout(() => this.execute());
-        return;
-      }
-
-      let [resolve, reject] = this.evalPromise;
-      resolve();
-      return;
-    }
-
-    this.evalIter += 1;
-    setTimeout(() => this.execute());
   }
 }
