@@ -1,4 +1,6 @@
+use crate::cell::Cell;
 use crate::error::Error;
+use crate::pretty;
 use crate::vm::builtin::pop_argc;
 use crate::vm::vcell::VCell;
 use crate::vm::Vm;
@@ -6,6 +8,7 @@ use crate::vm::Vm;
 pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("display", display);
     vm.load_builtin("write", write);
+    vm.load_builtin("pretty-print", pretty_print);
     vm.load_builtin("term-rows", term_rows);
     vm.load_builtin("term-cols", term_cols);
     vm.load_builtin("time-utc", time_utc);
@@ -27,6 +30,20 @@ pub fn write(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "write")?;
     let obj = vm.heap.get_as_cell(vm.stack.pop()?);
     vm.write(&obj);
+    Ok(VCell::Void)
+}
+
+pub fn pretty_print(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 1, Some(1), "pretty-print")?;
+    let obj = vm.heap.get_as_cell(vm.stack.pop()?);
+    let width = vm.term_cols();
+    let width = if width == 0 { 80 } else { width };
+    let mut formatted = pretty::format(&obj, width);
+    formatted.push('\n');
+    // Cell::String in display form prints the raw string (no quoting),
+    // so this routes the formatted output through the same path as
+    // (display ...).
+    vm.display(&Cell::String(formatted));
     Ok(VCell::Void)
 }
 
