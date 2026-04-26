@@ -20,3 +20,14 @@ fn eof_object() {
         "(eq? (eof-object) (eof-object))" => "#t"
     ];
 }
+
+#[test]
+fn read_char_default_returns_eof() {
+    // Default StubInterface yields no input; read-char/peek-char return eof-object,
+    // and char-ready? returns #f.
+    evals![
+        "(eof-object? (read-char))" => "#t",
+        "(eof-object? (peek-char))" => "#t",
+        "(char-ready?)" => "#f"
+    ];
+}

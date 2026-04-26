@@ -11,6 +11,9 @@ pub fn load_builtins(vm: &mut Vm) {
     vm.load_builtin("time-utc", time_utc);
     vm.load_builtin("eof-object", eof_object);
     vm.load_builtin("eof-object?", eof_object_p);
+    vm.load_builtin("read-char", read_char);
+    vm.load_builtin("peek-char", peek_char);
+    vm.load_builtin("char-ready?", char_ready);
 }
 
 pub fn display(vm: &mut Vm) -> Result<VCell, Error> {
@@ -51,4 +54,25 @@ pub fn eof_object_p(vm: &mut Vm) -> Result<VCell, Error> {
     pop_argc(vm, 1, Some(1), "eof-object?")?;
     let val = vm.heap.get(vm.stack.pop()?);
     Ok(VCell::Bool(val.is_eof()))
+}
+
+pub fn read_char(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 0, Some(0), "read-char")?;
+    Ok(match vm.read_char() {
+        Some(c) => VCell::Char(c),
+        None => VCell::Eof,
+    })
+}
+
+pub fn peek_char(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 0, Some(0), "peek-char")?;
+    Ok(match vm.peek_char() {
+        Some(c) => VCell::Char(c),
+        None => VCell::Eof,
+    })
+}
+
+pub fn char_ready(vm: &mut Vm) -> Result<VCell, Error> {
+    pop_argc(vm, 0, Some(0), "char-ready?")?;
+    Ok(VCell::Bool(vm.char_ready()))
 }
