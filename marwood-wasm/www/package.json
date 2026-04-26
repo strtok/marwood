@@ -35,7 +35,7 @@
         "buffer": "^6.0.3",
         "marwood": "file:../pkg",
         "pako": "^2.1.0",
-        "xterm-readline": "github:strtok/xterm-readline"
+        "xterm-readline": "github:strtok/xterm-readline#v1.2.1"
     },
     "devDependencies": {
         "copy-webpack-plugin": "^14.0.0",
