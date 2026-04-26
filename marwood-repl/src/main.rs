@@ -203,7 +203,9 @@ fn eval<'a>(vm: &mut Vm, text: &'a str) -> &'a str {
                     println!();
                 }
                 _ => {
-                    println!("{:#}", cell);
+                    let width = vm.term_cols();
+                    let width = if width == 0 { 80 } else { width };
+                    println!("{}", marwood::pretty::format(&cell, width));
                 }
             }
             remaining_text.unwrap_or("")

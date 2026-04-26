@@ -181,7 +181,11 @@ impl Marwood {
     pub fn eval_continue(&mut self, count: usize) -> EvalResult {
         match self.vm.run_count(count) {
             Ok(Some(Cell::Void)) => EvalResult::new_ok(""),
-            Ok(Some(cell)) => EvalResult::new_ok(format!("{:#}", cell)),
+            Ok(Some(cell)) => {
+                let width = self.vm.term_cols();
+                let width = if width == 0 { 80 } else { width };
+                EvalResult::new_ok(marwood::pretty::format(&cell, width))
+            }
             Ok(None) => EvalResult::new_not_completed(),
             Err(e) => EvalResult::new_error(format!(
                 "error: {}\ntrace: \n{}",
