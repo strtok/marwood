@@ -1,3 +1,4 @@
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, is_raw_mode_enabled};
 use marwood::cell::Cell;
 use marwood::lex::scan;
 use marwood::parse::parse;
@@ -11,6 +12,8 @@ use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::{Editor, Result};
 use rustyline_derive::{Completer, Helper, Hinter};
 use std::borrow::Cow::Owned;
+use std::cell::RefCell;
+use std::io::{Read, Write};
 use std::time::UNIX_EPOCH;
 
 #[derive(Completer, Helper, Hinter)]
@@ -49,14 +52,17 @@ impl Highlighter for InputValidator {
 #[derive(Debug)]
 struct ReplSystemInterface {
     term_dimensions: (usize, usize),
+    peek: RefCell<Option<char>>,
 }
 impl SystemInterface for ReplSystemInterface {
     fn display(&self, cell: &Cell) {
         print!("{}", cell);
+        let _ = std::io::stdout().flush();
     }
 
     fn write(&self, cell: &Cell) {
         print!("{:#}", cell);
+        let _ = std::io::stdout().flush();
     }
 
     fn terminal_dimensions(&self) -> (usize, usize) {
@@ -67,6 +73,88 @@ impl SystemInterface for ReplSystemInterface {
         match std::time::SystemTime::now().duration_since(UNIX_EPOCH) {
             Ok(n) => n.as_millis() as u64,
             Err(_) => 0,
+        }
+    }
+
+    fn read_char(&self) -> Option<char> {
+        if let Some(c) = self.peek.borrow_mut().take() {
+            return Some(c);
+        }
+        read_one_char()
+    }
+
+    fn peek_char(&self) -> Option<char> {
+        let mut peek = self.peek.borrow_mut();
+        if let Some(c) = *peek {
+            return Some(c);
+        }
+        let c = read_one_char()?;
+        *peek = Some(c);
+        Some(c)
+    }
+
+    fn char_ready(&self) -> bool {
+        // Conservative: only report ready if a peeked char is buffered.
+        // R7RS allows #f when status is unknown; this never causes a
+        // spurious non-blocking guarantee.
+        self.peek.borrow().is_some()
+    }
+}
+
+/// RAII guard that puts the terminal into raw mode for the duration
+/// of a read_char call. On drop, restores cooked mode so rustyline's
+/// next readline behaves correctly even if a panic unwinds through us.
+struct RawModeGuard {
+    was_raw: bool,
+}
+
+impl RawModeGuard {
+    fn new() -> Option<Self> {
+        let was_raw = is_raw_mode_enabled().unwrap_or(false);
+        if !was_raw {
+            enable_raw_mode().ok()?;
+        }
+        Some(RawModeGuard { was_raw })
+    }
+}
+
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        if !self.was_raw {
+            let _ = disable_raw_mode();
+        }
+    }
+}
+
+/// Read one Unicode scalar value from stdin in raw mode. Ctrl-D
+/// returns None (EOF). Ctrl-C exits the process with status 130.
+fn read_one_char() -> Option<char> {
+    let _guard = RawModeGuard::new();
+    let mut stdin = std::io::stdin().lock();
+    let mut buf = [0u8; 4];
+    let mut len = 0;
+    loop {
+        if stdin.read(&mut buf[len..len + 1]).ok()? == 0 {
+            return None;
+        }
+        // Handle terminal control bytes on the first byte of a char.
+        if len == 0 {
+            match buf[0] {
+                0x03 => {
+                    // Ctrl-C: restore terminal then terminate.
+                    drop(_guard);
+                    std::process::exit(130);
+                }
+                0x04 => return None, // Ctrl-D
+                _ => {}
+            }
+        }
+        len += 1;
+        // Try to decode whatever we have so far as UTF-8.
+        match std::str::from_utf8(&buf[..len]) {
+            Ok(s) => return s.chars().next(),
+            Err(_) if len < 4 => continue,
+            Err(_) => return None,
         }
     }
 }
@@ -85,7 +173,10 @@ fn main() {
         Some((cols, rows)) => (cols, rows),
         None => (0, 0),
     };
-    vm.set_system_interface(Box::new(ReplSystemInterface { term_dimensions }));
+    vm.set_system_interface(Box::new(ReplSystemInterface {
+        term_dimensions,
+        peek: RefCell::new(None),
+    }));
     loop {
         let readline = rl.readline_with_initial("> ", (&remaining, ""));
         match readline {
