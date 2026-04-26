@@ -1,12 +1,30 @@
 use crate::lex;
 use crate::lex::{Token, TokenType};
 use std::borrow::Cow::{Borrowed, Owned};
+use std::cell::RefCell;
 
-pub struct ReplHighlighter {}
+#[derive(Clone, PartialEq, Eq)]
+enum HighlightSpans {
+    /// Cursor is on a bracket; highlight just its match.
+    Match((usize, usize)),
+    /// Cursor is between brackets; highlight the enclosing pair.
+    Pair((usize, usize), (usize, usize)),
+}
+
+pub struct ReplHighlighter {
+    /// Cache of the last (text, computed-spans) pair. `highlight_check`
+    /// returns true only when the *highlight* differs from the cache,
+    /// so xterm-readline's "skip refresh when nothing changed" path
+    /// is preserved when the cursor moves inside the same enclosing
+    /// pair.
+    cache: RefCell<Option<(String, Option<HighlightSpans>)>>,
+}
 
 impl ReplHighlighter {
     pub fn new() -> ReplHighlighter {
-        ReplHighlighter {}
+        ReplHighlighter {
+            cache: RefCell::new(None),
+        }
     }
 }
 
@@ -17,78 +35,74 @@ impl Default for ReplHighlighter {
 }
 
 impl ReplHighlighter {
-    pub fn highlight<'a>(&self, text: &'a str, index: usize) -> std::borrow::Cow<'a, str> {
-        const ON: &str = "\x1b[1;33m";
-        const OFF: &str = "\x1b[0m";
+    /// Compute which spans, if any, would be highlighted for the given
+    /// text and cursor position. Pure function shared by highlight()
+    /// and highlight_check() so they can never disagree.
+    fn compute_spans(text: &str, index: usize) -> Option<HighlightSpans> {
+        let tokens = lex::scan(text).ok()?;
 
-        let tokens = match lex::scan(text) {
-            Ok(tokens) => tokens,
-            Err(_) => {
-                return Borrowed(text);
-            }
-        };
-
-        // Case 1: the cursor sits on a bracket. Highlight the matching
-        // partner only — the cursor itself marks the bracket the user
-        // is on.
+        // Case 1: cursor is on a bracket — highlight the match only.
         if let Some(cur) = find_token_at_cursor(&tokens, index) {
             if matches!(
                 cur.1.token_type,
                 TokenType::LeftParen | TokenType::RightParen
             ) {
-                if let Some(matched) = find_matching_bracket(&tokens, cur) {
-                    let span = matched.span;
-                    return Owned(format!(
-                        "{}{}{}{}{}",
-                        &text[..span.0],
-                        ON,
-                        &text[span.0..span.1],
-                        OFF,
-                        &text[span.1..]
-                    ));
-                }
-                return Borrowed(text);
+                return find_matching_bracket(&tokens, cur).map(|m| HighlightSpans::Match(m.span));
             }
         }
 
-        // Case 2: cursor is between brackets. Highlight the innermost
-        // enclosing pair so the user always sees their depth.
-        if let Some((open, close)) = find_enclosing_pair(&tokens, index) {
-            return Owned(format!(
-                "{}{}{}{}{}{}{}{}{}",
-                &text[..open.span.0],
-                ON,
-                &text[open.span.0..open.span.1],
-                OFF,
-                &text[open.span.1..close.span.0],
-                ON,
-                &text[close.span.0..close.span.1],
-                OFF,
-                &text[close.span.1..]
-            ));
-        }
-
-        Borrowed(text)
+        // Case 2: cursor is between brackets — highlight enclosing pair.
+        find_enclosing_pair(&tokens, index)
+            .map(|(open, close)| HighlightSpans::Pair(open.span, close.span))
     }
 
-    pub fn highlight_check(&self, text: &str, mut index: usize) -> bool {
-        let tokens = match lex::scan(text) {
-            Ok(tokens) => tokens,
-            Err(_) => {
-                return false;
+    pub fn highlight<'a>(&self, text: &'a str, index: usize) -> std::borrow::Cow<'a, str> {
+        const ON: &str = "\x1b[1;33m";
+        const OFF: &str = "\x1b[0m";
+
+        let spans = Self::compute_spans(text, index);
+        // Keep the cache in sync with what's been rendered, so the
+        // next highlight_check has an accurate baseline.
+        *self.cache.borrow_mut() = Some((text.to_string(), spans.clone()));
+
+        match spans {
+            None => Borrowed(text),
+            Some(HighlightSpans::Match(span)) => Owned(format!(
+                "{}{}{}{}{}",
+                &text[..span.0],
+                ON,
+                &text[span.0..span.1],
+                OFF,
+                &text[span.1..]
+            )),
+            Some(HighlightSpans::Pair(open, close)) => Owned(format!(
+                "{}{}{}{}{}{}{}{}{}",
+                &text[..open.0],
+                ON,
+                &text[open.0..open.1],
+                OFF,
+                &text[open.1..close.0],
+                ON,
+                &text[close.0..close.1],
+                OFF,
+                &text[close.1..]
+            )),
+        }
+    }
+
+    pub fn highlight_check(&self, text: &str, index: usize) -> bool {
+        let current = Self::compute_spans(text, index);
+        let mut cache = self.cache.borrow_mut();
+        let stale = match &*cache {
+            Some((cached_text, cached_spans)) => {
+                cached_text != text || cached_spans != &current
             }
+            None => current.is_some(),
         };
-        index = index.saturating_sub(1);
-        matches!(
-            find_token_at_cursor(&tokens, index),
-            Some((
-                _,
-                &Token {
-                    token_type: TokenType::LeftParen | TokenType::RightParen,
-                    ..
-                },
-            ))
-        )
+        if stale {
+            *cache = Some((text.to_string(), current));
+        }
+        stale
     }
 }
 
