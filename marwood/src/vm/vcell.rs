@@ -41,6 +41,7 @@ pub enum VCell {
     Vector(Rc<Vector>),
 
     // other scheme values
+    Eof,
     Undefined,
     Void,
 
@@ -107,6 +108,7 @@ pub const BOOL_TYPE_TEXT: &str = "#<bool>";
 pub const CHAR_TYPE_TEXT: &str = "#<char>";
 pub const CLOSURE_TYPE_TEXT: &str = "#<closure>";
 pub const CONTINUATION_TYPE_TEXT: &str = "#<continuation>";
+pub const EOF_TYPE_TEXT: &str = "#<eof>";
 pub const GLOBAL_ENV_SLOT_TYPE_TEXT: &str = "#<global-environment-slot>";
 pub const ENVIRONMENT_POINTER_TYPE_TEXT: &str = "#<environment-pointer>";
 pub const MACRO_TYPE_TEXT: &str = "#<macro>";
@@ -142,6 +144,7 @@ impl VCell {
             VCell::Bool(_) => BOOL_TYPE_TEXT,
             VCell::Char(_) => CHAR_TYPE_TEXT,
             VCell::Continuation(_) => CONTINUATION_TYPE_TEXT,
+            VCell::Eof => EOF_TYPE_TEXT,
             VCell::Closure(_, _) => CLOSURE_TYPE_TEXT,
             VCell::EnvironmentPointer(_) => ENVIRONMENT_POINTER_TYPE_TEXT,
             VCell::GlobalEnvSlot(_) => GLOBAL_ENV_SLOT_TYPE_TEXT,
@@ -251,6 +254,10 @@ impl VCell {
 
     pub fn is_undefined(&self) -> bool {
         *self == VCell::Undefined
+    }
+
+    pub fn is_eof(&self) -> bool {
+        *self == VCell::Eof
     }
 
     pub fn is_nil(&self) -> bool {
@@ -513,6 +520,7 @@ impl fmt::Display for VCell {
             VCell::String(s) => write!(f, "\"{}\"", (**s).borrow().deref()),
             VCell::Symbol(s) => write!(f, "{}", *s),
             VCell::BuiltInProc(proc) => write!(f, "#<builtin:{}>", proc.desc()),
+            VCell::Eof => write!(f, "#!eof"),
             VCell::Undefined => write!(f, "undefined"),
             VCell::Vector(_) => write!(f, "#<vector>"),
             VCell::Void => write!(f, "#<void>"),

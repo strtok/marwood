@@ -26,6 +26,7 @@ pub enum Cell {
     // Types that exist in VCell, but need Cell representation for
     // printing purposes. These are never created by the lexer/parser.
     Continuation,
+    Eof,
     Macro,
     Procedure(Option<String>),
     Undefined,
@@ -511,6 +512,9 @@ impl Display for Cell {
             }
             Cell::Continuation => {
                 write!(f, "#<continuation>")
+            }
+            Cell::Eof => {
+                write!(f, "#!eof")
             }
             Cell::Macro => {
                 write!(f, "#<macro>")

@@ -140,6 +140,7 @@ impl Vm {
             Cell::Procedure(_)
             | Cell::Void
             | Cell::Undefined
+            | Cell::Eof
             | Cell::Macro
             | Cell::Continuation => Err(InvalidSyntax(expr.to_string())),
             Cell::Bool(_) | Cell::Char(_) | Cell::Number(_) | Cell::String(_) | Cell::Vector(_) => {

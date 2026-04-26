@@ -143,6 +143,7 @@ impl Heap {
             | VCell::Char(_)
             | VCell::Nil
             | VCell::Void
+            | VCell::Eof
             | VCell::Undefined => vcell,
             VCell::Ptr(_) => vcell,
             VCell::Symbol(sym) => {
@@ -214,6 +215,7 @@ impl Heap {
         labels: &mut HashMap<u32, HeapRef>,
     ) -> VCell {
         match *ast {
+            cell::Cell::Eof => VCell::Eof,
             cell::Cell::Undefined => VCell::Undefined,
             cell::Cell::Void => VCell::Void,
             cell::Cell::Nil => VCell::Nil,
@@ -537,6 +539,7 @@ impl Heap {
             }
             VCell::String(s) => Cell::String(s.borrow().deref().into()),
             VCell::Symbol(s) => Cell::Symbol(s.deref().into()),
+            VCell::Eof => Cell::Eof,
             VCell::Undefined => Cell::Undefined,
             VCell::Void => Cell::Void,
             VCell::Continuation(_) => Cell::Continuation,
@@ -647,6 +650,7 @@ impl Heap {
                 | VCell::String(_)
                 | VCell::Symbol(_)
                 | VCell::Macro(_)
+                | VCell::Eof
                 | VCell::Undefined
                 | VCell::Void => {}
             }
@@ -699,6 +703,7 @@ impl Heap {
             | VCell::Symbol(_)
             | VCell::BuiltInProc(_)
             | VCell::Macro(_)
+            | VCell::Eof
             | VCell::Undefined
             | VCell::Void => {}
         }

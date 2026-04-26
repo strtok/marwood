@@ -83,6 +83,7 @@ impl Vm {
             (VCell::Bool(left), VCell::Bool(right)) => Ok(left == right),
             (VCell::Number(left), VCell::Number(right)) => Ok(left == right),
             (VCell::Nil, VCell::Nil) => Ok(true),
+            (VCell::Eof, VCell::Eof) => Ok(true),
             (VCell::Pair(_, _), VCell::Pair(_, _)) => Ok(left == right),
             (VCell::Char(left), VCell::Char(right)) => Ok(left == right),
             (VCell::String(left), VCell::String(right)) => Ok(left == right),
