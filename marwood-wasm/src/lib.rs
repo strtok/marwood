@@ -1,6 +1,6 @@
 #![allow(clippy::unused_unit)]
 
-use js_sys::Date;
+use js_sys::{Atomics, Date, Int32Array, SharedArrayBuffer};
 use marwood::cell::Cell;
 use marwood::lex;
 use marwood::parse;
@@ -8,6 +8,23 @@ use marwood::syntax::ReplHighlighter;
 use marwood::vm::{SystemInterface, Vm};
 use std::borrow::Cow;
 use wasm_bindgen::prelude::*;
+
+// Wire protocol for the worker<->main sync RPC channel. Indices into a
+// SharedArrayBuffer-backed Int32Array. The worker writes a request,
+// notifies the main thread, then Atomics.wait()s on STATE until the
+// main thread fills in the result and flips STATE to RESPONSE.
+const SLOT_STATE: u32 = 0;
+const SLOT_OPCODE: u32 = 1;
+const SLOT_RESULT_A: u32 = 2; // char codepoint, or 0/1 for char-ready
+const SLOT_RESULT_B: u32 = 3; // 0 = have value, 1 = EOF (read/peek only)
+
+const STATE_IDLE: i32 = 0;
+const STATE_REQUEST: i32 = 1;
+const STATE_RESPONSE: i32 = 2;
+
+const OP_READ_CHAR: i32 = 1;
+const OP_PEEK_CHAR: i32 = 2;
+const OP_CHAR_READY: i32 = 3;
 
 #[wasm_bindgen(module = "/display.js")]
 extern "C" {
@@ -24,7 +41,37 @@ pub struct Marwood {
 }
 
 #[derive(Debug)]
-struct WasmSystemInterface {}
+struct WasmSystemInterface {
+    /// Int32Array view over a SharedArrayBuffer. When set, blocking
+    /// input methods perform a sync RPC to the main thread. When None,
+    /// they fall back to EOF.
+    input: Option<Int32Array>,
+}
+
+impl WasmSystemInterface {
+    fn rpc(&self, opcode: i32) -> Option<(i32, i32)> {
+        let arr = self.input.as_ref()?;
+        Atomics::store(arr, SLOT_OPCODE, opcode).ok()?;
+        Atomics::store(arr, SLOT_RESULT_A, 0).ok()?;
+        Atomics::store(arr, SLOT_RESULT_B, 0).ok()?;
+        Atomics::store(arr, SLOT_STATE, STATE_REQUEST).ok()?;
+        Atomics::notify(arr, SLOT_STATE).ok()?;
+        loop {
+            let cur = Atomics::load(arr, SLOT_STATE).ok()?;
+            if cur == STATE_RESPONSE {
+                break;
+            }
+            // Atomics.wait returns "ok" / "not-equal" / "timed-out";
+            // we ignore the result and re-check the state.
+            let _ = Atomics::wait(arr, SLOT_STATE, cur);
+        }
+        let a = Atomics::load(arr, SLOT_RESULT_A).ok()?;
+        let b = Atomics::load(arr, SLOT_RESULT_B).ok()?;
+        Atomics::store(arr, SLOT_STATE, STATE_IDLE).ok()?;
+        Some((a, b))
+    }
+}
+
 impl SystemInterface for WasmSystemInterface {
     fn display(&self, cell: &Cell) {
         display(&format!("{}", cell))
@@ -40,8 +87,34 @@ impl SystemInterface for WasmSystemInterface {
             termRows().as_f64().unwrap_or(0_f64) as usize,
         )
     }
+
     fn time_utc(&self) -> u64 {
         Date::now() as u64
+    }
+
+    fn read_char(&self) -> Option<char> {
+        let (a, b) = self.rpc(OP_READ_CHAR)?;
+        if b != 0 {
+            None
+        } else {
+            char::from_u32(a as u32)
+        }
+    }
+
+    fn peek_char(&self) -> Option<char> {
+        let (a, b) = self.rpc(OP_PEEK_CHAR)?;
+        if b != 0 {
+            None
+        } else {
+            char::from_u32(a as u32)
+        }
+    }
+
+    fn char_ready(&self) -> bool {
+        match self.rpc(OP_CHAR_READY) {
+            Some((a, _)) => a != 0,
+            None => false,
+        }
     }
 }
 
@@ -51,7 +124,23 @@ impl Marwood {
         #[cfg(feature = "console_error_panic_hook")]
         console_error_panic_hook::set_once();
         let mut vm = Vm::new();
-        vm.set_system_interface(Box::new(WasmSystemInterface {}));
+        vm.set_system_interface(Box::new(WasmSystemInterface { input: None }));
+        Marwood {
+            vm,
+            hl: ReplHighlighter::new(),
+        }
+    }
+
+    /// Construct a Marwood instance backed by a SharedArrayBuffer for
+    /// blocking input via Atomics.wait. The buffer must be at least 16
+    /// bytes (4 Int32 slots) and is shared with the main thread, which
+    /// services read-char / peek-char / char-ready requests.
+    pub fn new_with_shared(buffer: SharedArrayBuffer) -> Self {
+        #[cfg(feature = "console_error_panic_hook")]
+        console_error_panic_hook::set_once();
+        let mut vm = Vm::new();
+        let arr = Int32Array::new(&buffer);
+        vm.set_system_interface(Box::new(WasmSystemInterface { input: Some(arr) }));
         Marwood {
             vm,
             hl: ReplHighlighter::new(),
