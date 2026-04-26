@@ -142,6 +142,18 @@ impl Vm {
         self.sys.time_utc()
     }
 
+    pub fn read_char(&self) -> Option<char> {
+        self.sys.read_char()
+    }
+
+    pub fn peek_char(&self) -> Option<char> {
+        self.sys.peek_char()
+    }
+
+    pub fn char_ready(&self) -> bool {
+        self.sys.char_ready()
+    }
+
     pub fn global_symbols(&self) -> Vec<&str> {
         self.globenv
             .iter_bindings()
@@ -167,6 +179,22 @@ pub trait SystemInterface: Debug {
     fn write(&self, cell: &Cell);
     fn terminal_dimensions(&self) -> (usize, usize);
     fn time_utc(&self) -> u64;
+
+    /// Read one character from the current input source, blocking until
+    /// one is available. Returns None on EOF.
+    fn read_char(&self) -> Option<char> {
+        None
+    }
+
+    /// Peek at the next character without consuming it. Returns None on EOF.
+    fn peek_char(&self) -> Option<char> {
+        None
+    }
+
+    /// Returns true if a character is available without blocking.
+    fn char_ready(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Debug)]
