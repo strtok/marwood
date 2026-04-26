@@ -36,10 +36,7 @@ const handleMessage = (e) => {
   }
 };
 
-// Use both addEventListener and onmessage; module workers vary in
-// which one delivers messages reliably across browsers.
 self.addEventListener("message", handleMessage);
-self.onmessage = handleMessage;
 
 // Signal main that the worker is alive and listening before main
 // posts the init message containing the SharedArrayBuffer. Sending
