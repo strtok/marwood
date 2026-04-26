@@ -22,6 +22,12 @@ pub enum TokenType {
     Unquote,
     WhiteSpace,
     HashParen,
+    /// Datum-label definition `#N=`. The label number is in the span,
+    /// between the leading `#` and trailing `=`.
+    DatumLabelDef,
+    /// Datum-label reference `#N#`. The label number is in the span,
+    /// between the leading and trailing `#`.
+    DatumLabelRef,
 }
 
 /// Token
@@ -216,7 +222,40 @@ fn scan_hash_token(cur: &mut Peekable<CharIndices>) -> Result<Token, Error> {
             Ok(Token::new((start, start + 2), TokenType::NumberPrefix))
         }
         '\\' => scan_char(cur, start),
+        c if c.is_ascii_digit() => scan_datum_label(cur, start, c),
         c => Err(Error::UnexpectedCharacterFollowing('#'.into(), c.into())),
+    }
+}
+
+/// Scan a datum-label token starting from `#<digit>`. The leading `#`
+/// has been consumed (`start` points at it) and the first digit is
+/// already in `first`. Continues reading digits until either `=`
+/// (definition) or `#` (reference) is reached.
+fn scan_datum_label(
+    cur: &mut Peekable<CharIndices>,
+    start: usize,
+    first: char,
+) -> Result<Token, Error> {
+    while let Some(&(_, c)) = cur.peek() {
+        if !c.is_ascii_digit() {
+            break;
+        }
+        cur.next();
+    }
+    match cur.next() {
+        Some((offset, '=')) => Ok(Token::new(
+            (start, offset + '='.len_utf8()),
+            TokenType::DatumLabelDef,
+        )),
+        Some((offset, '#')) => Ok(Token::new(
+            (start, offset + '#'.len_utf8()),
+            TokenType::DatumLabelRef,
+        )),
+        Some((_, c)) => Err(Error::UnexpectedCharacterFollowing(
+            format!("#{}", first),
+            c.into(),
+        )),
+        None => Err(Error::Incomplete),
     }
 }
 

@@ -8,7 +8,7 @@ use crate::vm::vcell::VCell;
 use log::trace;
 use num::ToPrimitive;
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 
 pub type HeapRef = usize;
@@ -175,7 +175,16 @@ impl Heap {
     /// # Arguments
     /// `ast` - The structure to allocate recursively on the heap.
     pub fn put_cell(&mut self, ast: &cell::Cell) -> VCell {
-        let vcell = self.maybe_put_cell(ast);
+        let mut labels = HashMap::new();
+        self.put_cell_with_labels(ast, &mut labels)
+    }
+
+    fn put_cell_with_labels(
+        &mut self,
+        ast: &cell::Cell,
+        labels: &mut HashMap<u32, HeapRef>,
+    ) -> VCell {
+        let vcell = self.maybe_put_cell_with_labels(ast, labels);
         if vcell.is_ptr() {
             vcell
         } else {
@@ -195,6 +204,15 @@ impl Heap {
     /// # Arguments
     /// `ast` - The structure to allocate recursively on the heap.
     pub fn maybe_put_cell(&mut self, ast: &cell::Cell) -> VCell {
+        let mut labels = HashMap::new();
+        self.maybe_put_cell_with_labels(ast, &mut labels)
+    }
+
+    fn maybe_put_cell_with_labels(
+        &mut self,
+        ast: &cell::Cell,
+        labels: &mut HashMap<u32, HeapRef>,
+    ) -> VCell {
         match *ast {
             cell::Cell::Undefined => VCell::Undefined,
             cell::Cell::Void => VCell::Void,
@@ -203,7 +221,10 @@ impl Heap {
             cell::Cell::Bool(val) => VCell::Bool(val),
             cell::Cell::Char(val) => VCell::Char(val),
             cell::Cell::Pair(ref car, ref cdr) => {
-                match (self.put_cell(car.deref()), self.put_cell(cdr.deref())) {
+                match (
+                    self.put_cell_with_labels(car.deref(), labels),
+                    self.put_cell_with_labels(cdr.deref(), labels),
+                ) {
                     (VCell::Ptr(car), VCell::Ptr(cdr)) => self.put(VCell::Pair(car, cdr)),
                     _ => panic!("expected ptr, got {:?}", ast),
                 }
@@ -219,10 +240,32 @@ impl Heap {
             cell::Cell::Vector(ref vector) => {
                 let mut outv = Vec::with_capacity(vector.len());
                 for it in vector {
-                    outv.push(self.maybe_put_cell(it))
+                    outv.push(self.maybe_put_cell_with_labels(it, labels))
                 }
                 self.put(VCell::vector(outv))
             }
+            // R7RS datum-label resolution: pre-allocate a placeholder
+            // slot so back-references created while interning the inner
+            // datum already point at the correct heap location, then
+            // copy the inner result into that slot. This is the same
+            // mechanism `set-cdr!` uses to tie the knot at runtime.
+            cell::Cell::DatumDef(label, ref inner) => {
+                let placeholder = self.alloc();
+                *self.heap.get_mut(placeholder).expect("heap index out of bounds") =
+                    VCell::Undefined;
+                labels.insert(label, placeholder);
+                let result = self.maybe_put_cell_with_labels(inner, labels);
+                let value = match result {
+                    VCell::Ptr(p) => self.get_at_index(p).clone(),
+                    other => other,
+                };
+                *self.get_at_index_mut(placeholder) = value;
+                VCell::Ptr(placeholder)
+            }
+            cell::Cell::DatumRef(label) => match labels.get(&label) {
+                Some(&idx) => VCell::Ptr(idx),
+                None => panic!("unresolved datum label #{}#", label),
+            },
         }
     }
 
@@ -311,35 +354,187 @@ impl Heap {
     /// Return a Cell representation of the given vcell by copying the recursive
     /// structure out of the heap into a Cell structure.
     ///
+    /// Cyclic and back-referenced pair / vector structure is rendered using
+    /// R7RS datum-label syntax via `Cell::DatumDef` / `Cell::DatumRef`. A
+    /// pre-pass DFS labels heap refs that participate in a back-edge; the
+    /// build pass then wraps each labeled ref in a `DatumDef` on first
+    /// encounter and emits a `DatumRef` for repeats. Acyclic input pays a
+    /// pre-pass walk but is otherwise unchanged.
+    ///
     /// Panic if the type is not capable of being represented as a cell.
     ///
     /// # Arguments
     /// `vcell` - The vcell to map to a cell
     pub fn get_as_cell(&self, vcell: &VCell) -> Cell {
-        match vcell {
+        let mut labels = HashMap::<HeapRef, u32>::new();
+        let mut on_stack = HashSet::<HeapRef>::new();
+        let mut scanned = HashSet::<HeapRef>::new();
+        let mut next_label: u32 = 0;
+        self.scan_for_cycles(
+            vcell,
+            &mut on_stack,
+            &mut scanned,
+            &mut labels,
+            &mut next_label,
+        );
+        let mut emitted = HashSet::<u32>::new();
+        self.build_cell(vcell, &labels, &mut emitted)
+    }
+
+    /// DFS pre-pass that labels every heap ref reached via a back-edge —
+    /// i.e., the cycle anchors. Refs shared without a cycle (DAG sharing)
+    /// are intentionally not labeled; this matches R7RS `write` semantics
+    /// where labels appear only when needed to terminate output.
+    fn scan_for_cycles(
+        &self,
+        vcell: &VCell,
+        on_stack: &mut HashSet<HeapRef>,
+        scanned: &mut HashSet<HeapRef>,
+        labels: &mut HashMap<HeapRef, u32>,
+        next_label: &mut u32,
+    ) {
+        let (idx, deref) = match vcell {
+            VCell::Ptr(p) => (Some(*p), self.get_at_index(*p)),
+            _ => (None, vcell),
+        };
+        match deref {
+            VCell::Pair(car, cdr) => {
+                if let Some(idx) = idx {
+                    if on_stack.contains(&idx) {
+                        labels.entry(idx).or_insert_with(|| {
+                            let l = *next_label;
+                            *next_label += 1;
+                            l
+                        });
+                        return;
+                    }
+                    if !scanned.insert(idx) {
+                        return;
+                    }
+                    on_stack.insert(idx);
+                }
+                self.scan_for_cycles(
+                    &VCell::Ptr(*car),
+                    on_stack,
+                    scanned,
+                    labels,
+                    next_label,
+                );
+                self.scan_for_cycles(
+                    &VCell::Ptr(*cdr),
+                    on_stack,
+                    scanned,
+                    labels,
+                    next_label,
+                );
+                if let Some(idx) = idx {
+                    on_stack.remove(&idx);
+                }
+            }
+            VCell::Vector(vector) => {
+                if let Some(idx) = idx {
+                    if on_stack.contains(&idx) {
+                        labels.entry(idx).or_insert_with(|| {
+                            let l = *next_label;
+                            *next_label += 1;
+                            l
+                        });
+                        return;
+                    }
+                    if !scanned.insert(idx) {
+                        return;
+                    }
+                    on_stack.insert(idx);
+                }
+                for i in 0..vector.len() {
+                    self.scan_for_cycles(
+                        &vector.get(i).unwrap(),
+                        on_stack,
+                        scanned,
+                        labels,
+                        next_label,
+                    );
+                }
+                if let Some(idx) = idx {
+                    on_stack.remove(&idx);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn build_cell(
+        &self,
+        vcell: &VCell,
+        labels: &HashMap<HeapRef, u32>,
+        emitted: &mut HashSet<u32>,
+    ) -> Cell {
+        let (idx, deref) = match vcell {
+            VCell::Ptr(p) => (Some(*p), self.get_at_index(*p)),
+            _ => (None, vcell),
+        };
+        if let Some(idx) = idx
+            && let Some(&label) = labels.get(&idx)
+        {
+            if !emitted.insert(label) {
+                return Cell::DatumRef(label);
+            }
+            let inner = self.build_cell_body(deref, labels, emitted);
+            return Cell::DatumDef(label, Box::new(inner));
+        }
+        self.build_cell_body(deref, labels, emitted)
+    }
+
+    fn build_cell_body(
+        &self,
+        deref: &VCell,
+        labels: &HashMap<HeapRef, u32>,
+        emitted: &mut HashSet<u32>,
+    ) -> Cell {
+        match deref {
             VCell::Bool(val) => Cell::Bool(*val),
             VCell::Char(val) => Cell::Char(*val),
             VCell::Number(val) => Cell::Number(val.clone()),
             VCell::Nil => Cell::Nil,
             VCell::Pair(_, _) => {
                 let mut v = vec![];
-                let mut rest = vcell.clone();
+                let mut current = deref.clone();
                 loop {
-                    v.push(self.get_as_cell(&rest.as_car().unwrap()));
-                    match self.get_at_index(rest.as_cdr().unwrap().as_ptr().unwrap()) {
-                        pair if pair.is_pair() => {
-                            rest = pair.clone();
+                    v.push(self.build_cell(&current.as_car().unwrap(), labels, emitted));
+                    let cdr_ptr = current.as_cdr().unwrap().as_ptr().unwrap();
+                    // If the cdr is a labeled ref already emitted on this
+                    // walk, terminate the list with a DatumRef tail —
+                    // this is the back-edge that closes the cycle.
+                    if let Some(&label) = labels.get(&cdr_ptr)
+                        && emitted.contains(&label)
+                    {
+                        return Cell::new_improper_list(v, Cell::DatumRef(label));
+                    }
+                    let next = self.get_at_index(cdr_ptr);
+                    if next.is_pair() {
+                        // Labeled-but-not-yet-emitted in cdr position
+                        // (cycle anchor reached for the first time
+                        // from inside): hand off to build_cell so it
+                        // wraps the rest in DatumDef.
+                        if labels.contains_key(&cdr_ptr) {
+                            let rest = self.build_cell(
+                                &VCell::Ptr(cdr_ptr),
+                                labels,
+                                emitted,
+                            );
+                            return Cell::new_improper_list(v, rest);
                         }
-                        VCell::Nil => {
-                            return Cell::new_list(v);
-                        }
-                        cell => {
-                            return Cell::new_improper_list(v, self.get_as_cell(cell));
-                        }
+                        current = next.clone();
+                    } else if next.is_nil() {
+                        return Cell::new_list(v);
+                    } else {
+                        return Cell::new_improper_list(
+                            v,
+                            self.build_cell(&VCell::Ptr(cdr_ptr), labels, emitted),
+                        );
                     }
                 }
             }
-            VCell::Ptr(ptr) => self.get_as_cell(self.get_at_index(*ptr)),
             VCell::String(s) => Cell::String(s.borrow().deref().into()),
             VCell::Symbol(s) => Cell::Symbol(s.deref().into()),
             VCell::Undefined => Cell::Undefined,
@@ -354,11 +549,13 @@ impl Heap {
             VCell::Macro(_) => Cell::Macro,
             VCell::Vector(vector) => {
                 let mut outv = Vec::with_capacity(vector.len());
-                for idx in 0..vector.len() {
-                    outv.push(self.get_as_cell(&vector.get(idx).unwrap()));
+                for i in 0..vector.len() {
+                    outv.push(self.build_cell(&vector.get(i).unwrap(), labels, emitted));
                 }
                 Cell::Vector(outv)
             }
+            // Pointers get resolved by build_cell before reaching here.
+            VCell::Ptr(_) => self.build_cell(deref, labels, emitted),
             // Any internal values used by bytecode aren't convertible to Cells and
             // result in a panic.
             VCell::Acc
@@ -372,7 +569,7 @@ impl Heap {
             | VCell::LexicalEnvPtr(_, _)
             | VCell::OpCode(_)
             | VCell::InstructionPointer(_, _) => {
-                panic!("cannot convert VCell {} to Cell", vcell)
+                panic!("cannot convert VCell {} to Cell", deref)
             }
         }
     }

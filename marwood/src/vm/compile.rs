@@ -145,6 +145,7 @@ impl Vm {
             Cell::Bool(_) | Cell::Char(_) | Cell::Number(_) | Cell::String(_) | Cell::Vector(_) => {
                 self.compile_quote(lambda, expr)
             }
+            Cell::DatumDef(_, _) | Cell::DatumRef(_) => Err(InvalidSyntax(expr.to_string())),
         }
     }
 

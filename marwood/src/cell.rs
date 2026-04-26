@@ -30,6 +30,14 @@ pub enum Cell {
     Procedure(Option<String>),
     Undefined,
     Void,
+
+    // R7RS datum-label syntax (`#N=` / `#N#`). DatumDef wraps a
+    // labeled value at its definition site; DatumRef stands for a
+    // back-reference. These appear transiently between the reader
+    // and heap interning (where labels are resolved into shared heap
+    // pointers), and in the output of cycle-safe printing.
+    DatumDef(u32, Box<Cell>),
+    DatumRef(u32),
 }
 
 impl Cell {
@@ -520,6 +528,17 @@ impl Display for Cell {
             }
             Cell::Void => {
                 write!(f, "#<void>")
+            }
+            Cell::DatumDef(label, value) => {
+                write!(f, "#{}=", label)?;
+                if f.alternate() {
+                    write!(f, "{:#}", value)
+                } else {
+                    write!(f, "{}", value)
+                }
+            }
+            Cell::DatumRef(label) => {
+                write!(f, "#{}#", label)
             }
         }
     }

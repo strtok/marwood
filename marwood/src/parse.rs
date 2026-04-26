@@ -78,10 +78,28 @@ pub fn parse<'a, T: Iterator<Item = &'a Token>>(
         }),
         TokenType::Symbol => Ok(Cell::new_symbol(token.span(text))),
         TokenType::NumberPrefix | TokenType::Number => parse_number(text, cur, token),
+        TokenType::DatumLabelDef => {
+            let label = parse_datum_label(token.span(text))?;
+            Ok(Cell::DatumDef(label, Box::new(parse(text, cur)?)))
+        }
+        TokenType::DatumLabelRef => {
+            let label = parse_datum_label(token.span(text))?;
+            Ok(Cell::DatumRef(label))
+        }
         TokenType::Dot | TokenType::WhiteSpace => {
             Err(Error::UnexpectedToken(token.span(text).into()))
         }
     }
+}
+
+/// Extract the numeric label from a datum-label span. The span is
+/// `#N=` or `#N#`; the digits live between the leading `#` and the
+/// trailing `=` / `#`.
+fn parse_datum_label(span: &str) -> Result<u32, Error> {
+    let digits = &span[1..span.len() - 1];
+    digits
+        .parse::<u32>()
+        .map_err(|_| Error::SyntaxError(format!("invalid datum label '{}'", span)))
 }
 
 /// Parse List

@@ -103,3 +103,95 @@ fn assoc() {
            "(assv '(1 2) '((0 foo) ((1 2) bar) (2 baz)))" => "#f"
     ];
 }
+
+#[test]
+fn cyclic_list_print() {
+    prints![
+        "(define x (let ((x '(1 2 3))) (set-cdr! (cddr x) x) x))" => "#<void>",
+        "x" => "#0=(1 2 3 . #0#)"
+    ];
+}
+
+#[test]
+fn datum_label_reader() {
+    // R7RS datum-label syntax constructs cyclic structure at read time.
+    prints![
+        "(define x '#0=(1 2 . #0#))" => "#<void>",
+        "x" => "#0=(1 2 . #0#)"
+    ];
+    evals![
+        "(define x '#0=(1 2 . #0#))" => "#<void>",
+        "(eq? x (cddr x))" => "#t",
+        "(car x)" => "1",
+        "(cadr x)" => "2"
+    ];
+}
+
+#[test]
+fn cyclic_self_loop() {
+    prints![
+        "(define z (let ((x (list 'a))) (set-cdr! x x) x))" => "#<void>",
+        "z" => "#0=(a . #0#)"
+    ];
+}
+
+#[test]
+fn cyclic_tail_in_middle_of_list() {
+    // Cycle is anchored at the tail of an outer list; the label
+    // therefore appears mid-output, not at the head.
+    prints![
+        "(define m (let ((tail (list 3 4))) (set-cdr! (cdr tail) tail) (cons 1 (cons 2 tail))))"
+            => "#<void>",
+        "m" => "(1 2 . #0=(3 4 . #0#))"
+    ];
+}
+
+#[test]
+fn datum_label_self_as_element() {
+    // The cycle anchor is referenced as a list element, not as the tail.
+    prints!["'#0=(a b c #0#)" => "#0=(a b c #0#)"];
+    evals![
+        "(define x '#0=(a b c #0#))" => "#<void>",
+        "(eq? x (list-ref x 3))" => "#t"
+    ];
+}
+
+#[test]
+fn cyclic_vector_print_and_equal() {
+    prints![
+        "(define v (make-vector 2 0))" => "#<void>",
+        "(vector-set! v 0 'x)" => "#<void>",
+        "(vector-set! v 1 v)" => "#<void>",
+        "v" => "#0=#(x #0#)"
+    ];
+    evals![
+        "(define v (make-vector 2 0))" => "#<void>",
+        "(vector-set! v 0 'x)" => "#<void>",
+        "(vector-set! v 1 v)" => "#<void>",
+        "(equal? v v)" => "#t"
+    ];
+}
+
+#[test]
+fn reader_built_cycle_matches_set_cdr_built_cycle() {
+    // A cycle constructed with datum-label syntax should be equal? to
+    // an identically-shaped cycle constructed via set-cdr!.
+    evals![
+        "(define a '#0=(1 . #0#))" => "#<void>",
+        "(define b (let ((x (list 1))) (set-cdr! x x) x))" => "#<void>",
+        "(equal? a b)" => "#t",
+        "(eq? a b)" => "#f"
+    ];
+}
+
+#[test]
+fn cyclic_list_equal() {
+    // Two independently-allocated self-cycles of identical shape are
+    // equal? and the comparison terminates.
+    evals![
+        "(define a (let ((x (list 1))) (set-cdr! x x) x))" => "#<void>",
+        "(define b (let ((x (list 1))) (set-cdr! x x) x))" => "#<void>",
+        "(equal? a a)" => "#t",
+        "(equal? a b)" => "#t"
+    ];
+}
