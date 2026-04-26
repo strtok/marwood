@@ -11,12 +11,21 @@ self.marwood_display = (text) => {
 self.marwood_termCols = () => termCols;
 self.marwood_termRows = () => termRows;
 
-marwood = Marwood.new();
-self.postMessage({ type: "ready" });
-
-self.onmessage = (e) => {
+const handleMessage = (e) => {
   const msg = e.data;
   switch (msg.type) {
+    case "init":
+      try {
+        if (msg.buffer != null) {
+          marwood = Marwood.new_with_shared(msg.buffer);
+        } else {
+          marwood = Marwood.new();
+        }
+        self.postMessage({ type: "ready" });
+      } catch (err) {
+        self.postMessage({ type: "error", text: "worker init: " + String(err) });
+      }
+      break;
     case "termSize":
       termCols = msg.cols;
       termRows = msg.rows;
@@ -26,6 +35,17 @@ self.onmessage = (e) => {
       break;
   }
 };
+
+// Use both addEventListener and onmessage; module workers vary in
+// which one delivers messages reliably across browsers.
+self.addEventListener("message", handleMessage);
+self.onmessage = handleMessage;
+
+// Signal main that the worker is alive and listening before main
+// posts the init message containing the SharedArrayBuffer. Sending
+// the SAB while the worker is still loading races with Chrome's
+// cross-origin-isolated checks and silently drops the message.
+self.postMessage({ type: "started" });
 
 function runEval(text) {
   let remaining = text;
