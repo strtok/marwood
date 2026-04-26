@@ -12,12 +12,13 @@ enum HighlightSpans {
 }
 
 pub struct ReplHighlighter {
-    /// Cache of the last (text, computed-spans) pair. `highlight_check`
-    /// returns true only when the *highlight* differs from the cache,
+    /// Cache of the last computed spans. `highlight_check` returns
+    /// true only when the *highlight result* differs from the cache,
     /// so xterm-readline's "skip refresh when nothing changed" path
-    /// is preserved when the cursor moves inside the same enclosing
-    /// pair.
-    cache: RefCell<Option<(String, Option<HighlightSpans>)>>,
+    /// works for any keystroke that doesn't change which bracket pair
+    /// is being highlighted (including text-shifting inserts inside
+    /// the same enclosing pair).
+    cache: RefCell<Option<Option<HighlightSpans>>>,
 }
 
 impl ReplHighlighter {
@@ -63,7 +64,7 @@ impl ReplHighlighter {
         let spans = Self::compute_spans(text, index);
         // Keep the cache in sync with what's been rendered, so the
         // next highlight_check has an accurate baseline.
-        *self.cache.borrow_mut() = Some((text.to_string(), spans.clone()));
+        *self.cache.borrow_mut() = Some(spans.clone());
 
         match spans {
             None => Borrowed(text),
@@ -94,13 +95,11 @@ impl ReplHighlighter {
         let current = Self::compute_spans(text, index);
         let mut cache = self.cache.borrow_mut();
         let stale = match &*cache {
-            Some((cached_text, cached_spans)) => {
-                cached_text != text || cached_spans != &current
-            }
+            Some(cached) => cached != &current,
             None => current.is_some(),
         };
         if stale {
-            *cache = Some((text.to_string(), current));
+            *cache = Some(current);
         }
         stale
     }
@@ -187,5 +186,47 @@ fn find_enclosing_pair(tokens: &[Token], cursor: usize) -> Option<(&Token, &Toke
         Some((open, close))
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_returns_true_then_false_when_unchanged() {
+        let hl = ReplHighlighter::new();
+        // Cursor on '(' of "(foo)" → matches ')'.
+        assert!(hl.highlight_check("(foo)", 0));
+        // Same call → cache hit, no refresh needed.
+        assert!(!hl.highlight_check("(foo)", 0));
+    }
+
+    #[test]
+    fn check_stays_false_when_typing_inside_paren_keeps_match_span() {
+        let hl = ReplHighlighter::new();
+        // Cursor on ')' of "(foo)" — match-bracket span is (0,1).
+        assert!(hl.highlight_check("(foo)", 4));
+        // Insert a char before ')'; cursor moved with it. Match-bracket
+        // span is still (0,1), so the highlight doesn't change.
+        assert!(!hl.highlight_check("(foob)", 5));
+    }
+
+    #[test]
+    fn check_returns_true_when_pair_balance_changes() {
+        let hl = ReplHighlighter::new();
+        assert!(hl.highlight_check("(foo)", 4));
+        // Typing '(' makes the buffer unbalanced: ')' at pos 5 no longer
+        // has a match, so the cursor-on-bracket result changes.
+        assert!(hl.highlight_check("(foo()", 5));
+    }
+
+    #[test]
+    fn check_returns_false_when_cursor_moves_inside_same_pair() {
+        let hl = ReplHighlighter::new();
+        // Cursor between 'o' and 'o' of "(foo)" — enclosing pair (0,1)/(4,5).
+        assert!(hl.highlight_check("(foo)", 2));
+        // Move cursor one to the right; still inside the same pair.
+        assert!(!hl.highlight_check("(foo)", 3));
     }
 }
