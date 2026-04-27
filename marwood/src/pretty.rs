@@ -263,13 +263,11 @@ fn forces_multiline(cell: &Cell) -> bool {
         if elts[1].is_pair() {
             return true;
         }
-        if elts.len() == 3 {
-            if let Some(body_head) = elts[2].car() {
-                if body_head.is_lambda() {
+        if elts.len() == 3
+            && let Some(body_head) = elts[2].car()
+                && body_head.is_lambda() {
                     return true;
                 }
-            }
-        }
     }
 
     // (define-syntax NAME TRANSFORMER) — same convention as define.

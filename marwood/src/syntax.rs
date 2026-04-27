@@ -43,14 +43,13 @@ impl ReplHighlighter {
         let tokens = lex::scan(text).ok()?;
 
         // Case 1: cursor is on a bracket — highlight the match only.
-        if let Some(cur) = find_token_at_cursor(&tokens, index) {
-            if matches!(
+        if let Some(cur) = find_token_at_cursor(&tokens, index)
+            && matches!(
                 cur.1.token_type,
                 TokenType::LeftParen | TokenType::RightParen
             ) {
                 return find_matching_bracket(&tokens, cur).map(|m| HighlightSpans::Match(m.span));
             }
-        }
 
         // Case 2: cursor is between brackets — highlight enclosing pair.
         find_enclosing_pair(&tokens, index)
