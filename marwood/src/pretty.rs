@@ -242,28 +242,55 @@ enum Rule {
 }
 
 /// Forms that should always render across multiple lines, even when
-/// they would fit on a single line. Function definitions are the
-/// canonical case: separating signature from body makes file scans
-/// (`grep '^(define '`) and diffs cleaner, and visually distinguishes
-/// procedure definitions from value definitions.
+/// they would fit on a single line. Function definitions and the
+/// dispatch forms (cond / case / syntax-rules) are the canonical
+/// cases: separating signature from body, or one clause per line,
+/// makes file scans and diffs cleaner and visually distinguishes
+/// these forms from generic procedure calls.
 fn forces_multiline(cell: &Cell) -> bool {
     if !cell.is_list() {
         return false;
     }
     let elts: Vec<&Cell> = cell.iter().collect();
-    if elts.len() < 3 || !elts[0].is_define() {
+    if elts.is_empty() {
         return false;
     }
-    // (define (NAME ...) BODY...)
-    if elts[1].is_pair() {
-        return true;
-    }
-    // (define NAME (lambda ...))
-    if elts.len() == 3 {
-        if let Some(body_head) = elts[2].car() {
-            return body_head.is_lambda();
+    let head = elts[0].as_symbol();
+
+    // Function-shape defines: (define (NAME ...) ...) and
+    // (define NAME (lambda ...)).
+    if head == Some("define") && elts.len() >= 3 {
+        if elts[1].is_pair() {
+            return true;
+        }
+        if elts.len() == 3 {
+            if let Some(body_head) = elts[2].car() {
+                if body_head.is_lambda() {
+                    return true;
+                }
+            }
         }
     }
+
+    // (define-syntax NAME TRANSFORMER) — same convention as define.
+    if head == Some("define-syntax") && elts.len() >= 3 {
+        return true;
+    }
+
+    // Clause-table forms: each clause / pattern on its own line.
+    if matches!(head, Some("cond") | Some("case") | Some("syntax-rules"))
+        && elts.len() >= 2
+    {
+        return true;
+    }
+
+    // Multi-section forms that read poorly on a single line.
+    if matches!(head, Some("do") | Some("let-syntax") | Some("letrec-syntax"))
+        && elts.len() >= 3
+    {
+        return true;
+    }
+
     false
 }
 
@@ -497,6 +524,61 @@ mod tests {
             out,
             "(define greet\n  (lambda (name)\n    (display \"hi \")\n    (display name)))"
         );
+    }
+
+    #[test]
+    fn cond_always_breaks_clauses_even_when_fitting() {
+        let out = format(&p("(cond ((null? lst) 0) (else 1))"), 80);
+        assert_eq!(out, "(cond\n  ((null? lst) 0)\n  (else 1))");
+    }
+
+    #[test]
+    fn case_always_breaks_clauses() {
+        let out = format(&p("(case x ((1 2) 'small) (else 'big))"), 80);
+        assert_eq!(
+            out,
+            "(case\n  x\n  ((1 2) 'small)\n  (else 'big))"
+        );
+    }
+
+    #[test]
+    fn syntax_rules_always_breaks() {
+        let out = format(&p("(syntax-rules () ((_ x) x))"), 80);
+        // (syntax-rules) is Body(0): every element after the head goes
+        // on its own line indented +2.
+        assert_eq!(out, "(syntax-rules\n  ()\n  ((_ x) x))");
+    }
+
+    #[test]
+    fn empty_cond_still_renders_compactly() {
+        // (cond) with no clauses has nothing to break.
+        assert_eq!(format(&p("(cond)"), 80), "(cond)");
+    }
+
+    #[test]
+    fn do_form_always_breaks() {
+        let out = format(&p("(do ((i 0 (+ i 1))) ((= i 10)) (display i))"), 80);
+        assert_eq!(
+            out,
+            "(do ((i 0 (+ i 1)))\n  ((= i 10))\n  (display i))"
+        );
+    }
+
+    #[test]
+    fn define_syntax_always_breaks() {
+        let out = format(
+            &p("(define-syntax swap! (syntax-rules () ((_ a b) (let ((t a)) (set! a b) (set! b t)))))"),
+            80,
+        );
+        assert!(out.starts_with("(define-syntax swap!\n"), "got:\n{}", out);
+        assert!(out.contains("(syntax-rules\n"), "got:\n{}", out);
+    }
+
+    #[test]
+    fn let_syntax_always_breaks() {
+        let out = format(&p("(let-syntax ((m (syntax-rules () ((_) 1)))) (m))"), 80);
+        assert!(out.starts_with("(let-syntax"), "got:\n{}", out);
+        assert!(out.contains("\n"), "expected break:\n{}", out);
     }
 
     #[test]
