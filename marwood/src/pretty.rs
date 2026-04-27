@@ -58,7 +58,7 @@ impl Printer {
 
     fn print(&mut self, cell: &Cell) {
         let single = format!("{:#}", cell);
-        if self.fits_single_line(&single) {
+        if !forces_multiline(cell) && self.fits_single_line(&single) {
             self.raw(&single);
             return;
         }
@@ -239,6 +239,32 @@ enum Rule {
     /// Head + first arg on open-paren line; remaining args align
     /// under the first arg's column.
     AlignArgs,
+}
+
+/// Forms that should always render across multiple lines, even when
+/// they would fit on a single line. Function definitions are the
+/// canonical case: separating signature from body makes file scans
+/// (`grep '^(define '`) and diffs cleaner, and visually distinguishes
+/// procedure definitions from value definitions.
+fn forces_multiline(cell: &Cell) -> bool {
+    if !cell.is_list() {
+        return false;
+    }
+    let elts: Vec<&Cell> = cell.iter().collect();
+    if elts.len() < 3 || !elts[0].is_define() {
+        return false;
+    }
+    // (define (NAME ...) BODY...)
+    if elts[1].is_pair() {
+        return true;
+    }
+    // (define NAME (lambda ...))
+    if elts.len() == 3 {
+        if let Some(body_head) = elts[2].car() {
+            return body_head.is_lambda();
+        }
+    }
+    false
 }
 
 fn lookup_rule(head: &Cell) -> Rule {
@@ -442,6 +468,44 @@ mod tests {
         let src = format!("(define x {})", long);
         let out = format(&p(&src), 12);
         assert!(out.contains("\n  verylongnamethatdoesntfit"), "got: {}", out);
+    }
+
+    #[test]
+    fn function_form_define_always_breaks_body() {
+        // Even when (define (square x) (* x x)) would fit on one line,
+        // function definitions break body to its own line.
+        let out = format(&p("(define (square x) (* x x))"), 80);
+        assert_eq!(out, "(define (square x)\n  (* x x))");
+    }
+
+    #[test]
+    fn lambda_aliasing_define_always_breaks_body() {
+        // (define name (lambda ...)) is the long-hand of the function
+        // form; force the body onto its own line. The lambda itself
+        // still follows the normal fit-or-break rule, so a trivial
+        // body like `x` stays inline with the lambda head.
+        let out = format(&p("(define identity (lambda (x) x))"), 80);
+        assert_eq!(out, "(define identity\n  (lambda (x) x))");
+    }
+
+    #[test]
+    fn lambda_aliasing_define_with_long_body_breaks_lambda_too() {
+        // At a width where the lambda body itself doesn't fit, the
+        // lambda follows its own (Body(1)) rule and breaks.
+        let out = format(&p("(define greet (lambda (name) (display \"hi \") (display name)))"), 30);
+        assert_eq!(
+            out,
+            "(define greet\n  (lambda (name)\n    (display \"hi \")\n    (display name)))"
+        );
+    }
+
+    #[test]
+    fn value_define_stays_single_line_when_it_fits() {
+        // (define NAME EXPR) where EXPR isn't a lambda follows the
+        // normal fit-or-break rule.
+        assert_eq!(format(&p("(define x 42)"), 80), "(define x 42)");
+        assert_eq!(format(&p("(define name \"x\")"), 80), "(define name \"x\")");
+        assert_eq!(format(&p("(define ans (+ 1 2))"), 80), "(define ans (+ 1 2))");
     }
 
     #[test]
